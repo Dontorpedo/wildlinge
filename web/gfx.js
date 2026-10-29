@@ -149,22 +149,30 @@ function windAt(x, y, t) {
 }
 
 /* ---------- body geometry from shape genes (chibi proportions: big head, small soft body) ---------- */
-function geom(r, sh, baby) {
-  const e = sh[0], bx = sh[1], seg = clamp(Math.floor(sh[2]), 1, 3), hd = sh[3], tp = sh[4];
+function geom(r, sh, baby, ts) {
+  const e = sh[0], bx = sh[1], seg = clamp(Math.floor(sh[2]), 1, 6), hd = sh[3], tp = sh[4];
   const a = r * 0.85 * (1 + 0.5 * e), bb = Math.max(1, r * 0.85 * (1 - 0.2 * e)), n = 2 + 2 * bx;
   const segs = [];
   let u = 0;
   for (let k = 0; k < seg; k++) {
-    const s = 1 - 0.18 * k, ak = seg > 1 ? a * 0.68 * s : a, bk = bb * s;
+    const s = Math.max(0.4, 1 - (seg > 3 ? 0.11 : 0.18) * k), ak = seg > 1 ? a * (seg > 3 ? 0.5 : 0.68) * s : a, bk = bb * s * (seg > 3 ? 0.8 : 1);
     if (k > 0) u -= segs[k - 1].a * 0.8 + ak * 0.8;
     segs.push({ u, a: ak, b: bk });
   }
   const rh = Math.max(1.6, r * (0.72 + 0.3 * hd) * (baby ? 1.2 : 1));
   const uh = segs[0].a * 0.75;
+  const last = segs[seg - 1], umin = last.u - last.a, lb = last.b;
+  const tail = [];
+  if (ts === 1) tail.push([umin - Math.max(1.2, lb * 0.3), 0, Math.max(1.4, lb * 0.38)]);
+  else if (ts === 2) for (let k = 0; k < 6; k++) tail.push([umin - 0.5 - k * Math.max(1.3, lb * 0.4), 0, Math.max(0.8, lb * 0.3 * (1 - k * 0.13))]);
+  else if (ts === 3) for (let k = 0; k < 9; k++) { const q = k / 8; tail.push([umin - 0.5 - q * lb * 2.0, Math.sin(q * 4.2) * lb * 0.55 * q, Math.max(0.8, lb * 0.3 * (1 - q * 0.5))]); }
+  else if (ts === 4) tail.push([umin - Math.max(1.5, lb * 0.55), 0, Math.max(1.8, lb * 0.65)]);
+  else if (ts === 5) for (let k = -2; k <= 2; k++) tail.push([umin - Math.max(1.5, lb * 0.6) - Math.abs(k) * 0.2, k * Math.max(1, lb * 0.32), Math.max(0.9, lb * 0.34)]);
+  let tmin = umin, tv = 0;
+  for (const q of tail) { tmin = Math.min(tmin, q[0] - q[2]); tv = Math.max(tv, Math.abs(q[1]) + q[2]); }
   const umax = Math.max(segs[0].a, uh + rh);
-  const last = segs[seg - 1], umin = last.u - last.a;
-  const R = Math.ceil(Math.max(umax, -umin, bb, rh * 1.7, uh + rh * 1.3)) + 2;
-  return { segs, n, tp, rh, uh, umax, umin, R };
+  const R = Math.ceil(Math.max(umax, -tmin, bb, tv, rh * 1.7, uh + rh * 1.3)) + 2;
+  return { segs, n, tp, rh, uh, umax, umin, tmin, tail, R };
 }
 /* 0 = outside, 1 = body, 2 = inner ear */
 function inBody(g, u, v, ear) {
@@ -176,6 +184,7 @@ function inBody(g, u, v, ear) {
     if (bt < 0.6) bt = 0.6;
     if (Math.pow(Math.abs(uu) / s.a, g.n) + Math.pow(Math.abs(v) / bt, g.n) <= 1) return 1;
   }
+  for (const q of g.tail) { const dq = u - q[0], dv = v - q[1]; if (dq * dq + dv * dv <= q[2] * q[2]) return 1; }
   const er = Math.max(1.2, rh * 0.42), eu = g.uh - rh * 0.4, av = Math.abs(v);
   if (ear === 0) {
     const ev = rh * 0.78, d2 = (u - eu) * (u - eu) + (av - ev) * (av - ev);
@@ -198,12 +207,12 @@ function rhoAt(g, th) {
 
 const spriteCache = new Map();
 function bodySprite(hue, r, carn, light, look, dirQ, sh, baby) {
-  const qe = Math.round(sh[0] * 3) / 3, qb = Math.round(sh[1] * 2) / 2, qh = Math.round(sh[3] * 3) / 3, qt = Math.round(sh[4] * 2) / 2, seg = clamp(Math.floor(sh[2]), 1, 3);
-  const key = `${hue}|${r}|${light}|${look[0]}|${look[1]}|${look[3]}|${dirQ}|${qe}|${qb}|${seg}|${qh}|${qt}|${baby}`;
+  const qe = Math.round(sh[0] * 3) / 3, qb = Math.round(sh[1] * 2) / 2, qh = Math.round(sh[3] * 3) / 3, qt = Math.round(sh[4] * 2) / 2, seg = clamp(Math.floor(sh[2]), 1, 6);
+  const key = `${hue}|${r}|${light}|${look[0]}|${look[1]}|${look[3]}|${look[7]}|${dirQ}|${qe}|${qb}|${seg}|${qh}|${qt}|${baby}`;
   let ent = spriteCache.get(key);
   if (ent) return ent;
   if (spriteCache.size > 4000) spriteCache.clear();
-  const g = geom(r, [qe, qb, seg, qh, qt], baby), R = g.R, d = 2 * R + 1;
+  const g = geom(r, [qe, qb, seg, qh, qt], baby, look[7]), R = g.R, d = 2 * R + 1;
   const ang = dirQ * TAU / 16, ca = Math.cos(ang), sa = Math.sin(ang);
   const cnv = document.createElement('canvas');
   cnv.width = cnv.height = d;
@@ -284,6 +293,31 @@ function drawPart(cs, o, i, side, px, py, g, front, st) {
     case 'display': fill = `hsl(${(hue + 180) % 360},80%,84%)`; break;
     default: fill = `hsl(${hue},52%,72%)`;
   }
+  const ls = cs[o + 88] | 0;
+  if (ls > 0 && (kind === 'leg' || kind === 'weapon' || kind === 'sense' || kind === 'bud' || kind === 'display')) {
+    const tl = ls === 1 ? Math.max(5, rp(len * r * 2.6) + 4) : ls === 2 ? Math.max(4, rp(len * r * 1.8) + 3) : Math.max(3, rp(len * r * 1.5) + 2);
+    const ph = st.animT * 0.12 + i * 1.3 + (side < 0 ? 1.7 : 0), amp = (0.8 + 1.4 * mot) * (sl ? 0.3 : 1);
+    let lx = 0, ly = 0;
+    for (let j = 0; j < tl; j++) {
+      const w = ls === 1 ? Math.sin(j * 0.55 - ph) * amp * Math.min(1, j / 3) : ls === 3 ? Math.sin(ph * 0.5 + j) * 0.3 : 0;
+      const qx = px + ux * (rho + j) + vx * w, qy = py + uy * (rho + j) + vy * w;
+      b.fillStyle = ls === 1 && j % 3 === 2 ? `hsl(${hue},55%,84%)` : fill;
+      b.fillRect(rp(qx), rp(qy), 1, 1);
+      if (ls === 1 && j < tl * 0.55) b.fillRect(rp(qx + vx), rp(qy + vy), 1, 1);
+      if (ls === 3 && j > 0 && j % 2 === 0) { b.fillStyle = `hsl(${(hue + 25) % 360},60%,90%)`; b.fillRect(rp(qx + vx), rp(qy + vy), 1, 1); b.fillRect(rp(qx - vx), rp(qy - vy), 1, 1); }
+      lx = qx; ly = qy;
+    }
+    if (ls === 2) {
+      const eyeBall = kind === 'sense' || kind === 'leg';
+      b.fillStyle = eyeBall ? '#ffffff' : `hsl(${(hue + 150) % 360},70%,78%)`;
+      b.fillRect(rp(lx) - 1, rp(ly) - 1, 3, 3);
+      if (eyeBall) { b.fillStyle = '#2a2236'; b.fillRect(rp(lx), rp(ly), 1, 1); }
+    } else {
+      b.fillStyle = '#ff9db8';
+      b.fillRect(rp(lx), rp(ly), 1, 1);
+    }
+    return;
+  }
   b.fillStyle = fill;
   if (kind === 'armor') {
     for (let k = -1; k <= 1; k++) { const a2 = dir + a0 + k * 0.45; b.fillRect(rp(px + Math.cos(a2) * (rho - 0.5)), rp(py + Math.sin(a2) * (rho - 0.5)), 2, 2); }
@@ -360,7 +394,7 @@ function drawFace(cs, o, px, py, ent, look, carn, st) {
 /* ---------- one creature ---------- */
 function drawCreature(cs, o, sel, wpp, ox, oy, st) {
   const x = cs[o + 1], y = cs[o + 2], dir = cs[o + 3], size = cs[o + 4];
-  const r = clamp(rp(size / wpp * 1.8), 1, 16);
+  const r = clamp(rp(size / wpp * 1.8), 1, 26);
   const px = rp((x - ox) / wpp), pyBase = rp((y - oy) / wpp);
   const moving = cs[o + 18] > 0.15 && !cs[o + 12];
   const bob = moving ? rp(Math.abs(Math.sin(st.animT * 0.3 * (0.3 + cs[o + 18]) + (cs[o] | 0))) * Math.min(2, r * 0.18)) : 0;
@@ -369,7 +403,7 @@ function drawCreature(cs, o, sel, wpp, ox, oy, st) {
   const hue = (rp(cs[o + 5] / 12) * 12) % 360;
   st.hue = hue;
   const carn = cs[o + 6] > 0, hp = cs[o + 7], fly = cs[o + 9] > 0, sl = cs[o + 12];
-  if (st.showSense || sel) {
+  if ((st.showSense || sel) && !st.noRing) {
     b.fillStyle = 'rgba(255,255,255,.28)';
     const sr = cs[o + 16] / wpp;
     for (let a = 0; a < TAU; a += 3 / sr) b.fillRect(rp(px + Math.cos(a) * sr), rp(py + Math.sin(a) * sr), 1, 1);
@@ -383,11 +417,11 @@ function drawCreature(cs, o, sel, wpp, ox, oy, st) {
   const baby = cs[o + 25] > 0 ? 1 : 0;
   const light = hp > 66 ? 80 : hp > 33 ? 73 : 64;
   const dirQ = ((rp(dir / (TAU / 16)) % 16) + 16) % 16;
-  const look = [cs[o + 82] | 0, cs[o + 83] | 0, cs[o + 84] | 0, cs[o + 85] | 0, cs[o + 86] | 0, cs[o + 87] | 0];
+  const look = [cs[o + 82] | 0, cs[o + 83] | 0, cs[o + 84] | 0, cs[o + 85] | 0, cs[o + 86] | 0, cs[o + 87] | 0, cs[o + 88] | 0, cs[o + 89] | 0];
   const ent = bodySprite(hue, r, carn ? 1 : 0, light, look, dirQ, sh, baby);
   const g = ent.g, R = ent.R;
   b.fillStyle = 'rgba(30,40,70,.22)';
-  const sw = Math.max(r, rp(-g.umin * 0.6 + g.segs[0].b)), sy = rp(g.segs[0].b) + 1;
+  const sw = Math.max(r, rp(-g.tmin * 0.6 + g.segs[0].b)), sy = rp(g.segs[0].b) + 1;
   if (fly) b.fillRect(px - sw + 3, pyBase + sy + 3, 2 * sw, 1);
   else { b.fillRect(px - sw + 1, pyBase + sy, 2 * sw, 1); b.fillRect(px - sw + 2, pyBase + sy + 1, 2 * sw - 2, 1); }
   const np = cs[o + 19] | 0, detail = np > 0;

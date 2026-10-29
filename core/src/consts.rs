@@ -36,8 +36,8 @@ pub const NABIL: usize = 9;
 pub const NSHAPE: usize = 5;
 /// Cosmetic gene loci (two alleles each, low allele index = dominant and common):
 /// accent colour (12), pattern (6), eye colour (8), ear style (4), cheek colour (4), sparkle (2).
-pub const NLOCI: usize = 6;
-pub const LOCUS_N: [u8; NLOCI] = [12, 6, 8, 4, 4, 2];
+pub const NLOCI: usize = 8;
+pub const LOCUS_N: [u8; NLOCI] = [12, 6, 8, 4, 4, 2, 4, 6];
 
 // trait indices
 pub const T_SIZE: usize = 0;
@@ -74,7 +74,7 @@ pub const S_BOX: usize = 1;
 pub const S_SEG: usize = 2;
 pub const S_HEAD: usize = 3;
 pub const S_TAPER: usize = 4;
-pub const SHAPE_RANGES: [(f32, f32); NSHAPE] = [(0.0, 1.0), (0.0, 1.0), (1.0, 3.49), (0.0, 1.0), (-1.0, 1.0)];
+pub const SHAPE_RANGES: [(f32, f32); NSHAPE] = [(0.0, 1.0), (0.0, 1.0), (1.0, 6.49), (0.0, 1.0), (-1.0, 1.0)];
 
 // abilities of body parts
 pub const A_LEG: usize = 0;

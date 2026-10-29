@@ -38,6 +38,25 @@ const file = process.argv[2], steps = +process.argv[3] || 6000;
   E.wl_step(10); console.log('step after load ok');
   E.wl_newick(); console.log('newick', out().slice(0, 80));
   E.wl_pyphi(r.sel); console.log('pyphi', out().slice(0, 120));
+  const ids = Array.from(new Float32Array(E.memory.buffer, E.wl_buf_ptr(0), E.wl_buf_len(0))).filter((v, i) => i % 90 === 0);
+  const tk = cmd({ type: 'take', id: ids[0] });
+  console.log('take', tk.ok, tk.name, 'rec', tk.rec && tk.rec.length, 'growth', tk.growth);
+  const tk3 = cmd({ type: 'take', id: ids[1] });
+  E.wl_step(5);
+  let tl = cmd({ type: 'tlist' });
+  console.log('tlist', tl.list.length, tk3.ok);
+  if (tl.list.length >= 2) {
+    const br = cmd({ type: 'tbreed', a: tl.list[0].id, b: tl.list[1].id });
+    console.log('tbreed', br.ok, br.name, 'gen', br.gen, 'growth', br.growth);
+    E.wl_save(Date.now()); const sv = out();
+    const [qp, qn] = put(sv); console.log('reload with terra', E.wl_load(qp, qn)); E.wl_dealloc(qp, qn);
+    tl = cmd({ type: 'tlist' }); console.log('tlist after reload', tl.list.length);
+    const rl = cmd({ type: 'release', id: tl.list[0].id, growth: 1, hp: 80 });
+    console.log('release', rl.ok);
+    E.wl_step(50);
+    cmd({ type: 'tdie', id: tl.list[1].id, cause: 'hunger' });
+    tl = cmd({ type: 'tlist' }); console.log('tlist end', tl.list.length);
+  }
   const [lp, ln] = put(JSON.stringify({ knock: 'self', reps: 2, steps: 600, seed: 5 })); E.wl_lab_start(lp, ln);
   t0 = performance.now(); while (E.wl_lab_step(100) === 0) {} E.wl_lab_result();
   const lab = JSON.parse(out());

@@ -20,7 +20,7 @@ const csp = [
 const shim = "try { new Intl.NumberFormat(navigator.language); } catch (e) { Object.defineProperty(Navigator.prototype, 'language', { get: () => 'en' }); }\n";
 const libs = shim + txt('node_modules/uplot/dist/uPlot.iife.min.js') + '\n;\n' + txt('node_modules/d3-hierarchy/dist/d3-hierarchy.min.js');
 const worker = txt('web/worker.js');
-if (/<\/script/i.test(worker + libs + txt('web/app.js') + txt('web/gfx.js') + txt('web/i18n.js'))) throw new Error('script end tag inside source');
+if (/<\/script/i.test(worker + libs + txt('web/app.js') + txt('web/gfx.js') + txt('web/terrarium.js') + txt('web/i18n.js'))) throw new Error('script end tag inside source');
 
 const parts = {
   CSP: csp,
@@ -31,6 +31,7 @@ const parts = {
   LIBS: libs,
   I18N: txt('web/i18n.js'),
   GFX: txt('web/gfx.js'),
+  TERRA: txt('web/terrarium.js'),
   APP: txt('web/app.js')
 };
 let html = txt('web/index.html');

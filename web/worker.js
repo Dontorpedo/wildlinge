@@ -162,6 +162,16 @@ async function hostHandle(msg) {
       hostPost({ type: 'toast', o: r.toast }); H.lastPanel = 0; break;
     }
     case 'adopt': cmd({ type: 'adopt', id: msg.id >>> 0, on: msg.on === undefined ? undefined : !!msg.on, name: typeof msg.name === 'string' ? msg.name.slice(0, 40) : undefined }); H.lastPanel = 0; break;
+    case 'tcmd': {
+      const c = msg.c || {};
+      if (['take', 'tlist', 'trename', 'tbreed', 'release', 'tdie'].includes(c.type)) {
+        const res = cmd(c);
+        hostPost({ type: 'tres', rid: msg.rid, res });
+        H.lastPanel = 0;
+        if (c.type !== 'tlist') H.lastSave = 0;
+      } else hostPost({ type: 'tres', rid: msg.rid, res: {} });
+      break;
+    }
     case 'knock': cmd({ type: 'knock', key: String(msg.key || ''), v: !!msg.v }); H.lastPanel = 0; break;
     case 'save': hostSave(); break;
     case 'export': E.wl_save(Date.now()); download(`wildlinge-${E.wl_seed()}-${E.wl_step(0)}.json`, 'application/json', out()); break;

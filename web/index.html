@@ -24,6 +24,14 @@ select{background:#10151a;color:var(--fg);border:1px solid #34404c;border-radius
 #world{width:100%;height:auto;display:block;border-radius:6px;image-rendering:pixelated;image-rendering:crisp-edges;box-shadow:0 8px 28px rgba(0,0,0,.5);cursor:grab;touch-action:none;background:#0b1a2b}
 #world.drag{cursor:grabbing}
 #world.tool{cursor:crosshair}
+#terra{width:100%;height:auto;display:none;border-radius:6px;image-rendering:pixelated;image-rendering:crisp-edges;box-shadow:0 8px 28px rgba(0,0,0,.5);cursor:pointer;touch-action:manipulation;background:#f1e1ea}
+#modes{display:flex;gap:4px}
+#modes button{font:400 11px var(--pix);padding:7px 10px}
+#modes button.on{background:#3b4a2e;border-color:var(--acc);color:#fff}
+#ttools{display:none;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+#ttools button.on{background:#3b4a2e;border-color:var(--acc);color:#fff}
+.tzcard{border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:8px}
+.tzcard.on{border-color:var(--acc)}
 #tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
 #tools button.on{background:#3b4a2e;border-color:var(--acc);color:#fff}
 #help{color:var(--muted);font-size:12px;margin-top:4px}
@@ -90,6 +98,7 @@ footer{color:var(--muted);font-size:12px;padding:0 16px 20px}
 <body>
 <header>
   <h1>Wildlinge</h1>
+  <div id="modes"><button id="modeWild" class="on" data-i18n="mode.wild"></button><button id="modeTerra" data-i18n="mode.terra"></button></div>
   <span id="clock" data-i18n="app.loading">Loading world ...</span>
   <select id="langSel" aria-label="Language"><option value="en">English</option><option value="de">Deutsch</option></select>
   <a id="bmc" class="bmc" target="_blank" rel="noopener noreferrer">Buy me a coffee</a>
@@ -97,6 +106,7 @@ footer{color:var(--muted);font-size:12px;padding:0 16px 20px}
 <div id="wrap">
 <div id="stage">
   <canvas id="world" width="1600" height="800"></canvas>
+  <canvas id="terra" width="1600" height="800"></canvas>
   <div id="toast"></div>
   <div id="tools">
     <button data-tool="select" class="on" title="1" data-i18n="tool.select"></button>
@@ -107,6 +117,12 @@ footer{color:var(--muted);font-size:12px;padding:0 16px 20px}
     <button data-tool="food" title="6" data-i18n="tool.food"></button>
     <button data-tool="mirror" title="7" data-i18n="tool.mirror"></button>
     <input type="text" id="wordIn" maxlength="40" data-i18n-ph="ph.words">
+  </div>
+  <div id="ttools">
+    <button data-ttool="select" class="on" title="1" data-i18n="tz.tool.select"></button>
+    <button data-ttool="pet" title="2" data-i18n="tz.tool.pet"></button>
+    <button data-ttool="treat" title="3" data-i18n="tz.tool.treat"></button>
+    <button data-ttool="ball" title="4" data-i18n="tz.tool.ball"></button>
   </div>
   <div id="help" data-i18n="help.keys"></div>
 </div>
@@ -127,6 +143,7 @@ footer{color:var(--muted);font-size:12px;padding:0 16px 20px}
   <div id="tabs">
     <button data-tab="world" class="on" data-i18n="tab.world"></button>
     <button data-tab="creature" data-i18n="tab.creature"></button>
+    <button data-tab="terra" data-i18n="tab.terra"></button>
     <button data-tab="research" data-i18n="tab.research"></button>
     <button data-tab="lab" data-i18n="tab.lab"></button>
     <button data-tab="about" data-i18n="tab.about"></button>
@@ -156,6 +173,20 @@ footer{color:var(--muted);font-size:12px;padding:0 16px 20px}
       <div id="info"></div>
     </div>
     <div class="box"><b data-i18n="box.brain"></b><canvas id="brain" width="760" height="440"></canvas><div class="muted" id="brainTip" style="min-height:18px"></div><div class="muted" data-i18n="sel.brainHint"></div></div>
+  </div>
+
+  <div class="page" id="page-terra">
+    <div class="box"><b data-i18n="tab.terra"></b><div class="muted" data-i18n="tz.intro"></div></div>
+    <div class="box"><b data-i18n="tz.inhabitants"></b><div id="tzList"></div><div id="tzEggs"></div></div>
+    <div class="box"><b data-i18n="box.sel"></b>
+      <div id="tzSelHead" style="display:none">
+        <div class="row"><span id="selName2" style="font:400 14px var(--pix);color:#e8f0d8"><span id="tzSelName"></span></span><button id="tzRelease" data-i18n="tz.release"></button></div>
+        <div class="row"><input type="text" id="tzName" maxlength="16" data-i18n-ph="ph.name" style="width:150px"><button id="tzRename" data-i18n="btn.rename"></button></div>
+      </div>
+      <div id="tzInfo"></div>
+    </div>
+    <div class="box"><b data-i18n="tz.room"></b><div id="tzRoom"></div></div>
+    <div class="box"><b data-i18n="tz.memorial"></b><div id="tzGraves"></div></div>
   </div>
 
   <div class="page" id="page-research">
@@ -218,6 +249,7 @@ footer{color:var(--muted);font-size:12px;padding:0 16px 20px}
 <script>/*WORKER*/</script>
 <script>/*I18N*/</script>
 <script>/*GFX*/</script>
+<script>/*TERRA*/</script>
 <script>/*APP*/</script>
 </body>
 </html>

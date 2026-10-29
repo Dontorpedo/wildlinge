@@ -18,7 +18,7 @@ pub struct Genome {
     pub dw: [f32; ND],
     pub motor: [f32; 4],
     pub hue: f32,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "de_look")]
     pub look: [[u8; 2]; NLOCI],
     #[serde(default)]
     pub look_set: bool,
@@ -26,6 +26,15 @@ pub struct Genome {
     pub nodes: Vec<NodeGene>,
     pub conns: Vec<ConnGene>,
     pub mutated: bool,
+}
+
+fn de_look<'de, D: serde::Deserializer<'de>>(d: D) -> Result<[[u8; 2]; NLOCI], D::Error> {
+    let v: Vec<[u8; 2]> = serde::Deserialize::deserialize(d)?;
+    let mut l = [[255u8; 2]; NLOCI];
+    for (i, q) in v.into_iter().take(NLOCI).enumerate() {
+        l[i] = q;
+    }
+    Ok(l)
 }
 
 fn pick_allele(n: u8, rng: &mut Rng) -> u8 {
@@ -219,7 +228,7 @@ pub fn random_genome(carn: bool, rng: &mut Rng, innov: &mut Innov) -> Genome {
     tr[T_PAT] = rng.range(0.0, 1.0);
     tr[T_PLAST] = rng.range(0.004, 0.015);
     tr[T_DISC] = rng.range(0.2, 0.32);
-    let shape = [rng.range(0.0, 0.35), rng.range(0.0, 0.3), if rng.chance(0.25) { 2.0 } else { 1.0 }, rng.range(0.3, 0.7), rng.range(-0.3, 0.3)];
+    let shape = [rng.range(0.0, 0.35), rng.range(0.0, 0.3), if rng.chance(0.25) { 2.0 } else if rng.chance(0.1) { rng.range(3.0, 6.0) } else { 1.0 }, rng.range(0.3, 0.7), rng.range(-0.3, 0.3)];
     let dw = [
         rng.range(0.6, 1.0),
         rng.range(0.5, 1.0),
@@ -491,6 +500,10 @@ pub fn sanitize(g: &mut Genome) {
     }
     for i in 0..NLOCI {
         for a in 0..2 {
+            if g.look[i][a] == 255 {
+                let mut r = Rng::new(g.hue.to_bits() as u64 ^ ((i as u64 * 2 + a as u64 + 1) << 40) ^ ((g.conns.len() as u64) << 20));
+                g.look[i][a] = pick_allele(LOCUS_N[i], &mut r);
+            }
             g.look[i][a] = g.look[i][a].min(LOCUS_N[i] - 1);
         }
     }

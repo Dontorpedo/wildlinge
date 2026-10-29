@@ -274,6 +274,8 @@ pub struct World {
     pub modes: metrics::Modes,
     pub bedau: metrics::Bedau,
     pub lang_buf: Vec<UttRec>,
+    #[serde(default)]
+    pub terra: Vec<Creature>,
     #[serde(skip)]
     pub newborn: Vec<Creature>,
     #[serde(skip)]
@@ -365,6 +367,17 @@ impl World {
             }
             c.rebuild();
         }
+        for c in w.terra.iter_mut() {
+            sanitize(&mut c.g);
+            c.lex.sanitize(MAX_PROTO);
+            c.dlex.sanitize(8);
+            c.name = clean_name(&c.name);
+            if c.name.is_empty() {
+                c.name = "Wildling".into();
+            }
+            c.rebuild();
+        }
+        w.terra.truncate(crate::api::TERRA_MAX);
         for h in w.hof.iter_mut() {
             sanitize(&mut h.g);
         }
@@ -383,7 +396,7 @@ impl World {
             c.x = if c.x.is_finite() { clamp(c.x, 0.0, WORLD_W) } else { WORLD_W / 2.0 };
             c.y = if c.y.is_finite() { clamp(c.y, 0.0, WORLD_H) } else { WORLD_H / 2.0 };
         }
-        let max_id = w.creatures.iter().map(|c| c.id).max().unwrap_or(0);
+        let max_id = w.creatures.iter().chain(w.terra.iter()).map(|c| c.id).max().unwrap_or(0);
         w.next_id = w.next_id.max(max_id + 1);
         w.plants = w.foods.iter().filter(|f| !f.meat).count();
         w.rebuild_food_grid();
@@ -392,7 +405,7 @@ impl World {
 
     pub fn to_json(&mut self, now: f64) -> String {
         self.saved_at = now;
-        for c in self.creatures.iter_mut() {
+        for c in self.creatures.iter_mut().chain(self.terra.iter_mut()) {
             c.save_prepare();
         }
         serde_json::to_string(self).unwrap_or_default()
@@ -547,6 +560,10 @@ impl World {
         let mut c = Creature::new(id, x, y, g, gen, None, (0, 0), &mut self.rng);
         c.note(self.t, "d.immigrant", "");
         self.add_creature(c);
+    }
+
+    pub fn archive_pub(&mut self, c: &Creature) {
+        self.archive(c);
     }
 
     fn archive(&mut self, c: &Creature) {

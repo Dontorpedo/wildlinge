@@ -46,45 +46,7 @@ pub fn frame(w: &mut World, x0: f32, y0: f32, x1: f32, y1: f32, wpp: f32, sel: u
         }
         let start = cs.len();
         cs.resize(start + CS_STRIDE, 0.0);
-        let r = &mut cs[start..start + CS_STRIDE];
-        r[0] = c.id as f32;
-        r[1] = c.x;
-        r[2] = c.y;
-        r[3] = c.dir;
-        r[4] = c.size();
-        r[5] = c.g.hue;
-        r[6] = if c.carn() { 1.0 } else { 0.0 };
-        r[7] = c.health;
-        r[8] = c.g.tr[T_PAT].floor();
-        r[9] = if c.fly { 1.0 } else { 0.0 };
-        r[10] = c.fear;
-        r[11] = if c.speak_cool + 8 > SPEAK_COOL { 1.0 } else { 0.0 };
-        r[12] = if c.asleep { 1.0 } else { 0.0 };
-        r[13] = c.wellbeing;
-        r[14] = if bosses.contains(&c.id) { 1.0 } else { 0.0 };
-        r[15] = if c.mature() { 0.0 } else { 1.0 - (c.age as f32 / (c.g.tr[T_LIFE] * c.g.tr[T_CHILD])).min(1.0) };
-        r[16] = c.sense_r;
-        r[17] = if c.adopted { 1.0 } else { 0.0 };
-        r[18] = c.v;
-        r[20..25].copy_from_slice(&c.g.shape);
-        r[25] = if c.mature() { 0.0 } else { 1.0 };
-        for (i, v) in crate::genome::look_pheno(&c.g).iter().enumerate() {
-            r[82 + i] = *v as f32;
-        }
-        if detail {
-            let n = c.pp.len().min(MAX_PARTS);
-            r[19] = n as f32;
-            for (i, q) in c.pp.iter().take(n).enumerate() {
-                let b = 26 + i * 7;
-                r[b] = q.a;
-                r[b + 1] = if q.sym { 1.0 } else { 0.0 };
-                r[b + 2] = q.p[P_LEN];
-                r[b + 3] = q.p[P_WID];
-                r[b + 4] = q.p[P_MOT];
-                r[b + 5] = c.kinds[i] as f32;
-                r[b + 6] = q.p[P_COL];
-            }
-        }
+        fill_rec(c, &bosses, detail, &mut cs[start..start + CS_STRIDE]);
     }
     for f in &w.foods {
         if f.e > 0.0 && f.x > x0 - 10.0 && f.x < x1 + 10.0 && f.y > y0 - 10.0 && f.y < y1 + 10.0 {
@@ -101,6 +63,57 @@ pub fn frame(w: &mut World, x0: f32, y0: f32, x1: f32, y1: f32, wpp: f32, sel: u
         .collect();
     w.bubbles.clear();
     json!({"t": w.t, "sf": w.sf, "night": w.night, "frozen": w.frozen, "mirrors": w.mirrors, "bub": bub, "sel": sel_found}).to_string()
+}
+
+pub const TERRA_MAX: usize = 8;
+
+pub fn terra_json(c: &crate::creature::Creature) -> Value {
+    let mut r = vec![0.0f32; CS_STRIDE];
+    fill_rec(c, &[], true, &mut r);
+    let rv: Vec<f32> = r.iter().map(|x| if x.is_finite() { *x } else { 0.0 }).collect();
+    let (l, ch) = (c.g.tr[T_LIFE], c.g.tr[T_CHILD]);
+    json!({"ok": true, "id": c.id, "name": c.name, "gen": c.gen, "children": c.children, "p1": c.p1, "p2": c.p2, "rec": rv, "growth": (c.age as f32 / (l * ch)).min(1.0), "words": c.lex.m.len()})
+}
+
+pub fn fill_rec(c: &crate::creature::Creature, bosses: &[u32], detail: bool, r: &mut [f32]) {
+    r[0] = c.id as f32;
+    r[1] = c.x;
+    r[2] = c.y;
+    r[3] = c.dir;
+    r[4] = c.size();
+    r[5] = c.g.hue;
+    r[6] = if c.carn() { 1.0 } else { 0.0 };
+    r[7] = c.health;
+    r[8] = c.g.tr[T_PAT].floor();
+    r[9] = if c.fly { 1.0 } else { 0.0 };
+    r[10] = c.fear;
+    r[11] = if c.speak_cool + 8 > SPEAK_COOL { 1.0 } else { 0.0 };
+    r[12] = if c.asleep { 1.0 } else { 0.0 };
+    r[13] = c.wellbeing;
+    r[14] = if bosses.contains(&c.id) { 1.0 } else { 0.0 };
+    r[15] = if c.mature() { 0.0 } else { 1.0 - (c.age as f32 / (c.g.tr[T_LIFE] * c.g.tr[T_CHILD])).min(1.0) };
+    r[16] = c.sense_r;
+    r[17] = if c.adopted { 1.0 } else { 0.0 };
+    r[18] = c.v;
+    r[20..25].copy_from_slice(&c.g.shape);
+    r[25] = if c.mature() { 0.0 } else { 1.0 };
+    for (i, v) in crate::genome::look_pheno(&c.g).iter().enumerate() {
+        r[82 + i] = *v as f32;
+    }
+    if detail {
+        let n = c.pp.len().min(MAX_PARTS);
+        r[19] = n as f32;
+        for (i, q) in c.pp.iter().take(n).enumerate() {
+            let b = 26 + i * 7;
+            r[b] = q.a;
+            r[b + 1] = if q.sym { 1.0 } else { 0.0 };
+            r[b + 2] = q.p[P_LEN];
+            r[b + 3] = q.p[P_WID];
+            r[b + 4] = q.p[P_MOT];
+            r[b + 5] = c.kinds[i] as f32;
+            r[b + 6] = q.p[P_COL];
+        }
+    }
 }
 
 /* ---------------- panel ---------------- */
@@ -385,6 +398,103 @@ pub fn command(w: &mut World, v: &Value) -> Value {
             w.adopt(id, on, name);
             json!({})
         }
+        "take" => {
+            let id = v.get("id").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+            if w.terra.len() >= TERRA_MAX {
+                return json!({"ok": false, "full": true});
+            }
+            match w.creatures.iter().position(|c| c.id == id) {
+                Some(i) => {
+                    let mut c = w.creatures.remove(i);
+                    w.reindex();
+                    if let Ok(li) = w.lineage.binary_search_by_key(&id, |r| r.id) {
+                        w.lineage[li].c = "terrarium".to_string();
+                    }
+                    c.adopted = false;
+                    c.asleep = false;
+                    c.note(w.t, "d.toTerrarium", "");
+                    let out = terra_json(&c);
+                    w.terra.push(c);
+                    w.event("ev.taken", vec![out["name"].as_str().unwrap_or("").to_string()]);
+                    out
+                }
+                None => json!({"ok": false}),
+            }
+        }
+        "tlist" => json!({"list": w.terra.iter().map(terra_json).collect::<Vec<Value>>()}),
+        "trename" => {
+            let id = v.get("id").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+            let n = clean_name(v.get("name").and_then(|x| x.as_str()).unwrap_or(""));
+            if let (false, Some(c)) = (n.is_empty(), w.terra.iter_mut().find(|c| c.id == id)) {
+                c.name = n;
+            }
+            json!({})
+        }
+        "tbreed" => {
+            let ia = v.get("a").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+            let ib = v.get("b").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+            let pa = w.terra.iter().position(|c| c.id == ia);
+            let pb = w.terra.iter().position(|c| c.id == ib);
+            match (pa, pb) {
+                (Some(i), Some(j)) if i != j && w.terra.len() < TERRA_MAX => {
+                    let base = crate::genome::crossover(&w.terra[i].inherit_genome(), &w.terra[j].g, &mut w.rng);
+                    let st = w.terra[i].stress_info();
+                    let off = w.knock[K_MUT];
+                    let (g, _) = crate::genome::mutate(&base, &st, off, &mut w.rng, &mut w.innov);
+                    let culture = w.fresh_culture_of(&w.terra[i]);
+                    let gen = w.terra[i].gen.max(w.terra[j].gen) + 1;
+                    let id = w.next_id;
+                    w.next_id += 1;
+                    let mut c = crate::creature::Creature::new(id, 0.0, 0.0, g, gen, Some(culture), (ia, ib), &mut w.rng);
+                    c.sp = w.terra[i].sp;
+                    c.age = 0;
+                    c.note(w.t, "d.bornTerrarium", "");
+                    w.terra[i].children += 1;
+                    w.terra[j].children += 1;
+                    w.lineage.push(Lin { id, n: c.name.clone(), p1: ia, p2: ib, b: w.t, d: -1, c: String::new(), g: gen });
+                    let out = terra_json(&c);
+                    w.terra.push(c);
+                    out
+                }
+                _ => json!({"ok": false}),
+            }
+        }
+        "release" => {
+            let id = v.get("id").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+            match w.terra.iter().position(|c| c.id == id) {
+                Some(i) => {
+                    let mut c = w.terra.remove(i);
+                    let growth = f(v, "growth", 0.0, 1.0, 1.0);
+                    let full = c.g.tr[T_LIFE] * c.g.tr[T_CHILD];
+                    c.age = if growth >= 0.999 { full as u32 + 2 } else { (growth * full) as u32 };
+                    let (x, y) = w.random_land();
+                    c.x = x;
+                    c.y = y;
+                    c.health = f(v, "hp", 20.0, 100.0, 100.0);
+                    c.adopted = false;
+                    c.energy = c.max_e() * 0.8;
+                    c.note(w.t, "d.fromTerrarium", "");
+                    let nm = c.name.clone();
+                    w.creatures.push(c);
+                    w.reindex();
+                    w.event("ev.released", vec![nm]);
+                    json!({"ok": true, "id": id, "x": x, "y": y})
+                }
+                None => json!({"ok": false}),
+            }
+        }
+        "tdie" => {
+            let id = v.get("id").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+            if let Some(i) = w.terra.iter().position(|c| c.id == id) {
+                let c = w.terra.remove(i);
+                if let Ok(li) = w.lineage.binary_search_by_key(&id, |r| r.id) {
+                    w.lineage[li].d = w.t as i64;
+                    w.lineage[li].c = v.get("cause").and_then(|x| x.as_str()).unwrap_or("terrarium").chars().take(16).collect();
+                }
+                w.archive_pub(&c);
+            }
+            json!({})
+        }
         "knock" => {
             let key = v.get("key").and_then(|x| x.as_str()).unwrap_or("");
             if let Some(i) = KNOCKS.iter().position(|k| *k == key) {
@@ -399,6 +509,12 @@ pub fn command(w: &mut World, v: &Value) -> Value {
 }
 
 impl World {
+    pub fn reindex(&mut self) {
+        self.id_idx.clear();
+        for (i, c) in self.creatures.iter().enumerate() {
+            self.id_idx.insert(c.id, i);
+        }
+    }
     pub fn id_idx_get(&self, id: u32) -> Option<usize> {
         if id == 0 {
             return None;

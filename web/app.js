@@ -22,6 +22,7 @@ const mini = $('minimap'), mctx = mini.getContext('2d');
 const cam = { x: WORLD_W / 2, y: WORLD_H / 2, zi: 4 };
 
 let sendHost = () => {}, worker = null, mode = 'worker', labWorker = null;
+let viewMode = 'wild';
 let frame = null, panel = null, tool = 'select', running = true, selId = 0, activeTab = 'world';
 let showSense = false, showBubbles = true, showMeaning = true, follow = false;
 let mapInfo = null, terrainSummer = null, terrainWinter = null, miniBase = null;
@@ -84,6 +85,7 @@ function applyI18n() {
   for (const el of document.querySelectorAll('[data-i18n-ph]')) el.placeholder = t(el.dataset.i18nPh);
   $('welcomeList').innerHTML = tr('welcome.l').map(s => `<li>${esc(s)}</li>`).join('');
   $('btnRun').textContent = t(running ? 'btn.pause' : 'btn.run');
+  $('help').textContent = t(viewMode === 'wild' ? 'help.keys' : 'tz.help');
   $('chartSet').innerHTML = Object.entries(tr('chartSets')).map(([k, n]) => `<option value="${k}"${k === uplSet ? ' selected' : ''}>${esc(n)}</option>`).join('');
   $('labKnock').innerHTML = KNOCK_KEYS.map(k => `<option value="${k}">${esc(tr('knocks')[k])}</option>`).join('');
   $('langSel').value = LANG;
@@ -115,6 +117,8 @@ function render() {
   animT++;
   gst.animT = animT;
   requestAnimationFrame(render);
+  tzFrame();
+  if (viewMode === 'terra') { tzRender(); if (activeTab === 'terra') tzPanel(false); return; }
   if (!frame || !terrainSummer) return;
   const fr = frame, cs = fr.cs, meta = fr.meta;
   let selO = -1;
@@ -216,7 +220,7 @@ function renderPanel(p) {
   if (ad) {
     $('selName').textContent = ad.name;
     $('selId').textContent = '#' + ad.id;
-    $('btnAdopt').textContent = t(ad.adopted ? 'btn.release' : 'btn.adopt');
+    $('btnAdopt').textContent = t('btn.adopt');
   }
 }
 function renderWorld(p) {
@@ -538,6 +542,7 @@ function receive(m) {
       prepareGraphics(m);
       selId = 0; centered = false; frame = null; lastView = '';
       sendHost({ type: 'select', id: 0 });
+      tzWhenLoaded().then(tzReconcile);
       if (m.fresh && !welcomeOk) {
         let seen = false;
         try { seen = localStorage.getItem('wildlinge-welcome') === '1'; } catch (e) { /* storage blocked */ }
@@ -555,6 +560,7 @@ function receive(m) {
     case 'panel': panel = JSON.parse(m.json); if (panel.sel) selId = panel.sel.id; else if (selId && !panel.sel) selId = 0; renderPanel(panel); break;
     case 'sel': selId = m.id; if (m.id) setTab('creature'); break;
     case 'persist': persist(m); break;
+    case 'tres': tzResolve(m); break;
     case 'toast': toast(tToast(m.o)); break;
     case 'progress': $('clock').textContent = t('app.away', m.pct); break;
     case 'error': toast(t(m.k, m.msg)); break;
@@ -712,7 +718,7 @@ document.addEventListener('change', e => {
   const k = e.target.dataset && e.target.dataset.knock;
   if (k) sendHost({ type: 'knock', key: k, v: e.target.checked });
 });
-$('btnAdopt').onclick = () => { if (panel && panel.sel) sendHost({ type: 'adopt', id: panel.sel.id, on: !panel.sel.adopted }); };
+$('btnAdopt').onclick = () => { if (panel && panel.sel) tzAdopt(panel.sel.id); };
 $('btnRename').onclick = () => { const n = $('renameIn').value; if (panel && panel.sel && n.trim()) { sendHost({ type: 'adopt', id: panel.sel.id, name: n }); $('renameIn').value = ''; } };
 $('btnPyphi').onclick = () => { if (selId) sendHost({ type: 'pyphi' }); };
 $('btnCsv').onclick = () => sendHost({ type: 'csv' });
@@ -755,5 +761,31 @@ $('bmc').href = $('bmc2').href = BMC_URL;
 window.addEventListener('beforeunload', () => sendHost({ type: 'save' }));
 document.addEventListener('visibilitychange', () => { if (document.hidden) sendHost({ type: 'save' }); });
 
+function setViewMode(m) {
+  viewMode = m;
+  $('world').style.display = m === 'wild' ? 'block' : 'none';
+  $('terra').style.display = m === 'terra' ? 'block' : 'none';
+  $('tools').style.display = m === 'wild' ? 'flex' : 'none';
+  $('ttools').style.display = m === 'terra' ? 'flex' : 'none';
+  $('help').textContent = t(m === 'wild' ? 'help.keys' : 'tz.help');
+  $('modeWild').classList.toggle('on', m === 'wild');
+  $('modeTerra').classList.toggle('on', m === 'terra');
+  if (m === 'terra') setTab('terra'); else if (activeTab === 'terra') setTab('world');
+}
+function tzWhenLoaded() { return new Promise(res => { const f = () => (TZ.loaded ? res() : setTimeout(f, 30)); f(); }); }
+$('modeWild').onclick = () => setViewMode('wild');
+$('modeTerra').onclick = () => setViewMode('terra');
+document.addEventListener('click', e => {
+  const a = e.target.closest('a.w');
+  if (a && a.dataset.tz) { e.preventDefault(); TZ.sel = +a.dataset.tz; tzPanel(true); }
+});
+window.addEventListener('keydown', e => {
+  if (viewMode !== 'terra') return;
+  const ae = document.activeElement;
+  if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT')) return;
+  const names = ['select', 'pet', 'treat', 'ball'];
+  if (e.key >= '1' && e.key <= '4') { tzSetTool(names[+e.key - 1]); e.stopImmediatePropagation(); }
+}, true);
 applyI18n();
+tzInit();
 startApp();
