@@ -1140,8 +1140,8 @@ const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const rp = Math.round;
 const OUTLINE = '#141912';
 const KIND_KEYS = ['leg', 'fin', 'wing', 'weapon', 'armor', 'sense', 'storage', 'insul', 'display', 'bud'];
-const EYE_COL = ['#1a1a22', '#3a7bd5', '#2e9e5b', '#8a4b1f', '#8e44c8', '#e0a020', '#d03060', '#20b8c8'];
-const CHEEK_COL = ['rgba(255,120,160,.8)', 'rgba(255,160,70,.8)', null, 'rgba(110,170,255,.8)'];
+const EYE_COL = ['#3b3354', '#4a8be0', '#3fae6a', '#a0642c', '#9a58d0', '#e8b030', '#e0507a', '#30c0d0'];
+const CHEEK_COL = ['rgba(255,130,170,.85)', 'rgba(255,170,90,.85)', null, 'rgba(120,180,255,.85)'];
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 
 const bufCanvas = document.createElement('canvas');
@@ -1172,20 +1172,20 @@ function vnoise(x, y, s) {
 }
 const PAL = {
   summer: [
-    ['#0f2a45', '#123252', '#16395c', '#1a4166'], ['#235a7a', '#2a6787', '#327394', '#3b80a0'],
-    ['#2b4426', '#31512b', '#3c6132', '#4a7139'], ['#1b2e19', '#213820', '#284224', '#2f4d29'],
-    ['#b89a5c', '#c4a866', '#cfb472', '#d8c080'], ['#55574f', '#63655c', '#72746a', '#83857a']
+    ['#3f86c8', '#468fd0', '#4e98d8', '#57a1e0'], ['#86d0ea', '#92d8f0', '#9edff4', '#abe6f8'],
+    ['#8fd07a', '#99d783', '#a3de8d', '#aee596'], ['#5eae6c', '#67b875', '#71c27f', '#7bcc89'],
+    ['#f0d9a0', '#f4dfaa', '#f7e5b5', '#faebc0'], ['#b3b9c6', '#bec4d0', '#c9ced9', '#d4d8e1']
   ],
   winter: [
-    ['#102638', '#142d42', '#18344c', '#1c3b55'], ['#b9d3e2', '#c7dde9', '#d4e6ef', '#e2eff5'],
-    ['#c3d0d8', '#d1dde3', '#dde7ec', '#ebf2f5'], ['#7f939c', '#93a6ae', '#a8b9c0', '#bccbd1'],
-    ['#a6967a', '#b3a487', '#c0b295', '#ccbfa3'], ['#b8c0c6', '#cdd4d8', '#e0e5e8', '#f2f5f7']
+    ['#3a78b4', '#4082bc', '#488cc4', '#5096cc'], ['#cfe6f2', '#d9ecf6', '#e3f2f9', '#edf7fc'],
+    ['#d5e3ea', '#dfeaf0', '#e8f1f5', '#f1f7fa'], ['#9db3bd', '#aabfc8', '#b8cad2', '#c6d5db'],
+    ['#cdbf9f', '#d6c9ab', '#dfd3b8', '#e7ddc4'], ['#cfd6dd', '#dbe1e7', '#e7ebf0', '#f3f5f8']
   ]
 };
 const hexRgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 
 function drawTree(x2, x, y, winter, big) {
-  const o = winter ? ['#4a5a5e', '#8fa4a8', '#dfeaee', '#ffffff'] : ['#10200d', '#1f4a1c', '#33702b', '#5fa04a'];
+  const o = winter ? ['#5d6f76', '#9fb4ba', '#e3eef2', '#ffffff'] : ['#2b6a3c', '#3f9a56', '#62c070', '#a8ea90'];
   x2.fillStyle = winter ? '#3a2e24' : '#4a3020'; x2.fillRect(x, y + 2, 2, 3);
   x2.fillStyle = o[0]; x2.fillRect(x - 3, y - 1, 8, 4); x2.fillRect(x - 2, y - 3, 6, 3); x2.fillRect(x - 1, y - 5, 4, 3);
   x2.fillStyle = o[1]; x2.fillRect(x - 2, y - 1, 6, 3); x2.fillRect(x - 1, y - 3, 4, 2); x2.fillRect(x, y - 4, 2, 1);
@@ -1282,10 +1282,10 @@ function windAt(x, y, t) {
   return { x: 0.25 * Math.sin(y / 180 + t / 900), y: 0.25 * Math.cos(x / 220 - t / 1100) };
 }
 
-/* ---------- body geometry from shape genes ---------- */
+/* ---------- body geometry from shape genes (chibi proportions: big head, small soft body) ---------- */
 function geom(r, sh, baby) {
   const e = sh[0], bx = sh[1], seg = clamp(Math.floor(sh[2]), 1, 3), hd = sh[3], tp = sh[4];
-  const a = r * (1 + 0.55 * e), bb = Math.max(1, r * (1 - 0.22 * e)), n = 2 + 3 * bx;
+  const a = r * 0.85 * (1 + 0.5 * e), bb = Math.max(1, r * 0.85 * (1 - 0.2 * e)), n = 2 + 2 * bx;
   const segs = [];
   let u = 0;
   for (let k = 0; k < seg; k++) {
@@ -1293,36 +1293,35 @@ function geom(r, sh, baby) {
     if (k > 0) u -= segs[k - 1].a * 0.8 + ak * 0.8;
     segs.push({ u, a: ak, b: bk });
   }
-  const rh = Math.max(1.2, r * (0.5 + 0.35 * hd) * (baby ? 1.25 : 1));
-  const uh = segs[0].a * 0.6;
+  const rh = Math.max(1.6, r * (0.72 + 0.3 * hd) * (baby ? 1.2 : 1));
+  const uh = segs[0].a * 0.75;
   const umax = Math.max(segs[0].a, uh + rh);
   const last = segs[seg - 1], umin = last.u - last.a;
-  const R = Math.ceil(Math.max(umax, -umin, bb, rh * 1.6, uh + rh * 1.2)) + 2;
+  const R = Math.ceil(Math.max(umax, -umin, bb, rh * 1.7, uh + rh * 1.3)) + 2;
   return { segs, n, tp, rh, uh, umax, umin, R };
 }
+/* 0 = outside, 1 = body, 2 = inner ear */
 function inBody(g, u, v, ear) {
-  const rh = g.rh;
-  const du = u - g.uh;
-  if (du * du + v * v <= rh * rh) return true;
+  const rh = g.rh, du = u - g.uh;
+  if (du * du + v * v <= rh * rh) return 1;
   for (const s of g.segs) {
     const uu = u - s.u;
     let bt = s.b * (1 + g.tp * 0.35 * clamp(uu / s.a, -1, 1));
     if (bt < 0.6) bt = 0.6;
-    if (Math.pow(Math.abs(uu) / s.a, g.n) + Math.pow(Math.abs(v) / bt, g.n) <= 1) return true;
+    if (Math.pow(Math.abs(uu) / s.a, g.n) + Math.pow(Math.abs(v) / bt, g.n) <= 1) return 1;
   }
-  const er = Math.max(0.9, rh * 0.38), eu = g.uh - rh * 0.15;
-  const av = Math.abs(v);
-  if (ear === 1) {
-    const ev = rh * 0.95;
-    if (Math.pow((u - eu) / (er * 0.8), 2) + Math.pow((av - ev) / (er * 1.6), 2) <= 1) return true;
+  const er = Math.max(1.2, rh * 0.42), eu = g.uh - rh * 0.4, av = Math.abs(v);
+  if (ear === 0) {
+    const ev = rh * 0.78, d2 = (u - eu) * (u - eu) + (av - ev) * (av - ev);
+    if (d2 <= er * er) return d2 <= er * er * 0.3 && er >= 1.8 ? 2 : 1;
+  } else if (ear === 1) {
+    const ev = rh * 0.85, q = Math.pow((u - eu) / (er * 0.8), 2) + Math.pow((av - ev) / (er * 1.5), 2);
+    if (q <= 1) return q <= 0.35 && er >= 1.8 ? 2 : 1;
   } else if (ear === 2) {
-    const ev = rh * 1.05;
-    if (Math.pow((u - eu + er * 0.4) / (er * 1.5), 2) + Math.pow((av - ev) / (er * 0.9), 2) <= 1) return true;
-  } else if (ear === 0) {
-    const ev = rh * 0.85;
-    if ((u - eu) * (u - eu) + (av - ev) * (av - ev) <= er * er) return true;
+    const ev = rh * 0.95;
+    if (Math.pow((u - eu + er * 0.9) / (er * 1.4), 2) + Math.pow((av - ev) / (er * 0.85), 2) <= 1) return 1;
   }
-  return false;
+  return 0;
 }
 function rhoAt(g, th) {
   const s0 = g.segs[0], c = Math.cos(th), s = Math.sin(th);
@@ -1334,7 +1333,7 @@ function rhoAt(g, th) {
 const spriteCache = new Map();
 function bodySprite(hue, r, carn, light, look, dirQ, sh, baby) {
   const qe = Math.round(sh[0] * 3) / 3, qb = Math.round(sh[1] * 2) / 2, qh = Math.round(sh[3] * 3) / 3, qt = Math.round(sh[4] * 2) / 2, seg = clamp(Math.floor(sh[2]), 1, 3);
-  const key = `${hue}|${r}|${carn}|${light}|${look[0]}|${look[1]}|${look[3]}|${dirQ}|${qe}|${qb}|${seg}|${qh}|${qt}|${baby}`;
+  const key = `${hue}|${r}|${light}|${look[0]}|${look[1]}|${look[3]}|${dirQ}|${qe}|${qb}|${seg}|${qh}|${qt}|${baby}`;
   let ent = spriteCache.get(key);
   if (ent) return ent;
   if (spriteCache.size > 4000) spriteCache.clear();
@@ -1347,20 +1346,24 @@ function bodySprite(hue, r, carn, light, look, dirQ, sh, baby) {
   for (let py = 0; py < d; py++) {
     for (let px = 0; px < d; px++) {
       const dx = px - R, dy = py - R, u = dx * ca + dy * sa, v = -dx * sa + dy * ca;
-      if (inBody(g, u, v, look[3])) mask[py * d + px] = 1;
+      mask[py * d + px] = inBody(g, u, v, look[3]);
     }
   }
+  const accH = (look[0] * 30 + 15) % 360;
   for (let py = 0; py < d; py++) {
     for (let px = 0; px < d; px++) {
-      if (!mask[py * d + px]) continue;
+      const m = mask[py * d + px];
+      if (!m) continue;
       const dx = px - R, dy = py - R, u = dx * ca + dy * sa, v = -dx * sa + dy * ca;
       const edge = px === 0 || py === 0 || px === d - 1 || py === d - 1 || !mask[py * d + px - 1] || !mask[py * d + px + 1] || !mask[(py - 1) * d + px] || !mask[(py + 1) * d + px];
       const shade = (dx + dy) / (2 * R + 1);
-      let L = light + (shade < -0.3 ? 12 : shade > 0.35 ? -9 : 0);
+      let L = light + (shade < -0.3 ? 5 : shade > 0.35 ? -7 : 0);
       if (!edge) {
-        if (!mask[(py - 1) * d + px] || !mask[py * d + px - 1]) L += 12;
-        else if (!mask[(py + 1) * d + px] || !mask[py * d + px + 1]) L -= 8;
+        if (!mask[(py - 1) * d + px] || !mask[py * d + px - 1]) L += 6;
+        else if (!mask[(py + 1) * d + px] || !mask[py * d + px + 1]) L -= 6;
       }
+      const dh = u - g.uh;
+      if (dh > g.rh * 0.2 && dh * dh + v * v <= g.rh * g.rh && Math.abs(v) < g.rh * 0.6) L += 7;
       let useAcc = false;
       if (!edge && r >= 3) {
         const ru = Math.round(u), rv = Math.round(v), bs = g.segs[0].b;
@@ -1369,27 +1372,28 @@ function bodySprite(hue, r, carn, light, look, dirQ, sh, baby) {
           case 2: useAcc = ((ru % 3) + 3) % 3 === 0 && Math.abs(v) < bs - 0.5; break;
           case 3: useAcc = hash2(Math.floor(u / 2.5), Math.floor(v / 2.5), 9) > 0.62; break;
           case 4: useAcc = Math.abs(v) < bs * 0.4 && u < g.segs[0].a * 0.2 && u > g.umin * 0.9; break;
-          case 5: useAcc = (u - g.uh) > -g.rh * 0.1 && (u - g.uh) * (u - g.uh) + v * v <= g.rh * g.rh && Math.abs(v) > g.rh * 0.15; break;
+          case 5: useAcc = dh > -g.rh * 0.1 && dh * dh + v * v <= g.rh * g.rh && Math.abs(v) > g.rh * 0.15; break;
         }
       }
-      const accH = (look[0] * 30 + 15) % 360;
-      if (useAcc) x.fillStyle = `hsl(${accH},78%,${Math.min(80, L + 8)}%)`;
-      else x.fillStyle = edge ? `hsl(${hue},45%,${Math.max(10, light - 26)}%)` : `hsl(${hue},68%,${L}%)`;
+      if (edge) x.fillStyle = `hsl(${hue},38%,${Math.max(30, light - 30)}%)`;
+      else if (m === 2) x.fillStyle = `hsl(350,80%,${Math.min(90, light + 6)}%)`;
+      else if (useAcc) x.fillStyle = `hsl(${accH},70%,${Math.min(90, L + 2)}%)`;
+      else x.fillStyle = `hsl(${hue},60%,${Math.min(95, L)}%)`;
       x.fillRect(px, py, 1, 1);
     }
   }
   if (r >= 3) {
-    const hx = R + Math.cos(ang) * (g.uh - g.rh * 0.5) - Math.sin(ang) * 0, hy = R + Math.sin(ang) * (g.uh - g.rh * 0.5);
-    x.fillStyle = 'rgba(255,255,255,.85)';
-    x.fillRect(rp(hx - g.rh * 0.45), rp(hy - g.rh * 0.55), 2, 1);
-    x.fillRect(rp(hx - g.rh * 0.45), rp(hy - g.rh * 0.55) + 1, 1, 1);
+    const hx = R + Math.cos(ang) * g.uh, hy = R + Math.sin(ang) * g.uh;
+    x.fillStyle = 'rgba(255,255,255,.9)';
+    x.fillRect(rp(hx - g.rh * 0.5), rp(hy - g.rh * 0.6), 2, 1);
+    x.fillRect(rp(hx - g.rh * 0.5), rp(hy - g.rh * 0.6) + 1, 1, 1);
   }
   ent = { cnv, g, ang, R };
   spriteCache.set(key, ent);
   return ent;
 }
 
-/* ---------- parts ---------- */
+/* ---------- parts: soft paws, feelers, wings and crests ---------- */
 const BACK_KINDS = new Set(['leg', 'fin', 'wing', 'insul', 'storage', 'sense', 'bud']);
 function drawPart(cs, o, i, side, px, py, g, front, st) {
   const q = o + 26 + i * 7, kind = KIND_KEYS[cs[q + 5]] || 'bud';
@@ -1399,41 +1403,50 @@ function drawPart(cs, o, i, side, px, py, g, front, st) {
   const wig = mot > 0.3 && !sl ? Math.sin(st.animT * 0.3 * (0.3 + spd) + i * 1.7 + (side < 0 ? 1.5 : 0)) * 0.3 * mot : 0;
   const ang = dir + a0 + wig, ux = Math.cos(ang), uy = Math.sin(ang), vx = -uy, vy = ux;
   const rho = rhoAt(g, a0 + wig), r = g.segs[0].b;
-  const L = Math.max(1, rp(len * r * 1.6) + 1);
+  const cap = 2 + Math.floor(r / 4);
+  const L = Math.min(cap + (kind === 'wing' || kind === 'fin' || kind === 'display' ? 2 : 0), Math.max(1, rp(len * r * 1.3) + 1));
   let fill;
   switch (kind) {
-    case 'leg': fill = `hsl(${hue},40%,34%)`; break;
-    case 'fin': fill = `hsl(${hue},55%,66%)`; break;
-    case 'wing': fill = `hsl(${(hue + 20) % 360},40%,82%)`; break;
-    case 'weapon': fill = '#efe6cc'; break;
-    case 'armor': fill = '#646c74'; break;
-    case 'sense': fill = `hsl(${hue},40%,32%)`; break;
-    case 'storage': fill = `hsl(${hue},50%,74%)`; break;
-    case 'insul': fill = `hsl(${hue},30%,${62 + col * 18}%)`; break;
-    case 'display': fill = `hsl(${(hue + 180) % 360},85%,62%)`; break;
-    default: fill = `hsl(${hue},45%,50%)`;
+    case 'leg': fill = `hsl(${hue},48%,66%)`; break;
+    case 'fin': fill = `hsl(${(hue + 170) % 360},70%,86%)`; break;
+    case 'wing': fill = `hsl(${(hue + 20) % 360},60%,95%)`; break;
+    case 'weapon': fill = '#fff4d6'; break;
+    case 'armor': fill = `hsl(${hue},28%,74%)`; break;
+    case 'sense': fill = `hsl(${hue},48%,64%)`; break;
+    case 'storage': fill = `hsl(${hue},60%,88%)`; break;
+    case 'insul': fill = `hsl(${hue},50%,${86 + col * 6}%)`; break;
+    case 'display': fill = `hsl(${(hue + 180) % 360},80%,84%)`; break;
+    default: fill = `hsl(${hue},52%,72%)`;
   }
   b.fillStyle = fill;
   if (kind === 'armor') {
-    for (let k = -1; k <= 1; k++) { const a2 = dir + a0 + k * 0.45; b.fillRect(rp(px + Math.cos(a2) * (rho - 0.5)), rp(py + Math.sin(a2) * (rho - 0.5)), 1, 1); }
+    for (let k = -1; k <= 1; k++) { const a2 = dir + a0 + k * 0.45; b.fillRect(rp(px + Math.cos(a2) * (rho - 0.5)), rp(py + Math.sin(a2) * (rho - 0.5)), 2, 2); }
     return;
   }
-  if (kind === 'storage') { b.fillRect(rp(px + ux * (rho + 1)) - 1, rp(py + uy * (rho + 1)) - 1, 2, 2); return; }
+  if (kind === 'storage') { b.fillRect(rp(px + ux * (rho + 1)) - 1, rp(py + uy * (rho + 1)) - 1, 3, 3); return; }
   if (kind === 'insul') {
-    for (let k = -2; k <= 2; k++) { const a2 = dir + a0 + k * 0.3; b.fillRect(rp(px + Math.cos(a2) * (rho + 0.6)), rp(py + Math.sin(a2) * (rho + 0.6)), 1, 1); }
+    for (let k = -2; k <= 2; k++) { const a2 = dir + a0 + k * 0.3; b.fillRect(rp(px + Math.cos(a2) * (rho + 0.6)), rp(py + Math.sin(a2) * (rho + 0.6)), 1, 1); b.fillRect(rp(px + Math.cos(a2) * (rho + 1.6)), rp(py + Math.sin(a2) * (rho + 1.6)), 1, 1); }
     return;
   }
   const wide = kind === 'fin' || kind === 'wing' || kind === 'display';
+  if (wide) b.globalAlpha = 0.9;
   for (let j = 0; j < L; j++) {
     const qx = px + ux * (rho + j), qy = py + uy * (rho + j);
     b.fillRect(rp(qx), rp(qy), 1, 1);
     if (wide) {
-      const sw = Math.max(0, rp(wid * (kind === 'wing' ? Math.min(j + 1, L - j) : j + 1) * 0.7));
+      const sw = Math.max(1, rp(wid * (kind === 'wing' ? Math.min(j + 1, L - j) : j + 1) * 0.8));
       for (let s = 1; s <= sw; s++) b.fillRect(rp(qx - vx * s * side), rp(qy - vy * s * side), 1, 1);
-    } else if (wid > 0.15 && j < L - 1) b.fillRect(rp(qx + vx), rp(qy + vy), 1, 1);
+    } else if (kind === 'leg' || (kind === 'weapon' && j === 0)) b.fillRect(rp(qx + vx), rp(qy + vy), 1, 1);
   }
-  if (kind === 'leg' && L >= 2) { b.fillStyle = `hsl(${hue},45%,30%)`; b.fillRect(rp(px + ux * (rho + L - 1) + vx), rp(py + uy * (rho + L - 1) + vy), 1, 1); b.fillStyle = `hsl(${hue},40%,16%)`; b.fillRect(rp(px + ux * (rho + L - 1)), rp(py + uy * (rho + L - 1)), 1, 1); }
-  if (kind === 'sense') { b.fillStyle = '#ffe36a'; b.fillRect(rp(px + ux * (rho + L)), rp(py + uy * (rho + L)), 1, 1); }
+  if (wide) b.globalAlpha = 1;
+  const ex = px + ux * (rho + L - 1), ey = py + uy * (rho + L - 1);
+  if (kind === 'leg') {
+    b.fillStyle = `hsl(${hue},45%,52%)`;
+    b.fillRect(rp(ex), rp(ey), 2, 2);
+    b.fillStyle = `hsl(${hue},50%,80%)`;
+    b.fillRect(rp(ex), rp(ey), 1, 1);
+  }
+  if (kind === 'sense') { b.fillStyle = '#fff09a'; b.fillRect(rp(px + ux * (rho + L)), rp(py + uy * (rho + L)), 2, 2); }
 }
 
 /* ---------- cute face on the head ---------- */
@@ -1441,40 +1454,40 @@ function drawFace(cs, o, px, py, ent, look, carn, st) {
   const g = ent.g, ang = ent.ang, fx = Math.cos(ang), fy = Math.sin(ang), qx = -fy, qy = fx;
   const hx = px + fx * g.uh, hy = py + fy * g.uh, rh = g.rh;
   const sl = cs[o + 12], fear = cs[o + 10], wb = cs[o + 13], baby = cs[o + 25];
-  if (rh < 2) { b.fillStyle = '#ffffff'; b.fillRect(rp(hx + fx * rh), rp(hy + fy * rh), 1, 1); return; }
-  const cx = hx + fx * rh * 0.22, cy = hy + fy * rh * 0.22, sep = Math.max(1, rh * 0.52);
-  let es = Math.max(rh >= 3 ? 2 : 1, rp(rh * 0.7)) + (baby && rh >= 3 ? 1 : 0);
-  const blink = ((st.animT + (cs[o] | 0) * 13) % 170) < 5;
+  if (rh < 2.6) { b.fillStyle = '#2a2236'; b.fillRect(rp(hx + fx * rh * 0.5 - 0.5), rp(hy + fy * rh * 0.5 - 0.5), 1, 1); return; }
+  const sep = Math.max(1.3, rh * 0.5), cx = hx + fx * rh * 0.2, cy = hy + fy * rh * 0.2;
+  let es = Math.max(2, Math.min(6, rp(rh * 0.45))) + (baby && rh >= 4 ? 1 : 0);
   if (fear > 0.6 && !sl) es += 1;
+  const blink = ((st.animT + (cs[o] | 0) * 13) % 170) < 5;
   for (const sd of [-1, 1]) {
     const ex = rp(cx + qx * sd * sep - es / 2), ey = rp(cy + qy * sd * sep - es / 2);
-    if (sl || blink) { b.fillStyle = OUTLINE; b.fillRect(ex, ey + (es >> 1), es, 1); if (es >= 3) b.fillRect(ex, ey + (es >> 1) + 1, 1, 1); continue; }
+    if (sl || blink) { b.fillStyle = '#4a3a58'; b.fillRect(ex, ey + (es >> 1), es, 1); if (es >= 3) { b.fillRect(ex, ey + (es >> 1) - 1, 1, 1); b.fillRect(ex + es - 1, ey + (es >> 1) - 1, 1, 1); } continue; }
+    b.fillStyle = fear > 0.6 ? '#c03a50' : EYE_COL[look[2]] || '#3b3354';
+    if (es >= 3) { b.fillRect(ex + 1, ey, es - 2, es); b.fillRect(ex, ey + 1, es, es - 2); } else b.fillRect(ex, ey, es, es);
+    b.fillStyle = '#1b1226';
+    if (es >= 4) { const ps = Math.max(2, es - 3); b.fillRect(ex + ((es - ps) >> 1) + rp(fx * 0.5), ey + ((es - ps) >> 1) + rp(fy * 0.5) + 1, ps, ps); }
+    else if (es === 3) b.fillRect(ex + 1 + rp(fx * 0.5), ey + 1 + rp(fy * 0.5), 1, 1);
+    else b.fillRect(ex, ey, es, es);
     b.fillStyle = '#ffffff';
-    b.fillRect(ex, ey, es, es);
-    const ps = Math.max(1, es - 1 - (fear > 0.6 ? 1 : 0));
-    const ox = rp((es - ps) / 2 + fx * (es - ps) / 2), oy = rp((es - ps) / 2 + fy * (es - ps) / 2);
-    b.fillStyle = fear > 0.6 ? '#7a1010' : EYE_COL[look[2]] || '#1a1a22';
-    b.fillRect(ex + ox, ey + oy, ps, ps);
-    if (es >= 3) { b.fillStyle = '#ffffff'; b.fillRect(ex + ox, ey + oy, 1, 1); b.fillRect(ex + ox + ps - 1, ey + oy + ps - 1, 1, 1); }
-    else if (es === 2) { b.fillStyle = '#ffffff'; b.fillRect(ex + ox, ey + oy, 1, 1); }
+    b.fillRect(ex + (es >= 3 ? 1 : 0), ey, 1, 1);
+    if (es >= 4) b.fillRect(ex + es - 2, ey + es - 2, 1, 1);
   }
-  if (!sl && rh >= 3 && CHEEK_COL[look[4]]) {
-    b.fillStyle = CHEEK_COL[look[4]];
-    for (const sd of [-1, 1]) b.fillRect(rp(cx + qx * sd * sep * 1.75 - fx * 0.5), rp(cy + qy * sd * sep * 1.75 - fy * 0.5), 1, 1);
-  }
-  if (rh >= 3 && !sl) {
-    const mx = hx + fx * rh * 0.78, my = hy + fy * rh * 0.78;
-    if (carn) { b.fillStyle = '#ffffff'; b.fillRect(rp(mx + qx * 1.2), rp(my + qy * 1.2), 1, 1); b.fillRect(rp(mx - qx * 1.2), rp(my - qy * 1.2), 1, 1); }
-    b.fillStyle = '#3a1820';
-    if (fear > 0.6) b.fillRect(rp(mx), rp(my), 1, 1);
-    else if (wb > 0.68) {
-      b.fillRect(rp(mx), rp(my), 1, 1);
-      b.fillRect(rp(mx + qx - fx * 0.7), rp(my + qy - fy * 0.7), 1, 1);
-      b.fillRect(rp(mx - qx - fx * 0.7), rp(my - qy - fy * 0.7), 1, 1);
-    } else {
-      b.fillRect(rp(mx + qx * 0.5), rp(my + qy * 0.5), 1, 1);
-      b.fillRect(rp(mx - qx * 0.5), rp(my - qy * 0.5), 1, 1);
+  if (rh >= 3.4) {
+    const nx = hx + fx * rh * 0.84, ny = hy + fy * rh * 0.84;
+    b.fillStyle = '#ff8fae';
+    b.fillRect(rp(nx - 0.5), rp(ny - 0.5), 1, 1);
+    if (!sl) {
+      const mx = nx - fx * 1.3, my = ny - fy * 1.3;
+      b.fillStyle = '#8a4660';
+      if (fear > 0.6) { b.fillRect(rp(mx), rp(my), 1, 1); }
+      else if (wb > 0.6) { b.fillRect(rp(mx + qx * 1.1), rp(my + qy * 1.1), 1, 1); b.fillRect(rp(mx - qx * 1.1), rp(my - qy * 1.1), 1, 1); b.fillRect(rp(mx - fx * 0.8), rp(my - fy * 0.8), 1, 1); }
+      else { b.fillRect(rp(mx + qx * 0.6), rp(my + qy * 0.6), 1, 1); b.fillRect(rp(mx - qx * 0.6), rp(my - qy * 0.6), 1, 1); }
+      if (carn) { b.fillStyle = '#ffffff'; b.fillRect(rp(mx + qx * 1.6), rp(my + qy * 1.6), 1, 1); b.fillRect(rp(mx - qx * 1.6), rp(my - qy * 1.6), 1, 1); }
     }
+  }
+  if (!sl && rh >= 3.4 && CHEEK_COL[look[4]]) {
+    b.fillStyle = CHEEK_COL[look[4]];
+    for (const sd of [-1, 1]) b.fillRect(rp(cx + qx * sd * sep * 1.85 + fx * rh * 0.1), rp(cy + qy * sd * sep * 1.85 + fy * rh * 0.1), 2, 1);
   }
 }
 
@@ -1487,7 +1500,7 @@ function drawCreature(cs, o, sel, wpp, ox, oy, st) {
   const bob = moving ? rp(Math.abs(Math.sin(st.animT * 0.3 * (0.3 + cs[o + 18]) + (cs[o] | 0))) * Math.min(2, r * 0.18)) : 0;
   const py = pyBase - bob;
   if (px < -30 || py < -30 || px > BW + 30 || py > BH + 30) return;
-  const hue = (rp(cs[o + 5] / 18) * 18) % 360;
+  const hue = (rp(cs[o + 5] / 12) * 12) % 360;
   st.hue = hue;
   const carn = cs[o + 6] > 0, hp = cs[o + 7], fly = cs[o + 9] > 0, sl = cs[o + 12];
   if (st.showSense || sel) {
@@ -1496,18 +1509,18 @@ function drawCreature(cs, o, sel, wpp, ox, oy, st) {
     for (let a = 0; a < TAU; a += 3 / sr) b.fillRect(rp(px + Math.cos(a) * sr), rp(py + Math.sin(a) * sr), 1, 1);
   }
   if (r < 2) {
-    b.fillStyle = `hsl(${hue},58%,50%)`;
+    b.fillStyle = `hsl(${hue},60%,74%)`;
     b.fillRect(px, py, 2, 2);
     return;
   }
   const sh = [cs[o + 20], cs[o + 21], cs[o + 22], cs[o + 23], cs[o + 24]];
   const baby = cs[o + 25] > 0 ? 1 : 0;
-  const light = hp > 66 ? 52 : hp > 33 ? 44 : 34;
+  const light = hp > 66 ? 80 : hp > 33 ? 73 : 64;
   const dirQ = ((rp(dir / (TAU / 16)) % 16) + 16) % 16;
   const look = [cs[o + 82] | 0, cs[o + 83] | 0, cs[o + 84] | 0, cs[o + 85] | 0, cs[o + 86] | 0, cs[o + 87] | 0];
   const ent = bodySprite(hue, r, carn ? 1 : 0, light, look, dirQ, sh, baby);
   const g = ent.g, R = ent.R;
-  b.fillStyle = 'rgba(0,0,0,.33)';
+  b.fillStyle = 'rgba(30,40,70,.22)';
   const sw = Math.max(r, rp(-g.umin * 0.6 + g.segs[0].b)), sy = rp(g.segs[0].b) + 1;
   if (fly) b.fillRect(px - sw + 3, pyBase + sy + 3, 2 * sw, 1);
   else { b.fillRect(px - sw + 1, pyBase + sy, 2 * sw, 1); b.fillRect(px - sw + 2, pyBase + sy + 1, 2 * sw - 2, 1); }
@@ -1523,7 +1536,7 @@ function drawCreature(cs, o, sel, wpp, ox, oy, st) {
   }
   const fx = Math.cos(ent.ang), fy = Math.sin(ent.ang), qx = -fy, qy = fx;
   if (cs[o + 11]) {
-    b.fillStyle = 'rgba(255,255,255,.85)';
+    b.fillStyle = 'rgba(255,255,255,.9)';
     const hr = g.uh + g.rh + 2;
     for (let j = -1; j <= 1; j++) b.fillRect(rp(px + fx * hr + qx * j), rp(py + fy * hr + qy * j), 1, 1);
   }
@@ -1561,8 +1574,8 @@ function drawCreature(cs, o, sel, wpp, ox, oy, st) {
   }
 }
 const PLANT_COL = {
-  0: ['#1f5a63', '#3a8d96', '#8fe0d0'], 1: ['#2d6f6a', '#46a39a', '#8fe0d0'], 2: ['#2c4a22', '#4d8a35', '#e8d65a'],
-  3: ['#1d3a17', '#3b6e2b', '#d2485a'], 4: ['#3d5a25', '#6a8f3a', '#f08ac0'], 5: ['#4b5a45', '#78907a', '#e0e8f0']
+  0: ['#2f7a88', '#5cc0c8', '#d6fff0'], 1: ['#3a8a80', '#6cd0c0', '#d6fff0'], 2: ['#3f7a30', '#7bd05a', '#fff07a'],
+  3: ['#2d5a24', '#5ab04a', '#ff7a90'], 4: ['#5a7a30', '#a0cf5a', '#ffa0d8'], 5: ['#5f7a58', '#a0c0a0', '#f2f8ff']
 };
 </script>
 <script>'use strict';
