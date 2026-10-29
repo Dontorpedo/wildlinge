@@ -17,7 +17,8 @@ const csp = [
   "form-action 'none'"
 ].join('; ');
 
-const libs = txt('node_modules/uplot/dist/uPlot.iife.min.js') + '\n;\n' + txt('node_modules/d3-hierarchy/dist/d3-hierarchy.min.js');
+const shim = "try { new Intl.NumberFormat(navigator.language); } catch (e) { Object.defineProperty(Navigator.prototype, 'language', { get: () => 'en' }); }\n";
+const libs = shim + txt('node_modules/uplot/dist/uPlot.iife.min.js') + '\n;\n' + txt('node_modules/d3-hierarchy/dist/d3-hierarchy.min.js');
 const worker = txt('web/worker.js');
 if (/<\/script/i.test(worker + libs + txt('web/app.js') + txt('web/gfx.js') + txt('web/i18n.js'))) throw new Error('script end tag inside source');
 
