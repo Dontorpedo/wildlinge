@@ -1,0 +1,42 @@
+name: build
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Rust nightly with wasm target and rust-src
+        run: |
+          rustup toolchain install nightly --profile minimal --component rust-src --target wasm32-unknown-unknown
+          rustup default nightly
+      - name: Native simulation and determinism check
+        working-directory: core
+        run: cargo run --release --example sim -- 3000 42
+      - name: Build
+        env:
+          WL_BUILD_STD: "1"
+        run: |
+          npm ci --no-audit --no-fund
+          bash tools/build.sh
+      - name: WebAssembly test
+        run: node tools/wasmtest.js dist/wildlinge_core.wasm 1500
+      - name: Browser test
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.49.1
+          npx playwright install --with-deps chromium
+          node tools/browsertest.js dist/wildlinge.html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wildlinge
+          path: |
+            dist/wildlinge.html
+            dist/wildlinge_core.wasm

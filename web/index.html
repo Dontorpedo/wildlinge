@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="/*CSP*/">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Wildlinge: an open experiment in artificial life. Bodies, brains and language emerge through evolution and learning.">
+<title>Wildlinge</title>
+<style>
+@font-face{font-family:Silkscreen;src:url(data:font/woff2;base64,/*FONT*/) format("woff2");font-display:swap}
+/*UPLOT_CSS*/
+:root{--bg:#0f1317;--panel:#171d23;--line:#26303a;--fg:#d9e0e7;--muted:#8a96a3;--acc:#6fcf6a;--warn:#e5c14a;--pink:#ff9ec7;--pix:Silkscreen,ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;font:13px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--fg)}
+header{display:flex;align-items:center;gap:14px;padding:12px 16px 0;flex-wrap:wrap}
+header h1{margin:0;font:400 22px var(--pix);letter-spacing:1px;color:#e8f0d8}
+#clock{color:var(--muted);flex:1;min-width:200px}
+select{background:#10151a;color:var(--fg);border:1px solid #34404c;border-radius:6px;padding:5px 6px;font:inherit}
+.bmc{display:inline-block;background:#ffdd00;color:#1b1b1b;font-weight:700;border-radius:8px;padding:7px 12px;text-decoration:none;border:2px solid #1b1b1b;box-shadow:2px 2px 0 #1b1b1b}
+.bmc:hover{transform:translate(-1px,-1px);box-shadow:3px 3px 0 #1b1b1b}
+#wrap{display:flex;gap:14px;padding:12px 16px 16px;flex-wrap:wrap;align-items:flex-start}
+#stage{flex:1 1 860px;min-width:0;position:sticky;top:8px}
+#world{width:100%;height:auto;display:block;border-radius:6px;image-rendering:pixelated;image-rendering:crisp-edges;box-shadow:0 8px 28px rgba(0,0,0,.5);cursor:grab;touch-action:none;background:#0b1a2b}
+#world.drag{cursor:grabbing}
+#world.tool{cursor:crosshair}
+#tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+#tools button.on{background:#3b4a2e;border-color:var(--acc);color:#fff}
+#help{color:var(--muted);font-size:12px;margin-top:4px}
+#toast{position:absolute;left:50%;bottom:70px;transform:translateX(-50%);background:rgba(20,25,18,.92);border:2px solid #e8f0d8;color:#e8f0d8;padding:6px 12px;font:400 12px var(--pix);display:none;pointer-events:none;white-space:nowrap;max-width:95%;overflow:hidden;text-overflow:ellipsis}
+#side{width:410px;max-width:100%;display:flex;flex-direction:column;gap:10px}
+#tabs{display:flex;gap:4px;flex-wrap:wrap}
+#tabs button{font:400 11px var(--pix);letter-spacing:.5px;padding:7px 9px}
+#tabs button.on{background:#3b4a2e;border-color:var(--acc);color:#fff}
+.page{display:none;flex-direction:column;gap:10px}
+.page.on{display:flex}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;overflow:hidden}
+.box>b:first-child{display:inline-block;font:400 12px var(--pix);text-transform:uppercase;letter-spacing:.9px;color:var(--muted);margin-bottom:8px}
+button{background:#232c35;color:var(--fg);border:1px solid #34404c;border-radius:6px;padding:6px 10px;margin:0;cursor:pointer;font:inherit}
+button:hover{background:#2c3742;border-color:#46535f}
+button:disabled{opacity:.5;cursor:default}
+input[type=text],input[type=number]{background:#10151a;color:var(--fg);border:1px solid #34404c;border-radius:6px;padding:6px 8px;font:inherit}
+input[type=number]{width:90px}
+#wordIn{width:180px}
+input[type=range],input[type=checkbox]{accent-color:var(--acc);vertical-align:middle}
+label{display:block;margin-top:5px;color:#c3ccd5}
+table{width:100%;border-collapse:collapse}
+td,th{padding:2px 0;vertical-align:top;border-bottom:1px solid rgba(255,255,255,.04)}
+th{text-align:left;color:var(--muted);font-weight:400}
+td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+td.l{text-align:left!important}
+.leg{color:var(--muted);font-size:12px;margin-top:4px}
+.leg span{display:inline-block;width:12px;height:3px;border-radius:2px;margin:0 4px 2px 10px;vertical-align:middle}
+#chart,#minimap,#brain{width:100%;height:auto;display:block;margin-top:8px;image-rendering:pixelated;image-rendering:crisp-edges}
+#minimap{cursor:pointer;border-radius:4px;margin-top:0}
+#brain{image-rendering:auto;background:#10151a;border-radius:6px}
+#log,#events{font-size:12px;max-height:220px;overflow:auto}
+#log{font-family:ui-monospace,Consolas,monospace}
+#log b{color:#fff}
+.muted{color:var(--muted)}
+.done{color:var(--acc);font-weight:600}
+.yes{color:var(--acc)}
+.no{color:#6b7682}
+.bar{display:inline-block;width:110px;height:7px;background:#26303a;border-radius:3px;overflow:hidden;vertical-align:middle}
+.bar i{display:block;height:100%}
+.goal td{color:var(--warn)}
+a.w{color:#9fd8ff;text-decoration:none;cursor:pointer}
+a.w:hover{text-decoration:underline}
+h4{margin:10px 0 4px;font:400 11px var(--pix);color:var(--muted);letter-spacing:.6px}
+.q{border-left:3px solid var(--acc);padding:4px 8px;margin:6px 0;background:rgba(111,207,106,.06)}
+.q b{color:#e8f0d8}
+.modal{position:fixed;inset:0;background:rgba(5,8,10,.75);display:none;align-items:center;justify-content:center;z-index:10;padding:16px}
+.modal .card{background:var(--panel);border:2px solid #e8f0d8;border-radius:10px;max-width:560px;width:100%;padding:20px;max-height:90vh;overflow:auto}
+.modal h2{margin:0 0 10px;font:400 18px var(--pix);color:#e8f0d8}
+.modal ul{padding-left:18px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px}
+.prog{height:8px;background:#26303a;border-radius:4px;overflow:hidden;margin-top:8px}
+.prog i{display:block;height:100%;width:0;background:var(--acc)}
+#phylo svg{display:block;width:100%;height:auto}
+#phylo{max-height:420px;overflow:auto;margin-top:6px}
+.uplot{font-family:inherit}
+.u-legend{font-size:11px;color:var(--fg)}
+.u-legend .u-marker{width:10px;height:3px}
+#selHead{margin-bottom:6px}
+#selName{font:400 14px var(--pix);color:#e8f0d8}
+footer{color:var(--muted);font-size:12px;padding:0 16px 20px}
+@media (max-width:900px){#side{width:100%}#stage{position:static}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Wildlinge</h1>
+  <span id="clock" data-i18n="app.loading">Loading world ...</span>
+  <select id="langSel" aria-label="Language"><option value="en">English</option><option value="de">Deutsch</option></select>
+  <a id="bmc" class="bmc" target="_blank" rel="noopener noreferrer">Buy me a coffee</a>
+</header>
+<div id="wrap">
+<div id="stage">
+  <canvas id="world" width="1600" height="800"></canvas>
+  <div id="toast"></div>
+  <div id="tools">
+    <button data-tool="select" class="on" title="1" data-i18n="tool.select"></button>
+    <button data-tool="stroke" title="2" data-i18n="tool.stroke"></button>
+    <button data-tool="scold" title="3" data-i18n="tool.scold"></button>
+    <button data-tool="teach" title="4" data-i18n="tool.teach"></button>
+    <button data-tool="say" title="5" data-i18n="tool.say"></button>
+    <button data-tool="food" title="6" data-i18n="tool.food"></button>
+    <button data-tool="mirror" title="7" data-i18n="tool.mirror"></button>
+    <input type="text" id="wordIn" maxlength="40" data-i18n-ph="ph.words">
+  </div>
+  <div id="help" data-i18n="help.keys"></div>
+</div>
+<div id="side">
+  <div class="box">
+    <div class="row">
+      <button id="btnRun" data-i18n="btn.pause"></button><button id="btnZoomIn">+</button><button id="btnZoomOut">-</button>
+      <button id="btnExport" data-i18n="btn.export"></button><button id="btnImport" data-i18n="btn.import"></button><button id="btnReset" data-i18n="btn.reset"></button>
+    </div>
+    <input type="file" id="fileImport" accept=".json,.gz,application/json,application/gzip" hidden>
+    <label><span data-i18n="opt.speed"></span> <input id="speed" type="range" min="1" max="40" value="1"> <span id="speedVal">1x</span></label>
+    <label><input type="checkbox" id="follow"> <span data-i18n="opt.follow"></span></label>
+    <label><input type="checkbox" id="showSense"> <span data-i18n="opt.sense"></span></label>
+    <label><input type="checkbox" id="showBubbles" checked> <span data-i18n="opt.bubbles"></span></label>
+    <label><input type="checkbox" id="showMeaning" checked> <span data-i18n="opt.meaning"></span></label>
+    <div id="saveState" class="muted" style="margin-top:6px"></div>
+  </div>
+  <div id="tabs">
+    <button data-tab="world" class="on" data-i18n="tab.world"></button>
+    <button data-tab="creature" data-i18n="tab.creature"></button>
+    <button data-tab="research" data-i18n="tab.research"></button>
+    <button data-tab="lab" data-i18n="tab.lab"></button>
+    <button data-tab="about" data-i18n="tab.about"></button>
+  </div>
+
+  <div class="page on" id="page-world">
+    <div class="box"><b data-i18n="box.map"></b><canvas id="minimap" width="240" height="144"></canvas></div>
+    <div class="box"><b data-i18n="box.mine"></b><div id="mine"></div></div>
+    <div class="box"><b data-i18n="box.goals"></b><table id="goals"></table></div>
+    <div class="box"><b data-i18n="box.stats"></b>
+      <table id="stats"></table>
+      <canvas id="chart" width="170" height="60"></canvas>
+      <div class="leg"><span style="background:#6fcf6a"></span><i data-i18n="leg.herb"></i><span style="background:#e0645a"></span><i data-i18n="leg.carn"></i><span style="background:#9fd8ff"></span><i data-i18n="leg.wb"></i> <em id="chartMax" style="float:right"></em></div>
+    </div>
+    <div class="box"><b data-i18n="box.lang"></b><div id="lexicon"></div></div>
+    <div class="box"><b data-i18n="box.species"></b><table id="species"></table></div>
+    <div class="box"><b data-i18n="box.events"></b><div id="events"></div></div>
+    <div class="box"><b data-i18n="box.log"></b><div id="log"></div></div>
+  </div>
+
+  <div class="page" id="page-creature">
+    <div class="box"><b data-i18n="box.sel"></b>
+      <div id="selHead" style="display:none">
+        <div class="row"><span id="selName"></span><span id="selId" class="muted"></span><button id="btnAdopt"></button><button id="btnPyphi" data-i18n="btn.pyphi"></button></div>
+        <div class="row"><input type="text" id="renameIn" maxlength="16" data-i18n-ph="ph.name" style="width:150px"><button id="btnRename" data-i18n="btn.rename"></button></div>
+      </div>
+      <div id="info"></div>
+    </div>
+    <div class="box"><b data-i18n="box.brain"></b><canvas id="brain" width="760" height="440"></canvas><div class="muted" id="brainTip" style="min-height:18px"></div><div class="muted" data-i18n="sel.brainHint"></div></div>
+  </div>
+
+  <div class="page" id="page-research">
+    <div class="box"><b data-i18n="tab.research"></b><div id="research"></div></div>
+    <div class="box"><b data-i18n="box.charts"></b>
+      <div class="row"><span data-i18n="res.chartPick"></span> <select id="chartSet"></select><button id="btnCsv" data-i18n="btn.csv"></button></div>
+      <div id="uplot"></div>
+      <div class="muted" id="chartNote" style="display:none" data-i18n="res.ownScale"></div>
+    </div>
+    <div class="box"><b data-i18n="box.phylo"></b>
+      <div class="row"><button id="btnNewick" data-i18n="btn.newick"></button></div>
+      <div class="muted" data-i18n="res.phyloHint"></div>
+      <div id="phylo"></div>
+    </div>
+  </div>
+
+  <div class="page" id="page-lab">
+    <div class="box"><b data-i18n="box.lab"></b>
+      <div class="muted" data-i18n="lab.intro"></div>
+      <label><span data-i18n="lab.knock"></span> <select id="labKnock"></select></label>
+      <label><span data-i18n="lab.reps"></span> <input type="number" id="labReps" min="2" max="8" value="3"></label>
+      <label><span data-i18n="lab.steps"></span> <input type="number" id="labSteps" min="300" max="30000" step="300" value="3000"></label>
+      <label><span data-i18n="lab.seed"></span> <input type="number" id="labSeed" min="1" max="4294967295" value="1"></label>
+      <div class="row"><button id="btnLab" data-i18n="btn.labStart"></button><button id="btnLabStop" data-i18n="btn.labStop" disabled></button><button id="btnLabCsv" data-i18n="btn.labCsv" disabled></button></div>
+      <div class="prog"><i id="labBar"></i></div>
+      <div id="labState" class="muted" style="margin-top:4px"></div>
+      <div id="labOut"></div>
+    </div>
+  </div>
+
+  <div class="page" id="page-about">
+    <div class="box"><b>Wildlinge</b>
+      <p data-i18n="about.text"></p>
+      <p data-i18n="about.sci"></p>
+      <p class="muted" data-i18n="about.libs"></p>
+      <p><span data-i18n="about.coffee"></span> <a id="bmc2" class="bmc" target="_blank" rel="noopener noreferrer">Buy me a coffee</a></p>
+      <p class="muted">v0.7.0 | <a class="w" href="https://github.com/Dontorpedo/wildlinge" target="_blank" rel="noopener noreferrer">github.com/Dontorpedo/wildlinge</a></p>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="modal" id="welcome"><div class="card">
+  <h2 data-i18n="welcome.title"></h2>
+  <p data-i18n="welcome.p1"></p>
+  <p><b data-i18n="welcome.what"></b></p>
+  <ul id="welcomeList"></ul>
+  <p class="muted" data-i18n="welcome.note"></p>
+  <div class="row"><button id="welcomeOk" data-i18n="btn.ok"></button></div>
+</div></div>
+<div class="modal" id="away"><div class="card">
+  <h2 data-i18n="away.title"></h2>
+  <div id="awayBody"></div>
+  <div class="row"><button id="awayOk" data-i18n="btn.continue"></button></div>
+</div></div>
+
+<script type="application/octet-stream" id="wasm-b64">/*WASM*/</script>
+<script type="text/plain" id="worker-src">/*WORKER*/</script>
+<script>/*LIBS*/</script>
+<script>/*WORKER*/</script>
+<script>/*I18N*/</script>
+<script>/*GFX*/</script>
+<script>/*APP*/</script>
+</body>
+</html>

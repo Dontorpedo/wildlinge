@@ -1,0 +1,17 @@
+{
+  "name": "wildlinge",
+  "version": "0.7.0",
+  "private": true,
+  "description": "Wildlinge: an open experiment in artificial life (Rust/WebAssembly core, browser UI)",
+  "license": "MIT",
+  "scripts": {
+    "build": "bash tools/build.sh",
+    "test": "node tools/wasmtest.js dist/wildlinge_core.wasm 3000 && node tools/browsertest.js"
+  },
+  "devDependencies": {
+    "@fontsource/silkscreen": "5.3.0",
+    "binaryen": "123.0.0",
+    "d3-hierarchy": "3.1.2",
+    "uplot": "1.6.32"
+  }
+}

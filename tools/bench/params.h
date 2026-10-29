@@ -1,0 +1,11 @@
+#define NC 500
+#define NF 5000
+#define NIN 69
+#define NH 12
+#define NHMAX 32
+#define NOUT 9
+#define CELL 50
+#define WW 4000
+#define WH 2400
+#define GC 80
+#define GR 48

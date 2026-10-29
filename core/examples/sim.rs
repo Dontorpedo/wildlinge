@@ -1,0 +1,62 @@
+//! Native test run: cargo run --release --example sim -- [steps] [seed]
+use std::time::Instant;
+use wildlinge_core::api;
+use wildlinge_core::metrics;
+use wildlinge_core::world::World;
+
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    let steps: u32 = args.get(1).and_then(|s| s.parse().ok()).unwrap_or(12000);
+    let seed: u32 = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(42);
+    let t0 = Instant::now();
+    let mut w = World::new(seed);
+    w.mirrors.push([2000.0, 1200.0]);
+    w.mirrors.push([1000.0, 800.0]);
+    println!("init {:.0} ms, pop {}", t0.elapsed().as_secs_f64() * 1000.0, w.creatures.len());
+    let t1 = Instant::now();
+    let mut pop_sum = 0usize;
+    for i in 1..=steps {
+        w.step();
+        pop_sum += w.creatures.len();
+        if i == 1500 {
+            let id = w.creatures[0].id;
+            w.adopt(id, Some(true), Some("Testling"));
+            let (x, y) = (w.creatures[0].x, w.creatures[0].y);
+            w.teach(&["kalu".to_string()], x, y);
+            w.stroke(0, 1.0);
+        }
+        if i % 3000 == 0 {
+            let r = w.series.last().unwrap();
+            let el = t1.elapsed().as_secs_f64() * 1000.0;
+            println!(
+                "{:>6} pop {:>3} carn {:>3} sp {:>2} gen {:>3} | neur {:.1} conns {:.0} cert {:.2} wb {:.2} | rate {:.2} sent {} H {:.2} MI {:.2} topo {:.2} | phi {:.3} lz {:.2} | parts {:.1} kinds {} | modes c{} n{} e{:.2} x{} | {:.2} ms/step {:.1} us/cr",
+                i, r.pop, r.carn, r.species, w.max_gen, r.neurons, r.conns, r.certainty, r.wellbeing, r.understand, w.sentences, r.entropy, r.mi, r.topo,
+                r.phi, r.lz, r.parts, r.kinds, r.m_change, r.m_novelty, r.m_ecology, r.m_complexity, el / i as f64, el * 1000.0 / pop_sum as f64
+            );
+        }
+    }
+    let json = w.to_json(0.0);
+    let w2 = World::from_json(&json);
+    match w2 {
+        Ok(mut w2) => {
+            w2.step();
+            println!("save {:.2} MB, restore ok pop {}", json.len() as f64 / 1048576.0, w2.creatures.len());
+        }
+        Err(e) => println!("RESTORE FAILED {}", e),
+    }
+    let mut a = World::new(7);
+    let mut b = World::new(7);
+    for _ in 0..600 {
+        a.step();
+        b.step();
+    }
+    let same = a.creatures.len() == b.creatures.len() && a.creatures.iter().zip(b.creatures.iter()).all(|(x, y)| x.x == y.x && x.y == y.y && x.energy == y.energy);
+    println!("deterministic (same seed, 600 steps): {}", same);
+    println!("milestones: {:?}", w.milestones.keys().collect::<Vec<_>>());
+    println!("newick: {}...", &metrics::newick(&w).chars().take(160).collect::<String>());
+    let p = api::panel(&w, w.creatures[0].id);
+    println!("panel bytes {}", p.len());
+    for e in w.events.iter().rev().take(8) {
+        println!("  ev {} {:?}", e.k, e.p);
+    }
+}
