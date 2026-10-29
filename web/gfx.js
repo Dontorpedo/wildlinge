@@ -1,11 +1,13 @@
 'use strict';
 /* Wildlinge graphics: pixel terrain and creatures with mutable shapes (elongation, boxiness, segments, head, taper). */
-const WORLD_W = 4000, WORLD_H = 2400, TAU = Math.PI * 2, VIEW_W = 1600, VIEW_H = 800, YEAR_LEN = 6000, DAY_LEN = 400, CS_STRIDE = 82, MEAT_DECAY = 1500;
-const S = 3, BW = Math.ceil(VIEW_W / S), BH = Math.ceil(VIEW_H / S), TPX = 4;
+const WORLD_W = 4000, WORLD_H = 2400, TAU = Math.PI * 2, VIEW_W = 1600, VIEW_H = 800, YEAR_LEN = 6000, DAY_LEN = 400, CS_STRIDE = 90, MEAT_DECAY = 1500;
+const S = 2, BW = Math.ceil(VIEW_W / S), BH = Math.ceil(VIEW_H / S), TPX = 3;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const rp = Math.round;
 const OUTLINE = '#141912';
 const KIND_KEYS = ['leg', 'fin', 'wing', 'weapon', 'armor', 'sense', 'storage', 'insul', 'display', 'bud'];
+const EYE_COL = ['#1a1a22', '#3a7bd5', '#2e9e5b', '#8a4b1f', '#8e44c8', '#e0a020', '#d03060', '#20b8c8'];
+const CHEEK_COL = ['rgba(255,120,160,.8)', 'rgba(255,160,70,.8)', null, 'rgba(110,170,255,.8)'];
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 
 const bufCanvas = document.createElement('canvas');
@@ -48,18 +50,29 @@ const PAL = {
 };
 const hexRgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 
+function drawTree(x2, x, y, winter, big) {
+  const o = winter ? ['#4a5a5e', '#8fa4a8', '#dfeaee', '#ffffff'] : ['#10200d', '#1f4a1c', '#33702b', '#5fa04a'];
+  x2.fillStyle = winter ? '#3a2e24' : '#4a3020'; x2.fillRect(x, y + 2, 2, 3);
+  x2.fillStyle = o[0]; x2.fillRect(x - 3, y - 1, 8, 4); x2.fillRect(x - 2, y - 3, 6, 3); x2.fillRect(x - 1, y - 5, 4, 3);
+  x2.fillStyle = o[1]; x2.fillRect(x - 2, y - 1, 6, 3); x2.fillRect(x - 1, y - 3, 4, 2); x2.fillRect(x, y - 4, 2, 1);
+  x2.fillStyle = o[2]; x2.fillRect(x - 2, y - 1, 3, 1); x2.fillRect(x - 1, y - 3, 2, 1);
+  x2.fillStyle = o[3]; x2.fillRect(x - 1, y - 3, 1, 1);
+  if (big && !winter) { x2.fillStyle = '#d2485a'; x2.fillRect(x + 2, y, 1, 1); }
+}
 function buildTerrain(map, winter, seed) {
-  const { gw, gh, bio } = map, tw = WORLD_W / TPX, th = WORLD_H / TPX, c2 = document.createElement('canvas');
+  const { gw, gh, bio } = map, tw = Math.ceil(WORLD_W / TPX), th = Math.ceil(WORLD_H / TPX), c2 = document.createElement('canvas');
   c2.width = tw; c2.height = th;
   const x2 = c2.getContext('2d'), img = x2.createImageData(tw, th), d = img.data;
   const pal = (winter ? PAL.winter : PAL.summer).map(row => row.map(hexRgb));
   const bioAt = (wx, wy) => bio[clamp((wy / 20) | 0, 0, gh - 1) * gw + clamp((wx / 20) | 0, 0, gw - 1)];
+  const cls = new Uint8Array(tw * th);
   for (let y = 0; y < th; y++) {
     for (let x = 0; x < tw; x++) {
-      const wx = x * TPX + 2, wy = y * TPX + 2;
+      const wx = x * TPX + 1.5, wy = y * TPX + 1.5;
       const jx = (vnoise(wx / 45, wy / 45, seed + 1) - 0.5) * 26, jy = (vnoise(wx / 45 + 50, wy / 45, seed + 2) - 0.5) * 26;
       const bi = bioAt(wx + jx, wy + jy);
-      const fine = vnoise(wx / 14, wy / 14, seed + 3) * 0.6 + vnoise(wx / 40, wy / 40, seed + 4) * 0.4;
+      cls[y * tw + x] = bi;
+      const fine = vnoise(wx / 9, wy / 9, seed + 3) * 0.55 + vnoise(wx / 30, wy / 30, seed + 4) * 0.45;
       const lvl = fine * 4 + (BAYER[(y & 3) * 4 + (x & 3)] / 16 - 0.5) * 1.1;
       let col = pal[bi][clamp(lvl | 0, 0, 3)];
       if (bi === 5 && vnoise(wx / 90, wy / 90, seed + 5) > 0.68) col = winter ? [250, 252, 253] : [232, 238, 242];
@@ -67,26 +80,54 @@ function buildTerrain(map, winter, seed) {
       d[o] = col[0]; d[o + 1] = col[1]; d[o + 2] = col[2]; d[o + 3] = 255;
     }
   }
+  /* shore foam and darker deep-water rim */
+  const foam = winter ? [244, 250, 252] : [214, 236, 244];
+  for (let y = 2; y < th - 2; y++) {
+    for (let x = 2; x < tw - 2; x++) {
+      const bi = cls[y * tw + x];
+      if (bi > 1) continue;
+      const near = cls[y * tw + x - 2] > 1 || cls[y * tw + x + 2] > 1 || cls[(y - 2) * tw + x] > 1 || cls[(y + 2) * tw + x] > 1;
+      if (near && ((x + y) & 1) === 0) { const o = (y * tw + x) * 4; d[o] = foam[0]; d[o + 1] = foam[1]; d[o + 2] = foam[2]; }
+    }
+  }
   x2.putImageData(img, 0, 0);
   const rng = mulberry32(seed * 31 + 7);
-  for (let i = 0; i < 9000; i++) {
-    const x = (rng() * tw) | 0, y = (rng() * th) | 0, bi = bioAt(x * TPX, y * TPX);
+  const N = Math.floor(tw * th / 35);
+  for (let i = 0; i < N; i++) {
+    const x = (rng() * (tw - 8) + 4) | 0, y = (rng() * (th - 8) + 4) | 0, bi = cls[y * tw + x], r = rng();
     if (bi === 3) {
-      x2.fillStyle = winter ? '#5d6e72' : '#13220f'; x2.fillRect(x - 1, y + 1, 3, 1);
-      x2.fillStyle = winter ? '#e9f0f3' : '#2e5a27'; x2.fillRect(x - 1, y - 1, 3, 2);
-      x2.fillStyle = winter ? '#ffffff' : '#467a35'; x2.fillRect(x, y - 2, 1, 1);
-    } else if (bi === 2 && rng() < 0.5) {
-      x2.fillStyle = winter ? '#ffffff' : '#6f9a45'; x2.fillRect(x, y, 1, 1);
-      x2.fillStyle = winter ? '#b8c6cf' : '#2f4d27'; x2.fillRect(x - 1, y + 1, 1, 1); x2.fillRect(x + 1, y + 1, 1, 1);
-    } else if (bi === 2 && !winter && rng() < 0.08) {
-      x2.fillStyle = ['#f2d24a', '#f07ab0', '#ffffff'][(rng() * 3) | 0]; x2.fillRect(x, y, 1, 1);
-    } else if (bi === 4 && rng() < 0.15) {
-      x2.fillStyle = '#5e7a3a'; x2.fillRect(x, y - 2, 1, 3); x2.fillRect(x - 1, y - 1, 1, 1);
-    } else if (bi === 5 && rng() < 0.4) {
-      x2.fillStyle = '#2f302b'; x2.fillRect(x, y + 1, 2, 1);
-      x2.fillStyle = winter ? '#ffffff' : '#9c9e92'; x2.fillRect(x, y, 2, 1);
-    } else if (bi === 1 && !winter && rng() < 0.3) {
-      x2.fillStyle = '#5a8a4a'; x2.fillRect(x, y - 1, 1, 2);
+      if (r < 0.5) drawTree(x2, x, y, winter, r < 0.06);
+      else { x2.fillStyle = winter ? '#e9f0f3' : '#3f7a33'; x2.fillRect(x, y - 1, 1, 2); x2.fillRect(x + 1, y, 1, 1); }
+    } else if (bi === 2) {
+      if (r < 0.5) {
+        x2.fillStyle = winter ? '#ffffff' : '#78a84c'; x2.fillRect(x, y - 1, 1, 2);
+        x2.fillStyle = winter ? '#b8c6cf' : '#2f4d27'; x2.fillRect(x - 1, y, 1, 1); x2.fillRect(x + 1, y, 1, 1);
+      } else if (!winter && r < 0.62) {
+        const c = ['#f2d24a', '#f07ab0', '#ffffff', '#8fb8ff', '#ff9a4a'][(rng() * 5) | 0];
+        x2.fillStyle = c; x2.fillRect(x - 1, y, 3, 1); x2.fillRect(x, y - 1, 1, 3);
+        x2.fillStyle = '#f2d24a'; x2.fillRect(x, y, 1, 1);
+      } else if (r < 0.66) {
+        x2.fillStyle = winter ? '#9aa6ae' : '#6b6e66'; x2.fillRect(x, y, 3, 2);
+        x2.fillStyle = winter ? '#ffffff' : '#9c9e92'; x2.fillRect(x, y, 2, 1);
+      }
+    } else if (bi === 4) {
+      if (r < 0.2) {
+        x2.fillStyle = winter ? '#6d7f5a' : '#3f6a2a'; x2.fillRect(x, y - 3, 2, 5); x2.fillRect(x - 2, y - 2, 2, 1); x2.fillRect(x + 2, y - 1, 2, 1);
+        x2.fillStyle = winter ? '#dfe8d8' : '#7fb04a'; x2.fillRect(x, y - 3, 1, 3);
+      } else if (r < 0.4) {
+        x2.fillStyle = '#8a7340'; x2.fillRect(x, y, 3, 1);
+        x2.fillStyle = '#e0cd92'; x2.fillRect(x, y - 1, 2, 1);
+      }
+    } else if (bi === 5) {
+      if (r < 0.45) {
+        x2.fillStyle = '#2f302b'; x2.fillRect(x, y + 1, 4, 1); x2.fillRect(x + 1, y - 1, 3, 2);
+        x2.fillStyle = winter ? '#d8e0e4' : '#8a8c80'; x2.fillRect(x + 1, y, 3, 1);
+        x2.fillStyle = '#ffffff'; x2.fillRect(x + 1, y - 1, 2, 1);
+      }
+    } else if (bi === 1 && !winter && r < 0.18) {
+      x2.fillStyle = '#4a8a46'; x2.fillRect(x, y, 3, 2);
+      x2.fillStyle = '#7fc46a'; x2.fillRect(x, y, 2, 1);
+      if (r < 0.03) { x2.fillStyle = '#ffb6d0'; x2.fillRect(x + 1, y - 1, 1, 1); }
     }
   }
   return c2;
@@ -125,7 +166,7 @@ function geom(r, sh, baby) {
   const R = Math.ceil(Math.max(umax, -umin, bb, rh * 1.6, uh + rh * 1.2)) + 2;
   return { segs, n, tp, rh, uh, umax, umin, R };
 }
-function inBody(g, u, v, carn) {
+function inBody(g, u, v, ear) {
   const rh = g.rh;
   const du = u - g.uh;
   if (du * du + v * v <= rh * rh) return true;
@@ -137,10 +178,13 @@ function inBody(g, u, v, carn) {
   }
   const er = Math.max(0.9, rh * 0.38), eu = g.uh - rh * 0.15;
   const av = Math.abs(v);
-  if (carn) {
+  if (ear === 1) {
     const ev = rh * 0.95;
     if (Math.pow((u - eu) / (er * 0.8), 2) + Math.pow((av - ev) / (er * 1.6), 2) <= 1) return true;
-  } else {
+  } else if (ear === 2) {
+    const ev = rh * 1.05;
+    if (Math.pow((u - eu + er * 0.4) / (er * 1.5), 2) + Math.pow((av - ev) / (er * 0.9), 2) <= 1) return true;
+  } else if (ear === 0) {
     const ev = rh * 0.85;
     if ((u - eu) * (u - eu) + (av - ev) * (av - ev) <= er * er) return true;
   }
@@ -154,9 +198,9 @@ function rhoAt(g, th) {
 }
 
 const spriteCache = new Map();
-function bodySprite(hue, r, carn, light, patt, dirQ, sh, baby) {
+function bodySprite(hue, r, carn, light, look, dirQ, sh, baby) {
   const qe = Math.round(sh[0] * 3) / 3, qb = Math.round(sh[1] * 2) / 2, qh = Math.round(sh[3] * 3) / 3, qt = Math.round(sh[4] * 2) / 2, seg = clamp(Math.floor(sh[2]), 1, 3);
-  const key = `${hue}|${r}|${carn}|${light}|${patt}|${dirQ}|${qe}|${qb}|${seg}|${qh}|${qt}|${baby}`;
+  const key = `${hue}|${r}|${carn}|${light}|${look[0]}|${look[1]}|${look[3]}|${dirQ}|${qe}|${qb}|${seg}|${qh}|${qt}|${baby}`;
   let ent = spriteCache.get(key);
   if (ent) return ent;
   if (spriteCache.size > 4000) spriteCache.clear();
@@ -169,7 +213,7 @@ function bodySprite(hue, r, carn, light, patt, dirQ, sh, baby) {
   for (let py = 0; py < d; py++) {
     for (let px = 0; px < d; px++) {
       const dx = px - R, dy = py - R, u = dx * ca + dy * sa, v = -dx * sa + dy * ca;
-      if (inBody(g, u, v, carn)) mask[py * d + px] = 1;
+      if (inBody(g, u, v, look[3])) mask[py * d + px] = 1;
     }
   }
   for (let py = 0; py < d; py++) {
@@ -178,19 +222,33 @@ function bodySprite(hue, r, carn, light, patt, dirQ, sh, baby) {
       const dx = px - R, dy = py - R, u = dx * ca + dy * sa, v = -dx * sa + dy * ca;
       const edge = px === 0 || py === 0 || px === d - 1 || py === d - 1 || !mask[py * d + px - 1] || !mask[py * d + px + 1] || !mask[(py - 1) * d + px] || !mask[(py + 1) * d + px];
       const shade = (dx + dy) / (2 * R + 1);
-      let L = light + (shade < -0.3 ? 14 : shade > 0.35 ? -8 : 0);
-      if (!edge && r >= 3) {
-        if (patt === 1 && (Math.round(u) * 7 + Math.round(v) * 13 + 1000) % 5 === 0) L -= 12;
-        if (patt === 2 && Math.round(u) % 2 === 0 && Math.abs(v) < g.segs[0].b - 1) L -= 10;
+      let L = light + (shade < -0.3 ? 12 : shade > 0.35 ? -9 : 0);
+      if (!edge) {
+        if (!mask[(py - 1) * d + px] || !mask[py * d + px - 1]) L += 12;
+        else if (!mask[(py + 1) * d + px] || !mask[py * d + px + 1]) L -= 8;
       }
-      x.fillStyle = edge ? `hsl(${hue},40%,${Math.max(10, light - 24)}%)` : `hsl(${hue},58%,${L}%)`;
+      let useAcc = false;
+      if (!edge && r >= 3) {
+        const ru = Math.round(u), rv = Math.round(v), bs = g.segs[0].b;
+        switch (look[1]) {
+          case 1: useAcc = (ru * 7 + rv * 13 + 1000) % 5 === 0; break;
+          case 2: useAcc = ((ru % 3) + 3) % 3 === 0 && Math.abs(v) < bs - 0.5; break;
+          case 3: useAcc = hash2(Math.floor(u / 2.5), Math.floor(v / 2.5), 9) > 0.62; break;
+          case 4: useAcc = Math.abs(v) < bs * 0.4 && u < g.segs[0].a * 0.2 && u > g.umin * 0.9; break;
+          case 5: useAcc = (u - g.uh) > -g.rh * 0.1 && (u - g.uh) * (u - g.uh) + v * v <= g.rh * g.rh && Math.abs(v) > g.rh * 0.15; break;
+        }
+      }
+      const accH = (look[0] * 30 + 15) % 360;
+      if (useAcc) x.fillStyle = `hsl(${accH},78%,${Math.min(80, L + 8)}%)`;
+      else x.fillStyle = edge ? `hsl(${hue},45%,${Math.max(10, light - 26)}%)` : `hsl(${hue},68%,${L}%)`;
       x.fillRect(px, py, 1, 1);
     }
   }
   if (r >= 3) {
     const hx = R + Math.cos(ang) * (g.uh - g.rh * 0.5) - Math.sin(ang) * 0, hy = R + Math.sin(ang) * (g.uh - g.rh * 0.5);
-    x.fillStyle = `hsl(${hue},80%,${Math.min(92, light + 30)}%)`;
-    x.fillRect(rp(hx - 1), rp(hy - 1), 1, 1);
+    x.fillStyle = 'rgba(255,255,255,.85)';
+    x.fillRect(rp(hx - g.rh * 0.45), rp(hy - g.rh * 0.55), 2, 1);
+    x.fillRect(rp(hx - g.rh * 0.45), rp(hy - g.rh * 0.55) + 1, 1, 1);
   }
   ent = { cnv, g, ang, R };
   spriteCache.set(key, ent);
@@ -210,7 +268,7 @@ function drawPart(cs, o, i, side, px, py, g, front, st) {
   const L = Math.max(1, rp(len * r * 1.6) + 1);
   let fill;
   switch (kind) {
-    case 'leg': fill = `hsl(${hue},35%,22%)`; break;
+    case 'leg': fill = `hsl(${hue},40%,34%)`; break;
     case 'fin': fill = `hsl(${hue},55%,66%)`; break;
     case 'wing': fill = `hsl(${(hue + 20) % 360},40%,82%)`; break;
     case 'weapon': fill = '#efe6cc'; break;
@@ -238,38 +296,41 @@ function drawPart(cs, o, i, side, px, py, g, front, st) {
     if (wide) {
       const sw = Math.max(0, rp(wid * (kind === 'wing' ? Math.min(j + 1, L - j) : j + 1) * 0.7));
       for (let s = 1; s <= sw; s++) b.fillRect(rp(qx - vx * s * side), rp(qy - vy * s * side), 1, 1);
-    } else if (wid > 0.45 && j < L - 1) b.fillRect(rp(qx + vx), rp(qy + vy), 1, 1);
+    } else if (wid > 0.15 && j < L - 1) b.fillRect(rp(qx + vx), rp(qy + vy), 1, 1);
   }
-  if (kind === 'leg' && L >= 2) { b.fillStyle = `hsl(${hue},40%,16%)`; b.fillRect(rp(px + ux * (rho + L - 1)), rp(py + uy * (rho + L - 1)), 1, 1); }
+  if (kind === 'leg' && L >= 2) { b.fillStyle = `hsl(${hue},45%,30%)`; b.fillRect(rp(px + ux * (rho + L - 1) + vx), rp(py + uy * (rho + L - 1) + vy), 1, 1); b.fillStyle = `hsl(${hue},40%,16%)`; b.fillRect(rp(px + ux * (rho + L - 1)), rp(py + uy * (rho + L - 1)), 1, 1); }
   if (kind === 'sense') { b.fillStyle = '#ffe36a'; b.fillRect(rp(px + ux * (rho + L)), rp(py + uy * (rho + L)), 1, 1); }
 }
 
 /* ---------- cute face on the head ---------- */
-function drawFace(cs, o, px, py, ent) {
+function drawFace(cs, o, px, py, ent, look, carn, st) {
   const g = ent.g, ang = ent.ang, fx = Math.cos(ang), fy = Math.sin(ang), qx = -fy, qy = fx;
   const hx = px + fx * g.uh, hy = py + fy * g.uh, rh = g.rh;
   const sl = cs[o + 12], fear = cs[o + 10], wb = cs[o + 13], baby = cs[o + 25];
   if (rh < 2) { b.fillStyle = '#ffffff'; b.fillRect(rp(hx + fx * rh), rp(hy + fy * rh), 1, 1); return; }
   const cx = hx + fx * rh * 0.22, cy = hy + fy * rh * 0.22, sep = Math.max(1, rh * 0.52);
-  let es = Math.max(1, rp(rh * 0.6)) + (baby && rh >= 3 ? 1 : 0);
+  let es = Math.max(rh >= 3 ? 2 : 1, rp(rh * 0.7)) + (baby && rh >= 3 ? 1 : 0);
+  const blink = ((st.animT + (cs[o] | 0) * 13) % 170) < 5;
   if (fear > 0.6 && !sl) es += 1;
   for (const sd of [-1, 1]) {
     const ex = rp(cx + qx * sd * sep - es / 2), ey = rp(cy + qy * sd * sep - es / 2);
-    if (sl) { b.fillStyle = OUTLINE; b.fillRect(ex, ey + (es >> 1), es, 1); continue; }
+    if (sl || blink) { b.fillStyle = OUTLINE; b.fillRect(ex, ey + (es >> 1), es, 1); if (es >= 3) b.fillRect(ex, ey + (es >> 1) + 1, 1, 1); continue; }
     b.fillStyle = '#ffffff';
     b.fillRect(ex, ey, es, es);
     const ps = Math.max(1, es - 1 - (fear > 0.6 ? 1 : 0));
     const ox = rp((es - ps) / 2 + fx * (es - ps) / 2), oy = rp((es - ps) / 2 + fy * (es - ps) / 2);
-    b.fillStyle = fear > 0.6 ? '#7a1010' : '#1a1a22';
+    b.fillStyle = fear > 0.6 ? '#7a1010' : EYE_COL[look[2]] || '#1a1a22';
     b.fillRect(ex + ox, ey + oy, ps, ps);
-    if (es >= 3) { b.fillStyle = '#ffffff'; b.fillRect(ex + ox, ey + oy, 1, 1); }
+    if (es >= 3) { b.fillStyle = '#ffffff'; b.fillRect(ex + ox, ey + oy, 1, 1); b.fillRect(ex + ox + ps - 1, ey + oy + ps - 1, 1, 1); }
+    else if (es === 2) { b.fillStyle = '#ffffff'; b.fillRect(ex + ox, ey + oy, 1, 1); }
   }
-  if (!sl && wb > 0.75 && rh >= 3) {
-    b.fillStyle = 'rgba(255,120,160,.75)';
+  if (!sl && rh >= 3 && CHEEK_COL[look[4]]) {
+    b.fillStyle = CHEEK_COL[look[4]];
     for (const sd of [-1, 1]) b.fillRect(rp(cx + qx * sd * sep * 1.75 - fx * 0.5), rp(cy + qy * sd * sep * 1.75 - fy * 0.5), 1, 1);
   }
   if (rh >= 3 && !sl) {
     const mx = hx + fx * rh * 0.78, my = hy + fy * rh * 0.78;
+    if (carn) { b.fillStyle = '#ffffff'; b.fillRect(rp(mx + qx * 1.2), rp(my + qy * 1.2), 1, 1); b.fillRect(rp(mx - qx * 1.2), rp(my - qy * 1.2), 1, 1); }
     b.fillStyle = '#3a1820';
     if (fear > 0.6) b.fillRect(rp(mx), rp(my), 1, 1);
     else if (wb > 0.68) {
@@ -286,8 +347,11 @@ function drawFace(cs, o, px, py, ent) {
 /* ---------- one creature ---------- */
 function drawCreature(cs, o, sel, wpp, ox, oy, st) {
   const x = cs[o + 1], y = cs[o + 2], dir = cs[o + 3], size = cs[o + 4];
-  const r = clamp(rp(size / wpp * 1.25), 1, 11);
-  const px = rp((x - ox) / wpp), py = rp((y - oy) / wpp);
+  const r = clamp(rp(size / wpp * 1.8), 1, 16);
+  const px = rp((x - ox) / wpp), pyBase = rp((y - oy) / wpp);
+  const moving = cs[o + 18] > 0.15 && !cs[o + 12];
+  const bob = moving ? rp(Math.abs(Math.sin(st.animT * 0.3 * (0.3 + cs[o + 18]) + (cs[o] | 0))) * Math.min(2, r * 0.18)) : 0;
+  const py = pyBase - bob;
   if (px < -30 || py < -30 || px > BW + 30 || py > BH + 30) return;
   const hue = (rp(cs[o + 5] / 18) * 18) % 360;
   st.hue = hue;
@@ -306,17 +370,23 @@ function drawCreature(cs, o, sel, wpp, ox, oy, st) {
   const baby = cs[o + 25] > 0 ? 1 : 0;
   const light = hp > 66 ? 52 : hp > 33 ? 44 : 34;
   const dirQ = ((rp(dir / (TAU / 16)) % 16) + 16) % 16;
-  const ent = bodySprite(hue, r, carn ? 1 : 0, light, cs[o + 8] | 0, dirQ, sh, baby);
+  const look = [cs[o + 82] | 0, cs[o + 83] | 0, cs[o + 84] | 0, cs[o + 85] | 0, cs[o + 86] | 0, cs[o + 87] | 0];
+  const ent = bodySprite(hue, r, carn ? 1 : 0, light, look, dirQ, sh, baby);
   const g = ent.g, R = ent.R;
   b.fillStyle = 'rgba(0,0,0,.33)';
   const sw = Math.max(r, rp(-g.umin * 0.6 + g.segs[0].b)), sy = rp(g.segs[0].b) + 1;
-  if (fly) b.fillRect(px - sw + 3, py + sy + 3, 2 * sw, 1);
-  else { b.fillRect(px - sw + 1, py + sy, 2 * sw, 1); b.fillRect(px - sw + 2, py + sy + 1, 2 * sw - 2, 1); }
+  if (fly) b.fillRect(px - sw + 3, pyBase + sy + 3, 2 * sw, 1);
+  else { b.fillRect(px - sw + 1, pyBase + sy, 2 * sw, 1); b.fillRect(px - sw + 2, pyBase + sy + 1, 2 * sw - 2, 1); }
   const np = cs[o + 19] | 0, detail = np > 0;
   if (detail) for (let i = 0; i < np; i++) { drawPart(cs, o, i, 1, px, py, g, false, st); if (cs[o + 26 + i * 7 + 1]) drawPart(cs, o, i, -1, px, py, g, false, st); }
   b.drawImage(ent.cnv, px - R, py - R);
   if (detail) for (let i = 0; i < np; i++) { drawPart(cs, o, i, 1, px, py, g, true, st); if (cs[o + 26 + i * 7 + 1]) drawPart(cs, o, i, -1, px, py, g, true, st); }
-  drawFace(cs, o, px, py, ent);
+  drawFace(cs, o, px, py, ent, look, carn, st);
+  if (look[5] === 1 && r >= 3 && (((st.animT + (cs[o] | 0) * 7) % 48) < 4)) {
+    const k = ((cs[o] | 0) * 31 + (st.animT / 48 | 0) * 17) % 7, sx = px + (k % 3 - 1) * R * 0.7, sy2 = py + ((k / 3 | 0) - 1) * R * 0.7;
+    b.fillStyle = '#fff6b0';
+    b.fillRect(rp(sx), rp(sy2) - 1, 1, 3); b.fillRect(rp(sx) - 1, rp(sy2), 3, 1);
+  }
   const fx = Math.cos(ent.ang), fy = Math.sin(ent.ang), qx = -fy, qy = fx;
   if (cs[o + 11]) {
     b.fillStyle = 'rgba(255,255,255,.85)';

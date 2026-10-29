@@ -7,7 +7,7 @@ use crate::world::*;
 use serde_json::{json, Value};
 use std::cell::RefCell;
 
-pub const CS_STRIDE: usize = 82;
+pub const CS_STRIDE: usize = 90;
 pub const FOOD_STRIDE: usize = 6;
 
 #[derive(Default)]
@@ -68,6 +68,9 @@ pub fn frame(w: &mut World, x0: f32, y0: f32, x1: f32, y1: f32, wpp: f32, sel: u
         r[18] = c.v;
         r[20..25].copy_from_slice(&c.g.shape);
         r[25] = if c.mature() { 0.0 } else { 1.0 };
+        for (i, v) in crate::genome::look_pheno(&c.g).iter().enumerate() {
+            r[82 + i] = *v as f32;
+        }
         if detail {
             let n = c.pp.len().min(MAX_PARTS);
             r[19] = n as f32;
@@ -308,6 +311,7 @@ fn sel_json(w: &World, i: usize) -> Value {
         "surprise": s.surprise.min(1.0), "ext": s.ext_force, "gutEvents": s.gut_events, "gutOwn": s.gut_own, "learned": learned,
         "phi": phi, "lz": lz, "brain": brain_graph(s),
         "parts": kc.iter().map(|(k, n)| json!([KIND_KEYS[*k], n])).collect::<Vec<_>>(), "abil": abil, "fly": s.fly, "shape": g.shape,
+        "look": {"ph": crate::genome::look_pheno(g), "al": g.look, "rarity": r3(crate::genome::look_rarity(g))},
         "size": s.size(), "sizeG": g.tr[T_SIZE], "speed": g.tr[T_SPEED], "sense": s.sense_r, "diet": g.tr[T_DIET], "mutation": s.mutation,
         "children": s.children, "kills": s.kills, "fear": s.fear, "focus": s.focus_f, "protos": s.protos.iter().filter(|p| p.is_some()).count(),
         "lastSaid": s.last_said.as_ref().map(|l| json!({"tokens": l.tokens, "vec": l.vec, "sector": l.sector})), "heard": heard,

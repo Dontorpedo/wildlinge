@@ -25,7 +25,7 @@ const file = process.argv[2], steps = +process.argv[3] || 6000;
   console.log('avg ms/step', ((performance.now() - t0) / steps).toFixed(2));
   E.wl_frame(1000, 600, 2600, 1400, 2.5, 0);
   const meta = JSON.parse(out());
-  console.log('frame creatures', E.wl_buf_len(0) / 82, 'foods', E.wl_buf_len(1) / 6, 'bubbles', meta.bub.length);
+  console.log('frame creatures', E.wl_buf_len(0) / 90, 'foods', E.wl_buf_len(1) / 6, 'bubbles', meta.bub.length);
   E.wl_panel(0); const p = JSON.parse(out());
   const id = p.adopted.length ? p.adopted[0].id : null;
   const r = cmd({ type: 'pick', x: 2000, y: 1200, r: 2000 });

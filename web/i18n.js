@@ -117,6 +117,18 @@ const I18N = {
     'away.p': '{0} Wildling days have passed. {1} births and {2} deaths.',
     'away.lost': 'Sadly died:', 'away.alive': 'Your Wildlings are still alive:', 'away.events': 'Important events:',
 
+    look: {
+      loci: ['accent colour', 'pattern', 'eyes', 'ears', 'cheeks', 'sparkle'],
+      v: [
+        ['coral', 'amber', 'lime', 'green', 'mint', 'teal', 'sky', 'blue', 'indigo', 'violet', 'magenta', 'rose'],
+        ['plain', 'spots', 'stripes', 'patches', 'saddle', 'mask'],
+        ['black', 'blue', 'green', 'brown', 'purple', 'gold', 'ruby', 'aqua'],
+        ['round', 'pointed', 'floppy', 'none'],
+        ['pink', 'orange', 'none', 'blue'],
+        ['none', 'sparkling']
+      ]
+    },
+    'sel.look': 'Look (visible)', 'sel.lookHidden': 'Carries (hidden)', 'sel.rarity': 'Rarity',
     drives: ['Hunger', 'Safety', 'Warmth', 'Company', 'Mating', 'Curiosity', 'Reputation', 'Sleep'],
     goals: ['Find food', 'Get to safety', 'Seek warmth', 'Seek company', 'Find a partner', 'Explore', 'Seek recognition', 'Sleep'],
     features: ['threat', 'food', 'prey', 'kin', 'stranger', 'hunger', 'pain', 'cold', 'water', 'novelty'],
@@ -301,6 +313,18 @@ const I18N = {
     'away.p': 'Es sind {0} Wildling-Tage vergangen. {1} Geburten und {2} Todesfälle.',
     'away.lost': 'Leider gestorben:', 'away.alive': 'Ihre Wildlinge leben noch:', 'away.events': 'Wichtige Ereignisse:',
 
+    look: {
+      loci: ['Akzentfarbe', 'Muster', 'Augen', 'Ohren', 'Wangen', 'Glitzer'],
+      v: [
+        ['Koralle', 'Bernstein', 'Limette', 'Grün', 'Minze', 'Petrol', 'Himmel', 'Blau', 'Indigo', 'Violett', 'Magenta', 'Rosé'],
+        ['einfarbig', 'Tupfen', 'Streifen', 'Flecken', 'Sattel', 'Maske'],
+        ['schwarz', 'blau', 'grün', 'braun', 'lila', 'gold', 'rubin', 'aqua'],
+        ['rund', 'spitz', 'hängend', 'keine'],
+        ['rosa', 'orange', 'keine', 'blau'],
+        ['keins', 'glitzernd']
+      ]
+    },
+    'sel.look': 'Aussehen (sichtbar)', 'sel.lookHidden': 'Trägt (verborgen)', 'sel.rarity': 'Seltenheit',
     drives: ['Hunger', 'Sicherheit', 'Wärme', 'Gemeinschaft', 'Fortpflanzung', 'Neugier', 'Ansehen', 'Schlaf'],
     goals: ['Nahrung finden', 'In Sicherheit bringen', 'Wärme suchen', 'Gemeinschaft suchen', 'Partner finden', 'Erkunden', 'Anerkennung suchen', 'Schlafen'],
     features: ['Bedrohung', 'Futter', 'Beute', 'Verwandte', 'Fremde', 'Hunger', 'Schmerz', 'Kälte', 'Wasser', 'Neues'],

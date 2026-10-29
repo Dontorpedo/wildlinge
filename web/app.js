@@ -131,7 +131,7 @@ function render() {
   b.drawImage(terrainSummer, ox / TPX, oy / TPX, vw / TPX, vh / TPX, 0, 0, BW, BH);
   if (wf > 0) { b.globalAlpha = wf; b.drawImage(terrainWinter, ox / TPX, oy / TPX, vw / TPX, vh / TPX, 0, 0, BW, BH); b.globalAlpha = 1; }
   b.fillStyle = 'rgba(255,255,255,.35)';
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 70; i++) {
     const x = (Math.random() * BW) | 0, y = (Math.random() * BH) | 0;
     const bi = biomeAt(mapInfo, ox + x * wpp, oy + y * wpp);
     if (bi === 0 || (bi === 1 && !meta.frozen)) b.fillRect(x, y, 2, 1);
@@ -282,6 +282,13 @@ function renderResearch(p) {
   const sig = p.phylo.map(n => n.id + (n.died >= 0 ? 'x' : '')).join(',');
   if (sig !== phyloSig) { phyloSig = sig; drawPhylo(p.phylo); }
 }
+function lookRows(lk) {
+  if (!lk) return '';
+  const L = tr('look'), ph = lk.ph;
+  const vis = L.loci.map((n, i) => `${esc(n)}: ${esc(L.v[i][ph[i]])}`).join(', ');
+  const hid = L.loci.map((n, i) => { const o = Math.max(lk.al[i][0], lk.al[i][1]); return o !== ph[i] ? `${esc(n)}: ${esc(L.v[i][o])}` : ''; }).filter(Boolean).join(', ');
+  return row(t('sel.look'), vis) + row(t('sel.lookHidden'), hid || '-') + row(t('sel.rarity'), pct(lk.rarity));
+}
 function famLink(f) {
   if (!f) return '';
   return `<a class="w" data-id="${f.id}">${esc(f.name)}</a>${f.alive ? '' : ` <span class="muted">(${esc(t('sel.dead'))})</span>`}`;
@@ -322,6 +329,7 @@ function renderSel(s) {
     row(t('sel.lz'), (+s.lz).toFixed(3)) +
     '</table>' + sub(esc(t('sel.body'))) + '<table>' +
     row(t('sel.shape'), esc(tShape(s.shape))) +
+    lookRows(s.look) +
     row(t('sel.parts'), esc(s.parts.map(([k, n]) => `${tKind(k)}${n > 1 ? ' x' + n : ''}`).join(', ')) || '-') +
     row(t('sel.abil'), esc(s.abil.map(([k, v]) => `${tAbil(k)} ${v.toFixed(2)}`).join(', ')) || '-') +
     row(t('sel.fly'), yn(s.fly)) +

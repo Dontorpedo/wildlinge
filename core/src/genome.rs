@@ -18,10 +18,68 @@ pub struct Genome {
     pub dw: [f32; ND],
     pub motor: [f32; 4],
     pub hue: f32,
+    #[serde(default)]
+    pub look: [[u8; 2]; NLOCI],
+    #[serde(default)]
+    pub look_set: bool,
     pub parts: Vec<Part>,
     pub nodes: Vec<NodeGene>,
     pub conns: Vec<ConnGene>,
     pub mutated: bool,
+}
+
+fn pick_allele(n: u8, rng: &mut Rng) -> u8 {
+    let f = rng.f();
+    ((f * f * n as f32) as u8).min(n - 1)
+}
+
+/// Random cosmetic genes: common (dominant) alleles are likely, rare ones are recessive carriers.
+pub fn random_look(rng: &mut Rng) -> [[u8; 2]; NLOCI] {
+    let mut l = [[0u8; 2]; NLOCI];
+    for (i, n) in LOCUS_N.iter().enumerate() {
+        l[i] = [pick_allele(*n, rng), pick_allele(*n, rng)];
+    }
+    l
+}
+
+/// Visible look: the dominant (lower index) allele of each locus.
+pub fn look_pheno(g: &Genome) -> [u8; NLOCI] {
+    let mut p = [0u8; NLOCI];
+    for i in 0..NLOCI {
+        p[i] = g.look[i][0].min(g.look[i][1]);
+    }
+    p
+}
+
+/// Rarity 0..1 from both alleles (hidden recessive alleles count).
+pub fn look_rarity(g: &Genome) -> f32 {
+    let mut s = 0.0;
+    for i in 0..NLOCI {
+        let d = (LOCUS_N[i] - 1).max(1) as f32;
+        s += (g.look[i][0] as f32 + g.look[i][1] as f32) / (2.0 * d);
+    }
+    s / NLOCI as f32
+}
+
+fn mutate_look(l: &[[u8; 2]; NLOCI], m: f32, rng: &mut Rng) -> [[u8; 2]; NLOCI] {
+    let mut n = *l;
+    for i in 0..NLOCI {
+        for a in 0..2 {
+            if rng.chance(0.01 + m * 0.08) {
+                n[i][a] = pick_allele(LOCUS_N[i], rng);
+            }
+        }
+    }
+    n
+}
+
+/// Mendelian inheritance: one allele from each parent per locus.
+fn mendel(a: &[[u8; 2]; NLOCI], b: &[[u8; 2]; NLOCI], rng: &mut Rng) -> [[u8; 2]; NLOCI] {
+    let mut n = [[0u8; 2]; NLOCI];
+    for i in 0..NLOCI {
+        n[i] = [a[i][rng.below(2)], b[i][rng.below(2)]];
+    }
+    n
 }
 
 pub struct Fns {
@@ -173,10 +231,11 @@ pub fn random_genome(carn: bool, rng: &mut Rng, innov: &mut Innov) -> Genome {
         rng.range(0.5, 0.9),
     ];
     let motor = [rng.range(-1.0, 1.0), rng.range(-1.0, 1.0), rng.range(-1.0, 1.0), rng.range(-1.0, 1.0)];
-    let hue = if carn { (rng.range(-15.0, 15.0) + 360.0) % 360.0 } else { rng.range(90.0, 150.0) };
+    let hue = if carn { (rng.range(-30.0, 50.0) + 360.0) % 360.0 } else { rng.range(0.0, 360.0) };
+    let look = random_look(rng);
     let nh = 4 + rng.below(4) as u32;
     let nodes: Vec<NodeGene> = (0..nh).map(|k| NodeGene { id: HID0 + k, d: 0.5 }).collect();
-    let mut g = Genome { tr, shape, dw, motor, hue, parts, nodes, conns: Vec::new(), mutated: false };
+    let mut g = Genome { tr, shape, dw, motor, hue, look, look_set: true, parts, nodes, conns: Vec::new(), mutated: false };
     let h = |k: u32| HID0 + k;
     let o = |k: u32| OUT0 + k;
     add_conn(&mut g, innov, 1, h(0), 2.5);
@@ -359,6 +418,7 @@ pub fn mutate(g: &Genome, st: &Stress, off: bool, rng: &mut Rng, innov: &mut Inn
         }
     }
     n.hue = (n.hue + rng.gauss() * m * 40.0 + 360.0) % 360.0;
+    n.look = mutate_look(&g.look, m, rng);
     n.parts = mutate_parts(&g.parts, m, st, rng, &mut ev);
     mutate_brain(&mut n, m, rng, innov, &mut ev);
     n.mutated = true;
@@ -389,6 +449,7 @@ pub fn crossover(a: &Genome, b: &Genome, rng: &mut Rng) -> Genome {
     if rng.chance(0.5) {
         n.hue = b.hue;
     }
+    n.look = mendel(&a.look, &b.look, rng);
     if rng.chance(0.5) {
         n.parts = b.parts.clone();
     }
@@ -423,6 +484,16 @@ pub fn sanitize(g: &mut Genome) {
         *v = if v.is_finite() { clamp(*v, -1.5, 1.5) } else { 0.0 };
     }
     g.hue = if g.hue.is_finite() { g.hue.rem_euclid(360.0) } else { 100.0 };
+    if !g.look_set {
+        let mut r = Rng::new(g.hue.to_bits() as u64 ^ ((g.conns.len() as u64) << 32) ^ g.nodes.len() as u64);
+        g.look = random_look(&mut r);
+        g.look_set = true;
+    }
+    for i in 0..NLOCI {
+        for a in 0..2 {
+            g.look[i][a] = g.look[i][a].min(LOCUS_N[i] - 1);
+        }
+    }
     g.parts.truncate(MAX_PARTS);
     for q in g.parts.iter_mut() {
         q.a = if q.a.is_finite() { wrap_a(q.a) } else { 0.0 };
