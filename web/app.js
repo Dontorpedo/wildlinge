@@ -85,7 +85,7 @@ function applyI18n() {
   for (const el of document.querySelectorAll('[data-i18n-ph]')) el.placeholder = t(el.dataset.i18nPh);
   $('welcomeList').innerHTML = tr('welcome.l').map(s => `<li>${esc(s)}</li>`).join('');
   $('btnRun').textContent = t(running ? 'btn.pause' : 'btn.run');
-  $('help').textContent = t(viewMode === 'wild' ? 'help.keys' : 'tz.help');
+  if (viewMode === 'wild') $('help').textContent = t('help.keys'); else tzSetTool(TZ.tool);
   $('chartSet').innerHTML = Object.entries(tr('chartSets')).map(([k, n]) => `<option value="${k}"${k === uplSet ? ' selected' : ''}>${esc(n)}</option>`).join('');
   $('labKnock').innerHTML = KNOCK_KEYS.map(k => `<option value="${k}">${esc(tr('knocks')[k])}</option>`).join('');
   $('langSel').value = LANG;
@@ -768,12 +768,22 @@ function setViewMode(m) {
   $('terra').style.display = m === 'terra' ? 'block' : 'none';
   $('tools').style.display = m === 'wild' ? 'flex' : 'none';
   $('ttools').style.display = m === 'terra' ? 'flex' : 'none';
-  $('help').textContent = t(m === 'wild' ? 'help.keys' : 'tz.help');
+  if (m === 'wild') $('help').textContent = t('help.keys'); else tzSetTool(TZ.tool);
   $('modeWild').classList.toggle('on', m === 'wild');
   $('modeTerra').classList.toggle('on', m === 'terra');
   if (m === 'terra') setTab('terra'); else if (activeTab === 'terra') setTab('world');
 }
 function tzWhenLoaded() { return new Promise(res => { const f = () => (TZ.loaded ? res() : setTimeout(f, 30)); f(); }); }
+$('btnShot').onclick = () => {
+  const cv = $(viewMode === 'wild' ? 'world' : 'terra');
+  cv.toBlob(bl => {
+    if (!bl) return;
+    const a = document.createElement('a'), u = URL.createObjectURL(bl);
+    a.href = u; a.download = 'wildlinge-' + viewMode + '-' + new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19) + '.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(u), 2000);
+  }, 'image/png');
+};
 $('modeWild').onclick = () => setViewMode('wild');
 $('modeTerra').onclick = () => setViewMode('terra');
 document.addEventListener('click', e => {
@@ -784,8 +794,8 @@ window.addEventListener('keydown', e => {
   if (viewMode !== 'terra') return;
   const ae = document.activeElement;
   if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT')) return;
-  const names = ['select', 'pet', 'treat', 'ball'];
-  if (e.key >= '1' && e.key <= '4') { tzSetTool(names[+e.key - 1]); e.stopImmediatePropagation(); }
+  const k = e.key === '0' ? 9 : (e.key >= '1' && e.key <= '9' ? +e.key - 1 : -1);
+  if (k >= 0 && TZ_TOOLS[k]) { tzSetTool(TZ_TOOLS[k]); e.stopImmediatePropagation(); }
 }, true);
 applyI18n();
 tzInit();

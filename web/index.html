@@ -99,6 +99,7 @@ footer{color:var(--muted);font-size:12px;padding:0 16px 20px}
 <header>
   <h1>Wildlinge</h1>
   <div id="modes"><button id="modeWild" class="on" data-i18n="mode.wild"></button><button id="modeTerra" data-i18n="mode.terra"></button></div>
+  <button id="btnShot" data-i18n="btn.shot"></button>
   <span id="clock" data-i18n="app.loading">Loading world ...</span>
   <select id="langSel" aria-label="Language"><option value="en">English</option><option value="de">Deutsch</option></select>
   <a id="bmc" class="bmc" target="_blank" rel="noopener noreferrer">Buy me a coffee</a>
@@ -121,8 +122,18 @@ footer{color:var(--muted);font-size:12px;padding:0 16px 20px}
   <div id="ttools">
     <button data-ttool="select" class="on" title="1" data-i18n="tz.tool.select"></button>
     <button data-ttool="pet" title="2" data-i18n="tz.tool.pet"></button>
-    <button data-ttool="treat" title="3" data-i18n="tz.tool.treat"></button>
-    <button data-ttool="ball" title="4" data-i18n="tz.tool.ball"></button>
+    <button data-ttool="brush" title="3" data-i18n="tz.tool.brush"></button>
+    <button data-ttool="tickle" title="4" data-i18n="tz.tool.tickle"></button>
+    <button data-ttool="treat" title="5" data-i18n="tz.tool.treat"></button>
+    <button data-ttool="ball" title="6" data-i18n="tz.tool.ball"></button>
+    <button data-ttool="bubbles" title="7" data-i18n="tz.tool.bubbles"></button>
+    <button data-ttool="plush" title="8" data-i18n="tz.tool.plush"></button>
+    <button data-ttool="call" title="9" data-i18n="tz.tool.call"></button>
+    <button data-ttool="dress" title="0" data-i18n="tz.tool.dress"></button>
+    <button data-ttool="party" title="" data-i18n="tz.tool.party"></button>
+    <button data-ttool="teach" title="" data-i18n="tz.tool.teach"></button>
+    <button data-ttool="level" title="" data-i18n="tz.tool.level"></button>
+    <input type="text" id="tzWord" maxlength="12" data-i18n-ph="tz.wordPh">
   </div>
   <div id="help" data-i18n="help.keys"></div>
 </div>

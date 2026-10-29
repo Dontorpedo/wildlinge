@@ -164,7 +164,7 @@ async function hostHandle(msg) {
     case 'adopt': cmd({ type: 'adopt', id: msg.id >>> 0, on: msg.on === undefined ? undefined : !!msg.on, name: typeof msg.name === 'string' ? msg.name.slice(0, 40) : undefined }); H.lastPanel = 0; break;
     case 'tcmd': {
       const c = msg.c || {};
-      if (['take', 'tlist', 'trename', 'tbreed', 'release', 'tdie'].includes(c.type)) {
+      if (['take', 'tlist', 'trename', 'tbreed', 'release', 'tdie', 'tteach'].includes(c.type)) {
         const res = cmd(c);
         hostPost({ type: 'tres', rid: msg.rid, res });
         H.lastPanel = 0;

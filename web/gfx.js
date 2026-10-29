@@ -175,7 +175,7 @@ function geom(r, sh, baby, ts) {
   return { segs, n, tp, rh, uh, umax, umin, tmin, tail, R };
 }
 /* 0 = outside, 1 = body, 2 = inner ear */
-function inBody(g, u, v, ear) {
+function inBody(g, u, v, ear, top) {
   const rh = g.rh, du = u - g.uh;
   if (du * du + v * v <= rh * rh) return 1;
   for (const s of g.segs) {
@@ -185,7 +185,8 @@ function inBody(g, u, v, ear) {
     if (Math.pow(Math.abs(uu) / s.a, g.n) + Math.pow(Math.abs(v) / bt, g.n) <= 1) return 1;
   }
   for (const q of g.tail) { const dq = u - q[0], dv = v - q[1]; if (dq * dq + dv * dv <= q[2] * q[2]) return 1; }
-  const er = Math.max(1.2, rh * 0.42), eu = g.uh - rh * 0.4, av = Math.abs(v);
+  const er = Math.max(1.2, rh * 0.42), eu = g.uh - rh * 0.4, av = top ? -v : Math.abs(v);
+  if (top && v > 0) return 0;
   if (ear === 0) {
     const ev = rh * 0.78, d2 = (u - eu) * (u - eu) + (av - ev) * (av - ev);
     if (d2 <= er * er) return d2 <= er * er * 0.3 && er >= 1.8 ? 2 : 1;
@@ -206,9 +207,9 @@ function rhoAt(g, th) {
 }
 
 const spriteCache = new Map();
-function bodySprite(hue, r, carn, light, look, dirQ, sh, baby) {
+function bodySprite(hue, r, carn, light, look, dirQ, sh, baby, side) {
   const qe = Math.round(sh[0] * 3) / 3, qb = Math.round(sh[1] * 2) / 2, qh = Math.round(sh[3] * 3) / 3, qt = Math.round(sh[4] * 2) / 2, seg = clamp(Math.floor(sh[2]), 1, 6);
-  const key = `${hue}|${r}|${light}|${look[0]}|${look[1]}|${look[3]}|${look[7]}|${dirQ}|${qe}|${qb}|${seg}|${qh}|${qt}|${baby}`;
+  const key = `${hue}|${r}|${light}|${look[0]}|${look[1]}|${look[3]}|${look[7]}|${dirQ}|${qe}|${qb}|${seg}|${qh}|${qt}|${baby}|${side ? 1 : 0}`;
   let ent = spriteCache.get(key);
   if (ent) return ent;
   if (spriteCache.size > 4000) spriteCache.clear();
@@ -221,7 +222,7 @@ function bodySprite(hue, r, carn, light, look, dirQ, sh, baby) {
   for (let py = 0; py < d; py++) {
     for (let px = 0; px < d; px++) {
       const dx = px - R, dy = py - R, u = dx * ca + dy * sa, v = -dx * sa + dy * ca;
-      mask[py * d + px] = inBody(g, u, v, look[3]);
+      mask[py * d + px] = inBody(g, u, v, look[3], side);
     }
   }
   const accH = (look[0] * 30 + 15) % 360;

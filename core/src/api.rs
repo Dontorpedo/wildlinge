@@ -72,7 +72,7 @@ pub fn terra_json(c: &crate::creature::Creature) -> Value {
     fill_rec(c, &[], true, &mut r);
     let rv: Vec<f32> = r.iter().map(|x| if x.is_finite() { *x } else { 0.0 }).collect();
     let (l, ch) = (c.g.tr[T_LIFE], c.g.tr[T_CHILD]);
-    json!({"ok": true, "id": c.id, "name": c.name, "gen": c.gen, "children": c.children, "p1": c.p1, "p2": c.p2, "rec": rv, "growth": (c.age as f32 / (l * ch)).min(1.0), "words": c.lex.m.len()})
+    json!({"ok": true, "id": c.id, "name": c.name, "gen": c.gen, "children": c.children, "p1": c.p1, "p2": c.p2, "rec": rv, "growth": (c.age as f32 / (l * ch)).min(1.0), "words": c.lex.m.len(), "learn": c.g.tr[T_LEARN], "cur": c.g.tr[T_CUR]})
 }
 
 pub fn fill_rec(c: &crate::creature::Creature, bosses: &[u32], detail: bool, r: &mut [f32]) {
@@ -479,6 +479,27 @@ pub fn command(w: &mut World, v: &Value) -> Value {
                     w.reindex();
                     w.event("ev.released", vec![nm]);
                     json!({"ok": true, "id": id, "x": x, "y": y})
+                }
+                None => json!({"ok": false}),
+            }
+        }
+        "tteach" => {
+            let id = v.get("id").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+            let word = clean_word(v.get("word").and_then(|x| x.as_str()).unwrap_or(""));
+            let feat = v.get("feat").and_then(|x| x.as_u64()).unwrap_or(9).min(FD as u64 - 1) as usize;
+            if word.is_empty() || w.knock[K_LANG] {
+                return json!({"ok": false});
+            }
+            match w.terra.iter_mut().find(|c| c.id == id) {
+                Some(c) => {
+                    let mut f = [0.0; FD];
+                    f[feat] = 0.9;
+                    let k = c.categorize(&f, true);
+                    if k >= 0 {
+                        c.lex.reinforce(&word, k, 0.3);
+                    }
+                    w.taught_n += 1;
+                    json!({"ok": k >= 0, "word": word, "words": c.lex.m.len()})
                 }
                 None => json!({"ok": false}),
             }
