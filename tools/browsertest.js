@@ -3,7 +3,8 @@ const { chromium } = require('playwright');
 const path = require('path');
 const file = path.resolve(process.argv[2] || 'dist/wildlinge.html');
 const shots = process.argv[3] || null;
-(async () => {
+const fail = m => console.log('::error::' + String(m).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A').slice(0, 1500));
+async function main() {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1500, height: 1000 } });
   const errors = [];
@@ -36,5 +37,6 @@ const shots = process.argv[3] || null;
   console.log('clock:', clock);
   console.log('errors:', errors.length ? errors.join('\n') : 'none');
   await browser.close();
-  process.exit(errors.length ? 1 : 0);
-})();
+  if (errors.length) { fail(errors.join('\n')); process.exit(1); }
+}
+main().catch(e => { fail(e && e.stack || e); process.exit(1); });
