@@ -2041,7 +2041,7 @@ function showAway(rep) {
 async function persist(m) {
   try {
     await idbDo('readwrite', st => st.put(m.data, SAVE_KEY));
-    $('saveState').textContent = t('app.saved', new Date().toLocaleTimeString(LANG === 'de' ? 'de-AT' : 'en-GB'), (m.bytes / 1048576).toFixed(1));
+    $('saveState').textContent = t('app.saved', new Date().toTimeString().slice(0, 8), (m.bytes / 1048576).toFixed(1));
   } catch (e) {
     $('saveState').textContent = t('app.saveFail', e && e.message || e);
   }
