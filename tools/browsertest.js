@@ -6,7 +6,7 @@ const shots = process.argv[3] || null;
 const fail = m => console.log('::error::' + String(m).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A').slice(0, 1500));
 async function main() {
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: 1500, height: 1000 } });
+  const page = await browser.newPage({ viewport: { width: 1500, height: 1000 }, bypassCSP: true });
   const errors = [];
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
