@@ -116,6 +116,14 @@ pub struct Creature {
     pub eaten: u32,
     pub reacts: u32,
     pub self_recog: bool,
+    #[serde(default)]
+    pub fe: f32,
+    #[serde(skip)]
+    pub mp: [f32; 2],
+    #[serde(skip)]
+    pub mo: [f32; 2],
+    #[serde(skip)]
+    pub mc: [f32; 6],
     pub mirror_t: u32,
     pub mirror_tested: bool,
     pub flew_once: bool,

@@ -329,7 +329,7 @@ fn sel_json(w: &World, i: usize) -> Value {
         "children": s.children, "kills": s.kills, "fear": s.fear, "focus": s.focus_f, "protos": s.protos.iter().filter(|p| p.is_some()).count(),
         "lastSaid": s.last_said.as_ref().map(|l| json!({"tokens": l.tokens, "vec": l.vec, "sector": l.sector})), "heard": heard,
         "echoes": s.echoes, "spoken": s.spoken, "understood": s.understood, "heardN": s.heard_n, "order": s.order(), "vocab": vocab,
-        "selfRecog": s.self_recog, "mirrorT": s.mirror_t, "isBoss": w.species.iter().any(|q| q.boss_id == s.id), "bossSince": sp_boss_since, "t": w.t,
+        "selfRecog": s.self_recog, "fe": r3(s.fe), "mirrorT": s.mirror_t, "isBoss": w.species.iter().any(|q| q.boss_id == s.id), "bossSince": sp_boss_since, "t": w.t,
         "boss": {"total": btotal, "parts": bparts}, "lifeC": lc, "mindC": mc,
         "parents": [fam(s.p1), fam(s.p2)], "kids": kids,
         "diary": s.diary.iter().rev().take(15).map(|d| json!([World::day_of(d.t), d.k, d.p])).collect::<Vec<_>>()

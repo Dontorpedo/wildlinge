@@ -343,6 +343,7 @@ function renderSel(s) {
     row(t('sel.kids'), `${s.children} / ${s.kills}`) +
     '</table>' + sub(esc(t('sel.mind'))) + '<table>' +
     row(t('sel.fear'), `${s.fear.toFixed(2)} / ${esc(focus)}`) +
+    row(t('sel.fe'), s.fe.toFixed(2)) +
     row(t('sel.protos'), `${s.protos} / 10`) +
     row(t('sel.said'), ls ? `${esc(joinW(ls.tokens))}${showMeaning ? ` (${esc(describeVec(ls.vec))}${ls.sector >= 0 ? ', ' + esc(tSector(ls.sector)) : ''})` : ''}` : '-') +
     row(t('sel.heard'), s.heard ? `${esc(joinW(s.heard.words))} = ${esc(describeVec(s.heard.vec))}${s.heard.where !== null && s.heard.where !== undefined ? ', ' + esc(tSector(s.heard.where)) : ''}` : '-') +

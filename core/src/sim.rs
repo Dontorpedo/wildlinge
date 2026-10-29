@@ -311,6 +311,7 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
 
     // mirrors
     let mut mirror = false;
+    let mut mir_x = 0.0f32;
     if !c.self_recog && !w.mirrors.is_empty() {
         let od = other.as_ref().map(|o| o.d).unwrap_or(f32::INFINITY);
         for m in &w.mirrors {
@@ -336,7 +337,31 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
                 sp: c.sp,
             });
             mirror = true;
+            mir_x = m[0];
         }
+    }
+    {
+        // contingency: does the other's motion follow my own motion? (own displacement vs observed displacement)
+        let img = 2.0 * mir_x - c.x;
+        let ax = c.x - c.mp[0];
+        if mirror && c.mo[1] > 0.5 {
+            let bx = img - c.mo[0];
+            for v in c.mc.iter_mut() {
+                *v *= 0.97;
+            }
+            c.mc[0] += 1.0;
+            c.mc[1] += ax;
+            c.mc[2] += bx;
+            c.mc[3] += ax * ax;
+            c.mc[4] += bx * bx;
+            c.mc[5] += ax * bx;
+        } else if !mirror {
+            for v in c.mc.iter_mut() {
+                *v *= 0.995;
+            }
+        }
+        c.mp = [c.x, c.y];
+        c.mo = if mirror { [img, 1.0] } else { [0.0, 0.0] };
     }
     if let Some(o) = other.as_mut() {
         if let Some(oi) = o.idx {
@@ -422,7 +447,13 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
             c.mirror_tested = true;
             w.mirror_tests += 1;
         }
-        if c.mirror_t >= 80 && c.mirror_t % 40 == 0 && !c.self_recog && !w.knock[K_SELF] && c.certainty() > 0.72 {
+        if c.mirror_t >= 40 && c.mirror_t % 10 == 0 && !c.self_recog && !w.knock[K_SELF] && c.certainty() > 0.55 && {
+            let m = &c.mc;
+            let n = m[0].max(1e-6);
+            let (va, vb) = (m[3] / n - (m[1] / n).powi(2), m[4] / n - (m[2] / n).powi(2));
+            let cov = m[5] / n - (m[1] / n) * (m[2] / n);
+            n >= 20.0 && va > 0.004 && vb > 0.004 && (cov / (va * vb).sqrt()).abs() > 0.85
+        } {
             c.self_recog = true;
             w.mirror_pass += 1;
             w.achieve("mirror");
@@ -590,11 +621,12 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
     c.d[5] = clamp(c.d[5] + 0.0008 - novelty - c.surprise * 0.005, 0.0, 1.0);
     c.d[6] = if is_boss { 0.0 } else { clamp(c.d[6] + 0.0004 - status_gain, 0.0, 1.0) };
     c.d[7] = c.tired;
-    let mut r = 0.0;
+    // active inference: free energy = precision-weighted deviation from preferred states (drives) + prediction error of the own body model
+    let mut fe = 0.4 * c.surprise;
     let (mut num, mut den, mut gk, mut gv) = (0.0, 0.0, 0usize, -1.0);
     for i in 0..ND {
         let wt = c.g.dw[i];
-        r += wt * (dp[i] - c.d[i]);
+        fe += 0.5 * wt * c.d[i] * c.d[i];
         num += wt * c.d[i];
         den += wt;
         if wt * c.d[i] > gv {
@@ -602,6 +634,9 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
             gk = i;
         }
     }
+    let r = c.fe - fe;
+    c.fe = fe;
+    let _ = dp;
     c.goal = gk as u8;
     c.wellbeing = clamp(1.0 - num / den + 0.1 * h[1], 0.0, 1.0);
     c.wb_avg = c.wb_avg * 0.995 + c.wellbeing * 0.005;

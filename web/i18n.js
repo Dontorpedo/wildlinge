@@ -19,6 +19,7 @@ const I18N = {
     'app.worker': 'worker',
     'app.noWasm': 'This browser does not support WebAssembly. Wildlinge needs a current browser.',
 
+    'sel.fe': 'Free energy (lower = better)',
     'tab.terra': 'Terrarium', 'mode.wild': 'Wilderness', 'mode.terra': 'Terrarium',
     'tz.tool.select': 'Select', 'tz.tool.pet': 'Pet', 'tz.tool.treat': 'Treat', 'tz.tool.ball': 'Ball',
     'tz.help': 'Click bowls to refill | Click heat lamp, ceiling light and music box | Keys 1 to 4: tool',
@@ -232,6 +233,7 @@ const I18N = {
     'app.worker': 'Worker',
     'app.noWasm': 'Dieser Browser unterstützt kein WebAssembly. Wildlinge benötigt einen aktuellen Browser.',
 
+    'sel.fe': 'Freie Energie (niedriger = besser)',
     'tab.terra': 'Terrarium', 'mode.wild': 'Wildnis', 'mode.terra': 'Terrarium',
     'tz.tool.select': 'Auswählen', 'tz.tool.pet': 'Streicheln', 'tz.tool.treat': 'Leckerli', 'tz.tool.ball': 'Ball',
     'tz.help': 'Näpfe anklicken zum Auffüllen | Wärmelampe, Deckenlicht und Spieluhr anklicken | Tasten 1 bis 4: Werkzeug',
