@@ -34,6 +34,13 @@ fn main() {
                     life[k] += c.actc[k] as u64;
                 }
             }
+            let mut bio = [0usize; 3];
+            let mut fl = 0usize;
+            for c in &w.creatures {
+                if c.fly { fl += 1; continue; }
+                bio[wildlinge_core::consts::BIOMES[w.bio_at(c.x, c.y)].water as usize] += 1;
+            }
+            println!("  walkers land/shallow/deep {:?} fly {}", bio, fl);
             let tl = life.iter().sum::<u64>().max(1) as f64;
             let tn = now.iter().sum::<usize>().max(1) as f64;
             println!(
