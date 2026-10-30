@@ -7,6 +7,19 @@
 <meta name="referrer" content="no-referrer">
 <meta name="description" content="Plimploms: an open experiment in artificial life. Bodies, brains and language emerge through evolution and learning.">
 <title>Plimploms</title>
+<link rel="canonical" href="https://plimploms.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Plimploms">
+<meta property="og:title" content="Plimploms: a shared world of evolving creatures">
+<meta property="og:description" content="Watch artificial creatures evolve bodies, brains and language in one persistent world. Adopt one, teach it words, raise it in your own terrarium.">
+<meta property="og:url" content="https://plimploms.com/">
+<meta property="og:image" content="https://plimploms.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Plimploms: a shared world of evolving creatures">
+<meta name="twitter:description" content="Artificial life in your browser: evolution, learning and language in one persistent world.">
+<meta name="twitter:image" content="https://plimploms.com/og.png">
 <style>
 @font-face{font-family:Silkscreen;src:url(data:font/woff2;base64,/*FONT*/) format("woff2");font-display:swap}
 /*UPLOT_CSS*/
@@ -96,10 +109,11 @@ footer{color:var(--muted);font-size:12px;padding:0 16px 20px}
 </style>
 </head>
 <body>
+<noscript>Plimploms is an open artificial-life experiment: creatures evolve bodies, brains and language in one shared persistent world. It needs JavaScript and WebAssembly.</noscript>
 <header>
   <h1>Plimploms</h1>
   <div id="modes"><button id="modeWild" class="on" data-i18n="mode.wild"></button><button id="modeTerra" data-i18n="mode.terra"></button></div>
-  <button id="btnShot" data-i18n="btn.shot"></button>
+  <button id="btnShot" data-i18n="btn.shot"></button><button id="btnClip" data-i18n="btn.clip"></button>
   <span id="kraft" class="muted" style="display:none"></span>
   <span id="clock" data-i18n="app.loading">Loading world ...</span>
   <select id="langSel" aria-label="Language"><option value="en">English</option><option value="de">Deutsch</option></select>
@@ -236,6 +250,7 @@ footer{color:var(--muted);font-size:12px;padding:0 16px 20px}
       <p data-i18n="about.sci"></p>
       <p class="muted" data-i18n="about.libs"></p>
       <p><span data-i18n="about.coffee"></span> <a id="bmc2" class="bmc" target="_blank" rel="noopener noreferrer">Buy me a coffee</a></p>
+      <p class="muted"><a class="w" href="/impressum.html" target="_blank" rel="noopener" data-i18n="legal.imp"></a> | <a class="w" href="/datenschutz.html" target="_blank" rel="noopener" data-i18n="legal.priv"></a></p>
       <p class="muted">v0.7.0 | <a class="w" href="https://github.com/Dontorpedo/wildlinge" target="_blank" rel="noopener noreferrer">github.com/Dontorpedo/wildlinge</a></p>
     </div>
   </div>
@@ -247,7 +262,8 @@ footer{color:var(--muted);font-size:12px;padding:0 16px 20px}
   <p data-i18n="welcome.p1"></p>
   <p><b data-i18n="welcome.what"></b></p>
   <ul id="welcomeList"></ul>
-  <p class="muted" data-i18n="welcome.note"></p>
+  <p class="muted" id="welcomeNote" data-i18n="welcome.note"></p>
+  <p class="muted"><a class="w" href="/impressum.html" target="_blank" rel="noopener" data-i18n="legal.imp"></a> | <a class="w" href="/datenschutz.html" target="_blank" rel="noopener" data-i18n="legal.priv"></a></p>
   <div class="row"><button id="welcomeOk" data-i18n="btn.ok"></button></div>
 </div></div>
 <div class="modal" id="away"><div class="card">

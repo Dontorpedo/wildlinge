@@ -1,7 +1,7 @@
 //! Wildlinge server: one persistent shared world, WebSocket access, one terrarium per visitor token.
 use flate2::{read::GzDecoder, write::GzEncoder, write::ZlibEncoder, Compression};
 use serde_json::{json, Value};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
@@ -118,9 +118,42 @@ struct Sim {
     step_ms: f32,
     dir: PathBuf,
     saving: Arc<AtomicBool>,
+    v_day: u64,
+    v_set: HashSet<u64>,
+    v_peak: usize,
+}
+
+fn ymd(days: u64) -> String {
+    let z = days as i64 + 719468;
+    let era = z.div_euclid(146097);
+    let doe = z.rem_euclid(146097);
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = yoe + era * 400 + if m <= 2 { 1 } else { 0 };
+    format!("{:04}-{:02}-{:02}", y, m, d)
 }
 
 impl Sim {
+    fn visit(&mut self, owner: u64) {
+        let day = now_s() / 86400;
+        if day != self.v_day {
+            if self.v_day != 0 {
+                if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(self.dir.join("visits.csv")) {
+                    let _ = writeln!(f, "{},{},{}", ymd(self.v_day), self.v_set.len(), self.v_peak);
+                }
+            }
+            self.v_day = day;
+            self.v_set.clear();
+            self.v_peak = 0;
+        }
+        self.v_set.insert(owner);
+        self.v_peak = self.v_peak.max(self.clients.len());
+        let _ = std::fs::write(self.dir.join("visits-today.csv"), format!("{},{},{}\n", ymd(day), self.v_set.len(), self.v_peak));
+    }
+
     fn keeper(&mut self, token: &str) -> &mut Keeper {
         let now = Instant::now();
         let k = self.keepers.entry(token.to_string()).or_insert(Keeper { kraft: KRAFT_MAX, t: now, seen: now_s() });
@@ -202,9 +235,10 @@ impl Sim {
             }
             if let Some(c) = self.clients.get_mut(&cid) {
                 c.owner = fnv(&tok);
-                c.token = tok;
+                c.token = tok.clone();
                 c.ready = true;
             }
+            self.visit(fnv(&tok));
             self.init(cid);
             return;
         }
@@ -430,6 +464,9 @@ fn sim_thread(rx: mpsc::Receiver<ToSim>, dir: PathBuf, seed: u32, rate: f32, sto
         step_ms: 1.0,
         dir: dir.clone(),
         saving: Arc::new(AtomicBool::new(false)),
+        v_day: 0,
+        v_set: HashSet::new(),
+        v_peak: 0,
     };
     if let Some(text) = read_gz(&dir.join("terraria.json.gz")) {
         if let Ok(Value::Object(m)) = serde_json::from_str::<Value>(&text) {

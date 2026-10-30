@@ -874,17 +874,24 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
     if let Some((dx0, dy0, de)) = dung {
         w.add_det(dx0, dy0, de);
     }
-    let nx = clamp(c.x + dx, size, WORLD_W - size);
-    let ny = clamp(c.y + dy, size, WORLD_H - size);
+    let mut nx = clamp(c.x + dx, size, WORLD_W - size);
+    let mut ny = clamp(c.y + dy, size, WORLD_H - size);
+    let mut blocked = false;
+    if !c.fly && bwater != 2 && c.ab.ab[A_FIN] < 0.15 && BIOMES[w.bio_at(nx, ny)].water == 2 {
+        nx = c.x;
+        ny = c.y;
+        blocked = true;
+        c.dir += PI * 0.7 + w.rng.gauss() * 0.4;
+    }
     let (ax, ay) = (nx - c.x, ny - c.y);
     let (ca, sa) = (c.dir.cos(), c.dir.sin());
     let y0 = turn_cmd;
     let y1 = (ax * ca + ay * sa) / ms;
     let y2 = (-ax * sa + ay * ca) / ms;
-    if nx != c.x + dx {
+    if !blocked && nx != c.x + dx {
         c.dir = PI - c.dir;
     }
-    if ny != c.y + dy {
+    if !blocked && ny != c.y + dy {
         c.dir = -c.dir;
     }
     c.x = nx;

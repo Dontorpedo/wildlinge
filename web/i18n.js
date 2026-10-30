@@ -58,7 +58,7 @@ const I18N = {
     'tz.accs.crown': 'crown',
     'tz.accs.flower': 'flower',
     'tz.wordPh': 'Word to teach',
-    'btn.shot': 'Screenshot',
+    'btn.shot': 'Screenshot', 'btn.clip': 'Clip 10 s', 'clip.rec': 'Recording {0} s', 'clip.na': 'Video recording is not supported in this browser.', 'legal.imp': 'Legal notice', 'legal.priv': 'Privacy',
     'tz.alone': 'This Plimplom is alone and will become lonely and sad. A second one or a plush toy helps.',
     'tz.maxLevels': 'At most 5 additional shelves',
     'tz.levelBlocked': 'A shelf is already there',
@@ -178,6 +178,7 @@ const I18N = {
       'With "Show and name" you teach them words by clicking on a plant or a creature.',
       'Place a mirror and watch who recognises itself.',
       'In the research and lab tabs you switch off abilities and test: when is life still alive?'],
+    'welcome.noteSrv': 'This is one shared world on the server. Everyone sees the same Plimploms, seasons and days. Your anonymous visitor token only identifies your own terrarium; no personal data is collected.',
     'welcome.note': 'The world is stored in your browser and continues on your next visit. The time you were away is simulated.',
     'away.title': 'While you were away',
     'away.p': '{0} Plimplom days have passed. {1} births and {2} deaths.',
@@ -323,7 +324,7 @@ const I18N = {
     'tz.accs.crown': 'Krone',
     'tz.accs.flower': 'Blume',
     'tz.wordPh': 'Wort zum Lehren',
-    'btn.shot': 'Screenshot',
+    'btn.shot': 'Screenshot', 'btn.clip': 'Clip 10 s', 'clip.rec': 'Aufnahme {0} s', 'clip.na': 'Videoaufnahme wird von diesem Browser nicht unterstützt.', 'legal.imp': 'Impressum', 'legal.priv': 'Datenschutz',
     'tz.alone': 'Dieser Plimplom ist allein und wird einsam und traurig. Ein zweiter oder ein Kuscheltier hilft.',
     'tz.maxLevels': 'Höchstens 5 zusätzliche Regalbretter',
     'tz.levelBlocked': 'Dort ist schon ein Brett',
@@ -443,6 +444,7 @@ const I18N = {
       'Mit "Zeigen und benennen" bringen Sie ihnen Wörter bei, indem Sie auf eine Pflanze oder Kreatur klicken.',
       'Einen Spiegel aufstellen und beobachten, wer sich selbst erkennt.',
       'In Forschung und Labor einzelne Fähigkeiten abschalten und prüfen: Ab wann ist Leben noch Leben?'],
+    'welcome.noteSrv': 'Dies ist eine gemeinsame Welt auf dem Server. Alle sehen dieselben Plimploms, Jahreszeiten und Tage. Ihr anonymes Besucher-Token ordnet nur Ihr eigenes Terrarium zu; es werden keine personenbezogenen Daten erhoben.',
     'welcome.note': 'Die Welt wird in Ihrem Browser gespeichert und läuft beim nächsten Besuch weiter. Die verstrichene Zeit wird nachsimuliert.',
     'away.title': 'Während Sie weg waren',
     'away.p': 'Es sind {0} Plimplom-Tage vergangen. {1} Geburten und {2} Todesfälle.',
@@ -539,7 +541,6 @@ let LANG = 'en';
   let saved = null;
   try { saved = localStorage.getItem('wildlinge-lang'); } catch (e) { /* storage may be blocked */ }
   if (saved === 'en' || saved === 'de') LANG = saved;
-  else if (typeof navigator !== 'undefined' && /^de\b/i.test(navigator.language || '')) LANG = 'de';
 })();
 
 function setLang(l) {

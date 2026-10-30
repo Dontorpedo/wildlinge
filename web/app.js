@@ -569,7 +569,7 @@ function receive(m) {
       if (m.fresh && !welcomeOk) {
         let seen = false;
         try { seen = localStorage.getItem('wildlinge-welcome') === '1'; } catch (e) { /* storage blocked */ }
-        if (!seen) $('welcome').style.display = 'flex';
+        if (!seen) { if (serverMode) $('welcomeNote').textContent = t('welcome.noteSrv'); $('welcome').style.display = 'flex'; }
       }
       break;
     }
@@ -919,6 +919,28 @@ $('btnShot').onclick = () => {
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(u), 2000);
   }, 'image/png');
+};
+let clipBusy = false;
+$('btnClip').onclick = () => {
+  const cv = $(viewMode === 'wild' ? 'world' : 'terra');
+  if (clipBusy) return;
+  if (typeof MediaRecorder === 'undefined' || !cv.captureStream) { toast(t('clip.na')); return; }
+  const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'].find(m => MediaRecorder.isTypeSupported(m));
+  if (!mime) { toast(t('clip.na')); return; }
+  clipBusy = true;
+  const rec = new MediaRecorder(cv.captureStream(30), { mimeType: mime, videoBitsPerSecond: 4000000 }), parts = [], btn = $('btnClip');
+  let left = 10;
+  const tick = setInterval(() => { left--; btn.textContent = t('clip.rec', left); }, 1000);
+  btn.textContent = t('clip.rec', left);
+  rec.ondataavailable = e => { if (e.data && e.data.size) parts.push(e.data); };
+  rec.onstop = () => {
+    clearInterval(tick); clipBusy = false; btn.textContent = t('btn.clip');
+    const bl = new Blob(parts, { type: mime }), a = document.createElement('a'), u = URL.createObjectURL(bl);
+    a.href = u; a.download = 'plimploms-' + viewMode + '-' + new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19) + (mime.startsWith('video/mp4') ? '.mp4' : '.webm');
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(u), 4000);
+  };
+  rec.start(); setTimeout(() => { if (rec.state !== 'inactive') rec.stop(); }, 10000);
 };
 $('modeWild').onclick = () => setViewMode('wild');
 $('modeTerra').onclick = () => setViewMode('terra');

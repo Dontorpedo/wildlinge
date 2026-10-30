@@ -40,7 +40,8 @@ fn main() {
                 if c.fly { fl += 1; continue; }
                 bio[wildlinge_core::consts::BIOMES[w.bio_at(c.x, c.y)].water as usize] += 1;
             }
-            println!("  walkers land/shallow/deep {:?} fly {}", bio, fl);
+            let nf = w.creatures.iter().filter(|c| !c.fly && c.ab.ab[wildlinge_core::consts::A_FIN] < 0.15 && wildlinge_core::consts::BIOMES[w.bio_at(c.x, c.y)].water == 2).count();
+            println!("  walkers land/shallow/deep {:?} fly {} deep-without-fins {}", bio, fl, nf);
             let tl = life.iter().sum::<u64>().max(1) as f64;
             let tn = now.iter().sum::<usize>().max(1) as f64;
             println!(

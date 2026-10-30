@@ -17,6 +17,10 @@ server {
         try_files /index.html =404;
         add_header Cache-Control "no-cache";
     }
+    location ~ ^/(impressum\.html|datenschutz\.html|og\.png|robots\.txt|sitemap\.xml)$ {
+        try_files $uri =404;
+        add_header Cache-Control "public, max-age=3600";
+    }
     location /ws {
         limit_conn wl_conn 8;
         proxy_pass http://127.0.0.1:8787;
