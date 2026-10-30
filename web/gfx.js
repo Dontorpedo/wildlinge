@@ -464,7 +464,7 @@ function drawCreature(cs, o, sel, wpp, ox, oy, st) {
   const r = clamp(rp(size / wpp * 1.8), 1, 26);
   const px = rp((x - ox) / wpp), pyBase = rp((y - oy) / wpp);
   const moving = cs[o + 18] > 0.15 && !cs[o + 12];
-  const bob = moving ? rp(Math.abs(Math.sin(st.animT * 0.3 * (0.3 + cs[o + 18]) + (cs[o] | 0))) * Math.min(2, r * 0.18)) : 0;
+  const bob = moving && !(typeof crWholeOn === 'function' && crWholeOn()) ? rp(Math.abs(Math.sin(st.animT * 0.3 * (0.3 + cs[o + 18]) + (cs[o] | 0))) * Math.min(2, r * 0.18)) : 0;
   const py = pyBase - bob;
   if (px < -30 || py < -30 || px > BW + 30 || py > BH + 30) return;
   const hue = (rp(cs[o + 5] / 12) * 12) % 360;

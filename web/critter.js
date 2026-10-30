@@ -693,7 +693,7 @@ function crPose(kind0, t, id, spd, H, W) {
   let S = crPoseState.get(id);
   if (!S) { if (crPoseState.size > 3000) crPoseState.clear(); S = { kind: kind0, pend: kind0, cnt: 0, t, w: id * 7, sp: spd || 0 }; crPoseState.set(id, S); }
   if (kind0 === S.kind) S.cnt = 0;
-  else if (kind0 === S.pend) { if (++S.cnt >= 7) { S.kind = kind0; S.cnt = 0; } }
+  else if (kind0 === S.pend) { if (++S.cnt >= (kind0 === 'sleep' || kind0 === 'attack' ? 4 : 12)) { S.kind = kind0; S.cnt = 0; } }
   else { S.pend = kind0; S.cnt = 1; }
   const kind = S.kind, dt = Math.max(0, Math.min(4, t - S.t));
   S.t = t; S.sp += ((spd || 0) - S.sp) * Math.min(1, dt * 0.08);
@@ -812,7 +812,11 @@ function crDrawWhole(cs, o, px, py, r, baby, moving, st, hp) {
   let s = (r * 2.5 * (baby ? 0.75 : 1)) / sp.h;
   s = s < 0.75 ? s : s < 1.5 ? 1 : Math.round(s);
   const w = Math.max(1, Math.round(sp.w * s)), h = Math.max(1, Math.round(sp.h * s));
-  const flip = Math.cos(dir) < 0 ? -1 : 1;
+  let PS = crPoseState.get(id);
+  if (!PS) { crPose('idle', st.animT, id, cs[o + 18], 1, 1); PS = crPoseState.get(id); PS.flip = Math.cos(dir) < 0 ? -1 : 1; }
+  const cd = Math.cos(dir);
+  if (PS.flip === undefined) PS.flip = cd < 0 ? -1 : 1; else if (PS.flip > 0 && cd < -0.3) PS.flip = -1; else if (PS.flip < 0 && cd > 0.3) PS.flip = 1;
+  const flip = PS.flip;
   const kind = sl ? 'sleep' : fly ? 'fly' : act === 3 ? 'attack' : act === 4 && !moving ? 'eat' : act === 2 ? 'run' : act === 8 || act === 7 || act === 5 ? 'hop' : moving ? 'walk' : 'idle';
   const z = crPose(kind, st.animT, id, cs[o + 18], h, w);
   z.hue = hue; z.acc = acc;
