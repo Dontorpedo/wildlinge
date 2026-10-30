@@ -123,12 +123,13 @@ function tzSoc(c) {
 }
 function tzGrowth(c) { return Math.min(1, c.age / TZ.GROW); }
 function tzGeom(c) {
-  const g = tzGrowth(c), r = Math.max(2, Math.round(c.rT * (0.5 + 0.5 * g))), sh = c.rec.slice(20, 25), ge = geom(r, sh, g < 0.5 ? 1 : 0, c.rec[89] | 0);
+  const g = tzGrowth(c), r = Math.max(2, Math.round(c.rT * (0.5 + 0.5 * g)));
+  const sp = crSprite(c.rec, { r, baby: g < 0.5, ph: 0 });
   c.r = r;
-  c.bodyH = Math.max(ge.segs[0].b, ge.rh) + 1;
-  c.legL = 2 + (r >> 2) + 1;
-  c.half = c.bodyH + c.legL;
-  c.halfW = Math.max(8, ge.segs[0].a, -ge.tmin * 0.7);
+  c.half = Math.max(8, sp.hAbove / 2);
+  c.halfW = Math.max(8, sp.wHalf * 0.9);
+  c.bodyH = sp.hAbove * 0.6;
+  c.legL = sp.A.legL;
 }
 function tzMood(c) { const n = c.needs; return (n.food + n.water + n.warmth + n.light + n.fun + n.rest + n.social) / 7; }
 function tzFind(id) { return TZ.list.find(c => c.id === id); }
@@ -640,163 +641,93 @@ function tzGlyph(cx, cy, key, word) {
 }
 
 /* ---------- creature in side view ---------- */
+function tzEye(P, cu, cv, ew, eh, iris, open, look) {
+  const ex = Math.round(cu - ew / 2), ey = Math.round(cv - eh / 2);
+  if (!open) {
+    b.fillStyle = '#3a2f58';
+    if (look === 'laugh') { P(ex, ey + (eh >> 1), 1, 1); P(ex + 1, ey + (eh >> 1) - 1, Math.max(1, ew - 2), 1); P(ex + ew - 1, ey + (eh >> 1), 1, 1); }
+    else P(ex, ey + (eh >> 1), ew, 1);
+    return;
+  }
+  for (let j = 0; j < eh; j++) for (let i = 0; i < ew; i++) {
+    const nx = (i + 0.5 - ew / 2) / (ew / 2), ny = (j + 0.5 - eh / 2) / (eh / 2), d = nx * nx + ny * ny;
+    if (d > 1.15) continue;
+    let col = iris;
+    if (d > 0.62) col = '#2a2450';
+    else if (j < eh * 0.36) col = '#1d1840';
+    else if (j > eh * 0.68) col = '#58d0d8';
+    b.fillStyle = col; P(ex + i, ey + j, 1, 1);
+  }
+  if (ew >= 3) { b.fillStyle = '#ffffff'; P(ex + 1, ey + 1, ew >= 5 ? 2 : 1, ew >= 5 ? 2 : 1); if (ew >= 4) { P(ex + ew - 2, ey + eh - 2, 1, 1); } }
+}
 function tzSide(c, sel, now) {
-  const g = tzGrowth(c), baby = g < 0.5 ? 1 : 0, rec = c.rec, f = c.face >= 0 ? 1 : -1;
-  const hue = (Math.round(rec[5] / 12) * 12) % 360, carn = rec[6] > 0 ? 1 : 0;
-  const look = [82, 83, 84, 85, 86, 87, 88, 89].map(i => rec[i] | 0);
-  const sh = [rec[20], rec[21], rec[22], rec[23], rec[24]];
-  const ent = bodySprite(hue, c.r, carn, 80, look, 0, sh, baby, true), G = ent.g, R = ent.R;
-  const walking = c.moving && !c.sleeping && c.ground && !c.held;
-  const bob = walking ? Math.round(Math.abs(Math.sin(now / 110)) * 1.2) : 0;
-  const cx = Math.round(c.x), cy = Math.round(c.y - c.half) - bob + (c.sleeping ? 2 : 0);
-  const P = (u, v, w, h) => { w = w || 1; h = h || 1; b.fillRect(Math.round(f > 0 ? cx + u : cx - u - (w - 1)), Math.round(cy + v), w, h); };
-  const s0 = G.segs[0], rh = G.rh, hu = G.uh, ls = look[6], np = rec[19] | 0, r = c.r;
-  const swing = Math.sin(now / 130) * (walking ? 1.6 : 0);
-  const nLegs = (() => { let n = 0; for (let i = 0; i < np; i++) if (KIND_KEYS[rec[26 + i * 7 + 5]] === 'leg') n++; return Math.max(1, n); })();
-  const lowU = G.segs.length > 1 ? G.umin * 0.75 : -s0.a * 0.65, highU = s0.a * 0.65;
-  const segAt = u => { let bs = G.segs[0]; for (const s of G.segs) if (Math.abs(s.u - u) < Math.abs(bs.u - u)) bs = s; return bs; };
-  const wavy = (u0, v0, du, dv, len, col, tipCol, ph) => {
-    for (let j = 0; j < len; j++) {
-      const w = Math.sin(j * 0.6 - ph) * Math.min(1.8, 0.4 + j * 0.25);
-      b.fillStyle = j % 3 === 2 ? `hsl(${hue},55%,86%)` : col;
-      P(u0 + du * j + (dv ? w : 0), v0 + dv * j + (du ? w : 0), 1, 1);
-      if (j < len * 0.5) P(u0 + du * j + (dv ? w : 0) + (dv ? 1 : 0), v0 + dv * j + (du ? w : 0) + (du ? 1 : 0), 1, 1);
-    }
-    b.fillStyle = tipCol; P(u0 + du * (len - 1), v0 + dv * (len - 1), 1, 1);
-  };
-  const drawParts = phase => {
-    let li = 0;
-    for (let i = 0; i < np; i++) {
-      const o = 26 + i * 7, kind = KIND_KEYS[rec[o + 5]] || 'bud', sym = rec[o + 1] > 0, len = rec[o + 2], wid = rec[o + 3], mot = rec[o + 4];
-      const myLeg = kind === 'leg' ? li++ : 0;
-      for (const far of sym ? [1, 0] : [0]) {
-        if ((phase === 'far') !== (far === 1)) continue;
-        const L = Math.max(2, Math.min(r, Math.round(len * r * 1.2) + 1)), fu = far ? 2 : 0, ph = now / 160 + i * 1.3 + far * 1.7;
-        switch (kind) {
-          case 'leg': {
-            const t = (myLeg + 0.5) / nLegs, u = Math.round(lowU + t * (highU - lowU)) + fu, sg = segAt(u), v0 = Math.round(sg.b * 0.85);
-            const lg = c.half - c.bodyH + 1 + (c.bodyH - 1 - v0), sw = Math.round(swing * (far || myLeg % 2 ? -1 : 1));
-            const col = far ? `hsl(${hue},40%,58%)` : `hsl(${hue},48%,68%)`;
-            b.fillStyle = col;
-            if (ls === 1) { wavy(u, v0, 0, 1, lg + 4, col, '#ff9db8', ph); break; }
-            if (ls === 2) { P(u + (lg > 4 ? sw : 0), v0, 1, lg - 2); P(u + sw - 1, v0 + lg - 3, 3, 3); b.fillStyle = `hsl(${(hue + 40) % 360},60%,82%)`; P(u + sw, v0 + lg - 2, 1, 1); break; }
-            for (let j = 0; j < lg; j++) P(u + (j > lg - 3 ? sw : 0), v0 + j, 2, 1);
-            b.fillStyle = far ? `hsl(${hue},45%,50%)` : `hsl(${hue},50%,52%)`; P(u + sw, v0 + lg - 1, 3, 1);
-            b.fillStyle = '#ffb7c8'; P(u + sw + 1, v0 + lg - 1, 1, 1);
-            if (ls === 3) { b.fillStyle = `hsl(${(hue + 25) % 360},60%,90%)`; P(u - 1, v0 + 1, 1, 1); P(u + 2, v0 + 2, 1, 1); }
-            break;
-          }
-          case 'weapon': {
-            const u = hu + rh * 0.45 + fu * 0.5, v = -rh * 0.85;
-            if (ls === 1) { wavy(Math.round(u), Math.round(v), 0.5, -1, L + 3, `hsl(${hue},48%,70%)`, '#ff9db8', ph); break; }
-            b.fillStyle = '#fff4d6';
-            for (let j = 0; j < L; j++) P(Math.round(u + j * 0.6), Math.round(v - j), 1 + (j < L / 2 ? 1 : 0), 1);
-            break;
-          }
-          case 'sense': {
-            const u = Math.round(hu - rh * 0.1 - fu), v = Math.round(-rh), Ln = L + 2, sway = Math.round(Math.sin(ph) * 1.2);
-            b.fillStyle = `hsl(${hue},48%,62%)`;
-            for (let j = 0; j < Ln; j++) P(u + (j > 1 ? Math.round(sway * j / Ln) : 0), v - j, 1, 1);
-            if (ls === 2) { b.fillStyle = '#ffffff'; P(u + sway - 1, v - Ln - 2, 3, 3); b.fillStyle = '#2a2236'; P(u + sway, v - Ln - 1, 1, 1); }
-            else { b.fillStyle = '#fff09a'; P(u + sway - 1, v - Ln - 1, 2, 2); }
-            break;
-          }
-          case 'wing': {
-            const u0 = Math.round(-s0.a * 0.1 - fu), v0 = Math.round(-s0.b * 0.85), fl = Math.sin(now / 120 + far) * (mot > 0.3 ? 2.5 : 1), W = Math.max(3, L + 2);
-            b.globalAlpha = far ? 0.55 : 0.85;
-            b.fillStyle = `hsl(${(hue + 20) % 360},60%,95%)`;
-            for (let j = 0; j < W; j++) { const hgt = Math.max(1, Math.round((W - j) * (0.5 + wid * 0.5) + fl)); P(u0 - j, v0 - hgt - (j >> 1), 1, hgt); }
-            b.globalAlpha = 1;
-            break;
-          }
-          case 'fin': {
-            const u0 = Math.round(-s0.a * 0.2 - fu * 2), v0 = Math.round(-s0.b), H = Math.max(3, L);
-            b.globalAlpha = far ? 0.55 : 0.9;
-            b.fillStyle = `hsl(${(hue + 170) % 360},70%,86%)`;
-            for (let j = 0; j < H; j++) P(u0 - j, v0 - (H - j), 1, H - j);
-            b.globalAlpha = 1;
-            break;
-          }
-          case 'armor': { b.fillStyle = `hsl(${hue},28%,74%)`; for (let j = -2; j <= 2; j++) P(Math.round(j * s0.a * 0.28), Math.round(-s0.b) - 1, 3, 2); break; }
-          case 'storage': { b.fillStyle = `hsl(${hue},60%,88%)`; P(-2, Math.round(s0.b) - 2, 6, 3); break; }
-          case 'insul': { b.fillStyle = `hsl(${hue},50%,90%)`; for (let j = -3; j <= 3; j++) { P(Math.round(j * s0.a * 0.22), Math.round(-s0.b) - 1 - (j & 1), 2, 2); } break; }
-          case 'display': {
-            if (ls === 1) { wavy(Math.round(-s0.a * 0.5), Math.round(-s0.b * 0.6), -0.5, -1, L + 3, `hsl(${(hue + 180) % 360},70%,80%)`, '#ffe58a', ph); break; }
-            b.fillStyle = `hsl(${(hue + 180) % 360},80%,84%)`;
-            for (let j = -1; j <= 1; j++) P(Math.round(hu - rh * 0.1 + j * 2), Math.round(-rh) - 2 + Math.abs(j), 1, 3 - Math.abs(j));
-            break;
-          }
-          default: {
-            if (ls === 1) { wavy(Math.round(-s0.a * 0.6), Math.round(-s0.b * 0.5), -0.6, -1, L + 2, `hsl(${hue},52%,74%)`, '#ff9db8', ph); break; }
-            b.fillStyle = `hsl(${hue},52%,74%)`; P(Math.round(-s0.a * 0.6), Math.round(-s0.b) - 1, 3, 3);
-          }
-        }
-      }
-    }
-  };
-  /* far parts, body, near parts */
-  if (c.sleeping) b.globalAlpha = 0.97;
-  drawParts('far');
-  if (f > 0) b.drawImage(ent.cnv, cx - R, cy - R);
-  else { b.save(); b.translate(cx + 1, 0); b.scale(-1, 1); b.drawImage(ent.cnv, -R, cy - R); b.restore(); }
-  drawParts('near');
-  b.globalAlpha = 1;
-  /* face (three-quarter profile) */
+  const g = tzGrowth(c), baby = g < 0.5, rec = c.rec, f = c.face >= 0 ? 1 : -1;
+  const walking = c.moving && !c.sleeping && c.ground && !c.held && !c.fly;
+  const ph = walking ? 1 + (Math.floor(now / 110) % 4) : 0;
+  const sp = crSprite(rec, { r: c.r, baby, ph, lie: c.sleeping }), A = sp.A;
+  const cx = Math.round(c.x), gy = Math.round(c.y) - (walking && ph % 2 ? 1 : 0);
+  const P = (u, v, w, h) => { w = w || 1; h = h || 1; b.fillRect(Math.round(f > 0 ? cx + u : cx - u - (w - 1)), Math.round(gy + v), w, h); };
+  /* soft shadow on the ground */
+  if (!c.held) {
+    b.fillStyle = 'rgba(70,50,80,.16)';
+    const sw = Math.round(sp.wHalf * (c.fly ? 0.6 : 0.95)), sy = c.fly ? (TZ.lv[tzLevelOf(c.y)].y) : Math.round(c.y);
+    b.fillRect(cx - sw, sy, sw * 2, 1); b.fillRect(cx - sw + 2, sy + 1, sw * 2 - 4, 1);
+  }
+  if (f > 0) b.drawImage(sp.cnv, cx - sp.ox, gy - sp.gy);
+  else { b.save(); b.translate(cx + 1, 0); b.scale(-1, 1); b.drawImage(sp.cnv, -sp.ox, gy - sp.gy); b.restore(); }
+  /* face */
+  const hr = A.hr, hu = A.hu, hv = A.hv, look = [82, 83, 84, 85, 86, 87, 88, 89].map(i => rec[i] | 0);
   const mood = tzMood(c) / 100, sad = (c.soc > 0.35 && c.needs.social < 25) || mood < 0.35, fear = c.stress > 60, laugh = c.laughUntil > now;
-  const es = Math.max(2, Math.min(5, Math.round(rh * 0.42))) + (baby && rh >= 4 ? 1 : 0), es2 = Math.max(2, es - 1);
-  const blink = ((now / 16 + c.id * 13) % 170) < 5;
-  if (rh >= 2.6) {
-    const eyes = [[hu + rh * 0.12 - es / 2, -rh * 0.2 - es / 2, es], [hu + rh * 0.62 - es2 / 2, -rh * 0.24 - es2 / 2, es2]];
-    for (const [eu, ev, sz] of eyes) {
-      const ex = Math.round(eu), ey = Math.round(ev);
-      if (c.sleeping || blink || laugh) {
-        b.fillStyle = '#4a3a58'; P(ex, ey + (sz >> 1), sz, 1);
-        if (laugh && sz >= 3) { P(ex, ey + (sz >> 1) - 1, 1, 1); P(ex + sz - 1, ey + (sz >> 1) - 1, 1, 1); }
-        continue;
-      }
-      b.fillStyle = fear ? '#c03a50' : EYE_COL[look[2]] || '#3b3354';
-      if (sz >= 3) { P(ex + 1, ey, sz - 2, sz); P(ex, ey + 1, sz, sz - 2); } else P(ex, ey, sz, sz);
-      b.fillStyle = '#1b1226';
-      if (sz >= 4) { const ps = Math.max(2, sz - 3); P(ex + ((sz - ps) >> 1) + 1, ey + ((sz - ps) >> 1) + (sad ? 1 : 0), ps, ps); }
-      else if (sz === 3) P(ex + 2, ey + 1, 1, 1); else P(ex + 1, ey, 1, sz);
-      b.fillStyle = '#ffffff'; P(ex + (sz >= 3 ? 1 : 0), ey, 1, 1);
-      if (sz >= 4) P(ex + sz - 2, ey + sz - 2, 1, 1);
-      if (sad && !c.sleeping && sz >= 3) { b.fillStyle = '#6aaaf0'; const tq = Math.round((now / 120) % 5); P(ex + 1, ey + sz + tq, 1, 2); }
-    }
-    if (sad && !c.sleeping) { b.fillStyle = '#4a3a58'; P(Math.round(hu + rh * 0.05), Math.round(-rh * 0.2 - es / 2 - 2), es, 1); }
-    if (rh >= 3.4) {
-      b.fillStyle = '#ff8fae'; P(Math.round(hu + rh * 0.93), Math.round(rh * 0.02), 2, 2);
-      const mu = Math.round(hu + rh * 0.55), mv = Math.round(rh * 0.5);
+  const blink = ((now / 16 + c.id * 13) % 170) < 5, closed = c.sleeping || blink || laugh;
+  if (hr >= 4) {
+    const ew = A.ew, eh = A.eh, iris = fear ? '#c03a50' : A.iris;
+    tzEye(P, hu + hr * 0.5, hv - hr * 0.02, ew, eh, iris, !closed, laugh ? 'laugh' : '');
+    if (hr >= 99 && !c.sleeping) tzEye(P, hu + hr * 0.9, hv - hr * 0.1, Math.max(2, ew - 1), Math.max(3, eh - 1), iris, !closed, laugh ? 'laugh' : '');
+    if (sad && !c.sleeping && !closed) { b.fillStyle = '#6aaaf0'; const tq = Math.round((now / 120) % 6); P(Math.round(hu + hr * 0.4 - ew / 2), Math.round(hv + eh / 2 - 1 + tq), 1, 2); b.fillStyle = '#3a2f58'; P(Math.round(hu + hr * 0.4 - ew / 2 - 1), Math.round(hv - eh / 2 - 2), ew + 1, 1); }
+    /* nose and mouth */
+    b.fillStyle = '#5a3a58'; P(Math.round(hu + hr * 1.0), Math.round(hv + hr * 0.2), 2, 2);
+    const mu = Math.round(hu + hr * 0.62), mv = Math.round(hv + hr * 0.52);
+    if (hr >= 5) {
       b.fillStyle = '#8a4660';
-      if (laugh) { P(mu - 1, mv - 1, 3, 3); b.fillStyle = '#ff8fae'; P(mu, mv + 1, 1, 1); }
+      if (laugh) { P(mu - 1, mv - 1, 4, 3); b.fillStyle = '#ff8fae'; P(mu, mv + 1, 2, 1); }
       else if (c.sleeping) P(mu, mv, 2, 1);
       else if (sad || fear) { P(mu - 1, mv + 1, 1, 1); P(mu, mv, 2, 1); P(mu + 2, mv + 1, 1, 1); }
-      else if (mood > 0.55) { P(mu - 1, mv - 1, 1, 1); P(mu, mv, 2, 1); P(mu + 2, mv - 1, 1, 1); }
+      else if (mood > 0.5) { P(mu - 1, mv, 1, 1); P(mu, mv + 1, 2, 1); P(mu + 2, mv, 1, 1); }
       else P(mu - 1, mv, 4, 1);
-      if (carn && !sad) { b.fillStyle = '#ffffff'; P(mu - 1, mv + 1, 1, 1); P(mu + 2, mv + 1, 1, 1); }
-      if (!c.sleeping && CHEEK_COL[look[4]]) { b.fillStyle = CHEEK_COL[look[4]]; P(Math.round(hu + rh * 0.18), Math.round(rh * 0.3), 3, 2); }
+      if (rec[6] > 0 && !sad && !laugh) { b.fillStyle = '#ffffff'; P(mu - 1, mv + 1, 1, 1); P(mu + 2, mv + 1, 1, 1); }
+    }
+    /* cheek blush */
+    if (!c.sleeping) {
+      const bu = Math.round(hu + hr * 0.08), bv = Math.round(hv + hr * 0.36);
+      b.globalAlpha = 0.85; b.fillStyle = A.cheek;
+      if (A.cheekKind === 1) { P(bu, bv, 1, 1); P(bu + 2, bv, 1, 1); P(bu, bv + 1, 3, 1); P(bu + 1, bv + 2, 1, 1); }
+      else if (A.cheekKind === 2) { P(bu + 1, bv, 1, 3); P(bu, bv + 1, 3, 1); }
+      else if (A.cheekKind === 3) { P(bu, bv, 1, 1); P(bu + 2, bv, 1, 1); P(bu + 1, bv + 1, 1, 1); P(bu, bv + 2, 1, 1); P(bu + 2, bv + 2, 1, 1); }
+      else { P(bu, bv, 4, 2); P(bu + 1, bv - 1, 2, 1); }
+      b.globalAlpha = 1;
     }
   }
-  if (look[5] === 1 && r >= 3 && (((now / 16 + c.id * 7) % 48) < 4)) { b.fillStyle = '#fff6b0'; P(Math.round(s0.a * 0.5), -Math.round(s0.b * 0.5), 1, 3); P(Math.round(s0.a * 0.5) - 1, -Math.round(s0.b * 0.5) + 1, 3, 1); }
+  if (look[5] === 1 && (((now / 16 + c.id * 7) % 48) < 4)) { b.fillStyle = '#fff6b0'; const u = Math.round(A.hu - A.hr * 1.2), v = Math.round(A.bcv - A.b * 0.4); P(u, v - 1, 1, 3); P(u - 1, v, 3, 1); }
   /* accessories */
+  const top = Math.round(hv - hr * 0.93);
   switch (TZ_ACC[c.acc]) {
-    case 'bow': { const u = Math.round(hu - rh * 0.35), v = Math.round(-rh) - 1; b.fillStyle = '#ff7aa8'; P(u - 3, v - 2, 3, 4); P(u + 1, v - 2, 3, 4); b.fillStyle = '#ffc0d6'; P(u - 2, v - 1, 1, 1); P(u + 2, v - 1, 1, 1); b.fillStyle = '#d04a80'; P(u, v - 1, 1, 2); break; }
-    case 'hat': { const u = Math.round(hu - rh * 0.1), v = Math.round(-rh) - 1; b.fillStyle = '#3b3560'; P(u - 5, v, 11, 2); P(u - 3, v - 6, 7, 6); b.fillStyle = '#d8506a'; P(u - 3, v - 2, 7, 2); break; }
-    case 'glasses': { b.fillStyle = '#2a2236'; for (const [eu, ev, sz] of [[hu + rh * 0.12 - es / 2, -rh * 0.2 - es / 2, es], [hu + rh * 0.62 - es2 / 2, -rh * 0.24 - es2 / 2, es2]]) { const x0 = Math.round(eu) - 1, y0 = Math.round(ev) - 1; P(x0, y0, sz + 2, 1); P(x0, y0 + sz + 1, sz + 2, 1); P(x0, y0, 1, sz + 2); P(x0 + sz + 1, y0, 1, sz + 2); } P(Math.round(hu + rh * 0.3), Math.round(-rh * 0.2), 3, 1); break; }
-    case 'scarf': { const u = Math.round(hu - rh * 0.85), v = Math.round(-rh * 0.2); b.fillStyle = '#e8506a'; P(u, v, 3, Math.round(rh * 1.3)); b.fillStyle = '#ffb0c0'; P(u, v + 2, 3, 1); P(u, v + 5, 3, 1); b.fillStyle = '#e8506a'; P(u - 2, v + Math.round(rh * 1.3), 3, 4); break; }
-    case 'crown': { const u = Math.round(hu - rh * 0.1), v = Math.round(-rh) - 1; b.fillStyle = '#ffd84a'; P(u - 4, v - 1, 9, 2); P(u - 4, v - 3, 1, 2); P(u, v - 4, 1, 3); P(u + 4, v - 3, 1, 2); b.fillStyle = '#e04a4a'; P(u, v - 1, 1, 1); break; }
-    case 'flower': { const u = Math.round(hu - rh * 0.45), v = Math.round(-rh * 0.85); b.fillStyle = '#ffa0d0'; P(u - 1, v - 2, 3, 1); P(u - 1, v + 2, 3, 1); P(u - 2, v - 1, 1, 3); P(u + 2, v - 1, 1, 3); b.fillStyle = '#ffe070'; P(u - 1, v - 1, 3, 3); break; }
+    case 'bow': { const u = Math.round(hu - hr * 0.55), v = top + 1; b.fillStyle = '#ff7aa8'; P(u - 3, v - 2, 3, 4); P(u + 1, v - 2, 3, 4); b.fillStyle = '#ffc0d6'; P(u - 2, v - 1, 1, 1); P(u + 2, v - 1, 1, 1); b.fillStyle = '#d04a80'; P(u, v - 1, 1, 2); break; }
+    case 'hat': { const u = Math.round(hu + hr * 0.05), v = top + 2; b.fillStyle = '#3b3560'; P(u - 5, v, 11, 2); P(u - 3, v - 6, 7, 6); b.fillStyle = '#d8506a'; P(u - 3, v - 2, 7, 2); break; }
+    case 'glasses': { b.fillStyle = '#2a2236'; for (const [eu, ew2, eh2] of [[hu + hr * 0.4, A.ew, A.eh], [hu + hr * 0.93, Math.max(2, A.ew - 1), Math.max(3, A.eh - 1)]]) { const x0 = Math.round(eu - ew2 / 2) - 1, y0 = Math.round(hv - hr * 0.02 - eh2 / 2) - 1; P(x0, y0, ew2 + 2, 1); P(x0, y0 + eh2 + 1, ew2 + 2, 1); P(x0, y0, 1, eh2 + 2); P(x0 + ew2 + 1, y0, 1, eh2 + 2); } P(Math.round(hu + hr * 0.62), Math.round(hv - hr * 0.1), 3, 1); break; }
+    case 'scarf': { const u = Math.round(hu - hr * 0.7), v = Math.round(hv + hr * 0.45); b.fillStyle = '#e8506a'; P(u, v, 5, 3); b.fillStyle = '#ffb0c0'; P(u + 1, v + 1, 1, 1); P(u + 3, v + 1, 1, 1); b.fillStyle = '#e8506a'; P(u - 1, v + 3, 3, 5); break; }
+    case 'crown': { const u = Math.round(hu + hr * 0.05), v = top + 2; b.fillStyle = '#ffd84a'; P(u - 4, v - 1, 9, 3); P(u - 4, v - 3, 1, 2); P(u, v - 4, 1, 3); P(u + 4, v - 3, 1, 2); b.fillStyle = '#e04a4a'; P(u, v, 1, 1); break; }
+    case 'flower': { const u = Math.round(hu - hr * 0.35), v = top + 3; b.fillStyle = '#ffa0d0'; P(u - 1, v - 2, 3, 1); P(u - 1, v + 2, 3, 1); P(u - 2, v - 1, 1, 3); P(u + 2, v - 1, 1, 3); b.fillStyle = '#ffe070'; P(u - 1, v - 1, 3, 3); break; }
   }
   /* selection corners and health */
-  const top = cy - Math.round(c.bodyH) - 4;
+  const tp = gy + A.top - 4;
   if (sel || c.hp < 60) {
-    const w = 2 * r + 3;
-    b.fillStyle = OUTLINE; b.fillRect(cx - r - 1, top - 3, w, 2);
+    const w = Math.round(sp.wHalf * 1.2);
+    b.fillStyle = OUTLINE; b.fillRect(cx - (w >> 1) - 1, tp - 3, w + 2, 2);
     b.fillStyle = c.hp > 50 ? '#6fd36f' : c.hp > 25 ? '#e5c14a' : '#e05a4a';
-    b.fillRect(cx - r - 1, top - 3, Math.max(1, Math.round(w * Math.max(0, c.hp) / 100)), 1);
+    b.fillRect(cx - (w >> 1), tp - 3, Math.max(1, Math.round(w * Math.max(0, c.hp) / 100)), 1);
   }
   if (sel) {
-    const s = Math.max(R * 0.8, c.halfW) + 4, x0 = Math.round(cx - s), x1 = Math.round(cx + s), y0 = Math.round(cy - c.bodyH - 6), y1 = Math.round(c.y + 2);
+    const s = sp.wHalf + 4, x0 = Math.round(cx - s), x1 = Math.round(cx + s), y0 = Math.round(tp - 1), y1 = Math.round(c.y + 2);
     b.fillStyle = '#ffd84a';
     b.fillRect(x0, y0, 3, 1); b.fillRect(x0, y0, 1, 3); b.fillRect(x1 - 2, y0, 3, 1); b.fillRect(x1, y0, 1, 3);
     b.fillRect(x0, y1, 3, 1); b.fillRect(x0, y1 - 2, 1, 3); b.fillRect(x1 - 2, y1, 3, 1); b.fillRect(x1, y1 - 2, 1, 3);
