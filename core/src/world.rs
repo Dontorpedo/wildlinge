@@ -17,6 +17,8 @@ pub struct Food {
     pub meat: bool,
     pub born: u32,
     pub k: u8,
+    #[serde(default)]
+    pub det: bool,
 }
 
 #[derive(Clone, Default)]
@@ -281,6 +283,10 @@ pub struct World {
     #[serde(skip)]
     pub plants: usize,
     #[serde(skip)]
+    pub dets: usize,
+    #[serde(default)]
+    pub fert: u32,
+    #[serde(skip)]
     pub speech: Vec<Utt>,
     #[serde(skip)]
     pub speech_next: Vec<Utt>,
@@ -347,7 +353,8 @@ impl World {
         self.map = Some(Map::new(self.seed));
         self.grid = Grid::new();
         self.fgrid = Grid::new();
-        self.plants = self.foods.iter().filter(|f| !f.meat).count();
+        self.plants = self.foods.iter().filter(|f| !f.meat && !f.det).count();
+        self.dets = self.foods.iter().filter(|f| f.det).count();
         self.update_season();
     }
 
@@ -398,7 +405,8 @@ impl World {
         }
         let max_id = w.creatures.iter().chain(w.terra.iter()).map(|c| c.id).max().unwrap_or(0);
         w.next_id = w.next_id.max(max_id + 1);
-        w.plants = w.foods.iter().filter(|f| !f.meat).count();
+        w.plants = w.foods.iter().filter(|f| !f.meat && !f.det).count();
+        w.dets = w.foods.iter().filter(|f| f.det).count();
         w.rebuild_food_grid();
         Ok(w)
     }
@@ -451,10 +459,18 @@ impl World {
     }
 
     pub fn add_food(&mut self, x: f32, y: f32, e: f32, meat: bool, k: u8) {
-        self.foods.push(Food { x, y, e, meat, born: self.t, k });
+        self.foods.push(Food { x, y, e, meat, born: self.t, k, det: false });
         if !meat {
             self.plants += 1;
         }
+    }
+
+    pub fn add_det(&mut self, x: f32, y: f32, e: f32) {
+        if self.dets >= DET_MAX {
+            return;
+        }
+        self.foods.push(Food { x, y, e, meat: false, born: self.t, k: 0, det: true });
+        self.dets += 1;
     }
 
     pub fn grow_plant(&mut self, initial: bool) {
@@ -1105,8 +1121,34 @@ impl World {
         }
         if self.t % 5 == 0 {
             let t = self.t;
-            self.foods.retain(|f| f.e > 0.5 && !(f.meat && t - f.born > MEAT_DECAY));
-            self.plants = self.foods.iter().filter(|f| !f.meat).count();
+            let mut rot: Vec<(f32, f32, f32)> = Vec::new();
+            let mut fert: Vec<(f32, f32)> = Vec::new();
+            for f in self.foods.iter_mut() {
+                if f.meat && t - f.born > MEAT_DECAY && f.e > 0.5 {
+                    rot.push((f.x, f.y, f.e * 0.5));
+                    f.e = 0.0;
+                } else if f.det && t - f.born > DET_DECAY && f.e > 0.5 {
+                    fert.push((f.x, f.y));
+                    f.e = 0.0;
+                }
+            }
+            self.foods.retain(|f| f.e > 0.5);
+            self.plants = self.foods.iter().filter(|f| !f.meat && !f.det).count();
+            self.dets = self.foods.iter().filter(|f| f.det).count();
+            for (x, y, e) in rot {
+                self.add_det(x, y, e);
+            }
+            for (x, y) in fert {
+                let b = self.bio_at(x, y);
+                if BIOMES[b].growth > 0.0 && BIOMES[b].water == 0 {
+                    for _ in 0..2 {
+                        let px = clamp(x + self.rng.gauss() * 6.0, 2.0, WORLD_W - 2.0);
+                        let py = clamp(y + self.rng.gauss() * 6.0, 2.0, WORLD_H - 2.0);
+                        self.add_food(px, py, BIOMES[b].food * 1.4, false, b as u8);
+                    }
+                    self.fert += 1;
+                }
+            }
             self.rebuild_food_grid();
             for c in self.creatures.iter_mut() {
                 c.cf = -1;

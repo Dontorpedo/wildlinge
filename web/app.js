@@ -150,6 +150,11 @@ function render() {
   const big = wpp < 3.6, fd = fr.foods;
   for (let i = 0; i + 6 <= fd.length; i += 6) {
     const px = ((fd[i] - ox) / wpp) | 0, py = ((fd[i + 1] - oy) / wpp) | 0, e = fd[i + 2];
+    if (fd[i + 3] === 2) {
+      b.fillStyle = '#4a3326'; b.fillRect(px, py, big ? 2 : 1, 1);
+      b.fillStyle = '#7a5a3c'; b.fillRect(px, py, 1, 1);
+      continue;
+    }
     if (fd[i + 3]) {
       b.globalAlpha = clamp(1 - fd[i + 5] / MEAT_DECAY, 0.25, 1);
       b.fillStyle = '#5e1717'; b.fillRect(px, py, big ? 2 : 1, big ? 2 : 1);
@@ -237,6 +242,7 @@ function renderWorld(p) {
   setHtml($('stats'),
     row(t('st.herbCarn'), `${st.herb} / ${st.carn}`) +
     row(t('st.plants'), `${st.plants} / ${st.asleep}`) +
+    row(t('st.cycle'), `${st.dets} / ${st.fert}`) +
     row(t('st.gen'), st.gen) +
     row(t('st.wb'), pct(st.wb)) +
     row(t('st.neurons'), `${st.neurons.toFixed(1)} / ${st.conns.toFixed(0)}`) +

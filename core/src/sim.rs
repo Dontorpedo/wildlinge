@@ -184,6 +184,7 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
     }
     let diet = c.g.tr[T_DIET];
     let (plant_eff, meat_eff) = (1.0 - diet, diet);
+    let det_eff = (1.0 - (diet - 0.5).abs() * 3.5).clamp(0.0, 1.0) * 0.8;
     let sense_r = (c.sense_r * (1.0 - 0.4 * w.night)).min(MAX_SENSE);
     let b = w.bio_at(c.x, c.y);
     let bm = &BIOMES[b];
@@ -208,7 +209,7 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
         if d <= sense_r {
             food = Some(c.cf as usize);
             food_d = d;
-            food_score = (if f.meat { meat_eff } else { plant_eff }) * (1.0 - d / sense_r);
+            food_score = (if f.det { det_eff } else if f.meat { meat_eff } else { plant_eff }) * (1.0 - d / sense_r);
         }
     } else {
         let g = &w.fgrid;
@@ -233,7 +234,7 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
                         continue;
                     }
                     let d = d2.sqrt();
-                    let s = (if f.meat { meat_eff } else { plant_eff }) * (1.0 - d / sense_r);
+                    let s = (if f.det { det_eff } else if f.meat { meat_eff } else { plant_eff }) * (1.0 - d / sense_r);
                     if s > food_score {
                         food_score = s;
                         food = Some(fi);
@@ -858,13 +859,18 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
     let mut dy = c.dir.sin() * c.v + wy * wm + c.push[1];
     c.push = [0.0, 0.0];
     let mut gut_fire = false;
+    let mut dung: Option<(f32, f32, f32)> = None;
     if c.urge {
         gut_fire = true;
         c.urge = false;
         dx -= c.dir.cos() * 0.8;
         dy -= c.dir.sin() * 0.8;
         c.gut_events += 1;
+        dung = Some((c.x, c.y, 1.5 + size * 1.2));
         w.body_bubble(c.x, c.y, "b.gut");
+    }
+    if let Some((dx0, dy0, de)) = dung {
+        w.add_det(dx0, dy0, de);
     }
     let nx = clamp(c.x + dx, size, WORLD_W - size);
     let ny = clamp(c.y + dy, size, WORLD_H - size);
@@ -966,11 +972,11 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
     if let Some(fi) = food {
         if !prey && food_d < size + 4.0 {
             let fd = &mut w.foods[fi];
-            let eff = if fd.meat { meat_eff } else { plant_eff };
+            let eff = if fd.det { det_eff } else if fd.meat { meat_eff } else { plant_eff };
             if eff > 0.15 {
                 let bite = fd.e.min(size * 2.0);
                 fd.e -= bite;
-                c.energy = (c.energy + bite * eff).min(c.max_e());
+                c.energy = (c.energy + bite * eff * if fd.det { 0.6 } else { 1.0 }).min(c.max_e());
                 c.gut += bite * 0.015;
                 c.last_ate = t as i64;
                 if c.eaten == 0 {

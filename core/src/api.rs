@@ -50,7 +50,7 @@ pub fn frame(w: &mut World, x0: f32, y0: f32, x1: f32, y1: f32, wpp: f32, sel: u
     }
     for f in &w.foods {
         if f.e > 0.0 && f.x > x0 - 10.0 && f.x < x1 + 10.0 && f.y > y0 - 10.0 && f.y < y1 + 10.0 {
-            fd.extend_from_slice(&[f.x, f.y, f.e, if f.meat { 1.0 } else { 0.0 }, f.k as f32, (w.t - f.born) as f32]);
+            fd.extend_from_slice(&[f.x, f.y, f.e, if f.det { 2.0 } else if f.meat { 1.0 } else { 0.0 }, f.k as f32, (w.t - f.born) as f32]);
         }
     }
     let bub: Vec<Value> = w
@@ -265,7 +265,7 @@ pub fn panel(w: &World, sel: u32) -> String {
         "t": w.t, "day": [year, day], "season": w.season_key(), "frozen": w.frozen, "night": w.night > 0.5, "seed": w.seed,
         "pop": cs.len(), "spCount": w.species.iter().filter(|s| s.n >= 5).count(),
         "goals": goals,
-        "stats": {"herb": cs.len() - carn, "carn": carn, "plants": w.plants, "gen": w.max_gen, "wb": avg(&|c| c.wellbeing),
+        "stats": {"herb": cs.len() - carn, "carn": carn, "plants": w.plants, "dets": w.dets, "fert": w.fert, "gen": w.max_gen, "wb": avg(&|c| c.wellbeing),
             "neurons": avg(&|c| c.net.hidden as f32), "conns": avg(&|c| c.net.w.len() as f32), "cert": avg(&|c| c.certainty()),
             "parts": avg(&|c| c.pp.len() as f32), "rate": w.rate, "sentences": w.sentences, "births": w.births, "deaths": w.deaths,
             "macro": w.macro_n, "neuronsN": w.neurons_n, "bossChanges": w.boss_changes, "asleep": cs.iter().filter(|c| c.asleep).count(), "words": words},

@@ -98,7 +98,7 @@ const I18N = {
     'box.phylo': 'Family tree of species', 'box.lab': 'Controlled experiment',
     'leg.herb': 'Herbivores', 'leg.carn': 'Carnivores', 'leg.wb': 'Wellbeing',
 
-    'st.herbCarn': 'Herbivores / carnivores', 'st.plants': 'Plants / asleep', 'st.gen': 'Max. generation',
+    'st.herbCarn': 'Herbivores / carnivores', 'st.plants': 'Plants / asleep', 'st.cycle': 'Waste now / fertilized plots', 'st.gen': 'Max. generation',
     'st.wb': 'Avg. wellbeing', 'st.neurons': 'Avg. hidden neurons / connections', 'st.cert': 'Avg. body knowledge',
     'st.parts': 'Avg. body parts', 'st.rate': 'Communication success', 'st.sentences': 'Sentences understood',
     'st.words': 'Words in use', 'st.births': 'Births', 'st.deaths1': 'Deaths hunger / age / eaten',
@@ -359,7 +359,7 @@ const I18N = {
     'box.phylo': 'Stammbaum der Arten', 'box.lab': 'Kontrolliertes Experiment',
     'leg.herb': 'Pflanzenfr.', 'leg.carn': 'Fleischfr.', 'leg.wb': 'Wohlbefinden',
 
-    'st.herbCarn': 'Pflanzenfresser / Fleischfresser', 'st.plants': 'Pflanzen / schlafend', 'st.gen': 'Max. Generation',
+    'st.herbCarn': 'Pflanzenfresser / Fleischfresser', 'st.plants': 'Pflanzen / schlafend', 'st.cycle': 'Abfall aktuell / gedüngte Stellen', 'st.gen': 'Max. Generation',
     'st.wb': 'Ø Wohlbefinden', 'st.neurons': 'Ø verdeckte Neuronen / Verbindungen', 'st.cert': 'Ø Körperkenntnis',
     'st.parts': 'Ø Körperteile', 'st.rate': 'Verständigungsrate', 'st.sentences': 'Sätze richtig verstanden',
     'st.words': 'Wörter im Umlauf', 'st.births': 'Geburten', 'st.deaths1': 'Tode Hunger / Alter / Gefressen',
