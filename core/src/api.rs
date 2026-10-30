@@ -72,7 +72,7 @@ pub fn terra_json(c: &crate::creature::Creature) -> Value {
     fill_rec(c, &[], true, &mut r);
     let rv: Vec<f32> = r.iter().map(|x| if x.is_finite() { *x } else { 0.0 }).collect();
     let (l, ch) = (c.g.tr[T_LIFE], c.g.tr[T_CHILD]);
-    json!({"ok": true, "id": c.id, "name": c.name, "gen": c.gen, "children": c.children, "p1": c.p1, "p2": c.p2, "rec": rv, "growth": (c.age as f32 / (l * ch)).min(1.0), "words": c.lex.m.len(), "learn": c.g.tr[T_LEARN], "cur": c.g.tr[T_CUR]})
+    json!({"ok": true, "id": c.id, "name": c.name, "gen": c.gen, "children": c.children, "p1": c.p1, "p2": c.p2, "rec": rv, "growth": (c.age as f32 / (l * ch)).min(1.0), "words": c.lex.m.len(), "learn": c.g.tr[T_LEARN], "cur": c.g.tr[T_CUR], "soc": c.g.soc})
 }
 
 pub fn fill_rec(c: &crate::creature::Creature, bosses: &[u32], detail: bool, r: &mut [f32]) {
@@ -240,6 +240,7 @@ pub fn panel(w: &World, sel: u32) -> String {
     let events: Vec<Value> = w.events.iter().rev().take(16).map(|e| json!([World::day_of(e.t), e.k, e.p])).collect();
     let log: Vec<Value> = w.log.iter().rev().take(16).map(|e| json!({"words": e.words, "id": e.id, "name": e.name, "carn": e.carn, "vec": e.vec, "sector": e.sector})).collect();
     let adopted: Vec<Value> = cs.iter().filter(|c| c.adopted).map(|c| json!({"id": c.id, "name": c.name, "phase": c.phase(), "wb": c.wellbeing, "goal": c.goal, "asleep": c.asleep})).collect();
+    let released: Vec<Value> = cs.iter().filter(|c| c.released && !c.adopted).map(|c| json!({"id": c.id, "name": c.name, "phase": c.phase(), "wb": c.wellbeing, "goal": c.goal, "asleep": c.asleep, "kids": c.children, "gen": c.gen})).collect();
     let memorial: Vec<Value> = w.memorial.iter().rev().take(8).map(|m| json!({"name": m.name, "cause": m.cause, "died": World::day_of(m.died), "children": m.children})).collect();
     let mut mini: Vec<f32> = Vec::with_capacity(cs.len() * 3);
     let bosses: Vec<u32> = w.species.iter().map(|s| s.boss_id).collect();
@@ -270,7 +271,7 @@ pub fn panel(w: &World, sel: u32) -> String {
             "macro": w.macro_n, "neuronsN": w.neurons_n, "bossChanges": w.boss_changes, "asleep": cs.iter().filter(|c| c.asleep).count(), "words": words},
         "hist": &w.hist[w.hist.len().saturating_sub(170)..],
         "lang": {"what": what, "where": whr},
-        "species": species, "phylo": phylo, "events": events, "log": log, "adopted": adopted, "memorial": memorial,
+        "species": species, "phylo": phylo, "events": events, "log": log, "adopted": adopted, "released": released, "memorial": memorial,
         "research": research, "mini": mini, "sel": sel_v
     })
     .to_string()
@@ -472,6 +473,7 @@ pub fn command(w: &mut World, v: &Value) -> Value {
                     c.y = y;
                     c.health = f(v, "hp", 20.0, 100.0, 100.0);
                     c.adopted = false;
+                    c.released = true;
                     c.energy = c.max_e() * 0.8;
                     c.note(w.t, "d.fromTerrarium", "");
                     let nm = c.name.clone();

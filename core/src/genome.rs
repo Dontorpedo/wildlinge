@@ -22,10 +22,16 @@ pub struct Genome {
     pub look: [[u8; 2]; NLOCI],
     #[serde(default)]
     pub look_set: bool,
+    #[serde(default = "soc_unset")]
+    pub soc: f32,
     pub parts: Vec<Part>,
     pub nodes: Vec<NodeGene>,
     pub conns: Vec<ConnGene>,
     pub mutated: bool,
+}
+
+fn soc_unset() -> f32 {
+    -1.0
 }
 
 fn de_look<'de, D: serde::Deserializer<'de>>(d: D) -> Result<[[u8; 2]; NLOCI], D::Error> {
@@ -244,7 +250,7 @@ pub fn random_genome(carn: bool, rng: &mut Rng, innov: &mut Innov) -> Genome {
     let look = random_look(rng);
     let nh = 4 + rng.below(4) as u32;
     let nodes: Vec<NodeGene> = (0..nh).map(|k| NodeGene { id: HID0 + k, d: 0.5 }).collect();
-    let mut g = Genome { tr, shape, dw, motor, hue, look, look_set: true, parts, nodes, conns: Vec::new(), mutated: false };
+    let mut g = Genome { tr, shape, dw, motor, hue, look, look_set: true, soc: if carn { rng.range(0.05, 0.4) } else { rng.range(0.15, 1.0) }, parts, nodes, conns: Vec::new(), mutated: false };
     let h = |k: u32| HID0 + k;
     let o = |k: u32| OUT0 + k;
     add_conn(&mut g, innov, 1, h(0), 2.5);
@@ -427,6 +433,9 @@ pub fn mutate(g: &Genome, st: &Stress, off: bool, rng: &mut Rng, innov: &mut Inn
         }
     }
     n.hue = (n.hue + rng.gauss() * m * 40.0 + 360.0) % 360.0;
+    if rng.chance(0.5) {
+        n.soc = clamp(n.soc + rng.gauss() * m * 1.2, 0.0, 1.0);
+    }
     n.look = mutate_look(&g.look, m, rng);
     n.parts = mutate_parts(&g.parts, m, st, rng, &mut ev);
     mutate_brain(&mut n, m, rng, innov, &mut ev);
@@ -457,6 +466,9 @@ pub fn crossover(a: &Genome, b: &Genome, rng: &mut Rng) -> Genome {
     }
     if rng.chance(0.5) {
         n.hue = b.hue;
+    }
+    if rng.chance(0.5) {
+        n.soc = b.soc;
     }
     n.look = mendel(&a.look, &b.look, rng);
     if rng.chance(0.5) {
@@ -493,6 +505,11 @@ pub fn sanitize(g: &mut Genome) {
         *v = if v.is_finite() { clamp(*v, -1.5, 1.5) } else { 0.0 };
     }
     g.hue = if g.hue.is_finite() { g.hue.rem_euclid(360.0) } else { 100.0 };
+    if !g.soc.is_finite() || g.soc < 0.0 {
+        let mut r = Rng::new(g.hue.to_bits() as u64 ^ 0x50C1A1 ^ ((g.conns.len() as u64) << 24));
+        g.soc = r.range(0.15, 1.0);
+    }
+    g.soc = clamp(g.soc, 0.0, 1.0);
     if !g.look_set {
         let mut r = Rng::new(g.hue.to_bits() as u64 ^ ((g.conns.len() as u64) << 32) ^ g.nodes.len() as u64);
         g.look = random_look(&mut r);

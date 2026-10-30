@@ -23,7 +23,7 @@ const cam = { x: WORLD_W / 2, y: WORLD_H / 2, zi: 4 };
 
 let sendHost = () => {}, worker = null, mode = 'worker', labWorker = null;
 let viewMode = 'wild';
-let frame = null, panel = null, tool = 'select', running = true, selId = 0, activeTab = 'world';
+let relIds = new Set(), frame = null, panel = null, tool = 'select', running = true, selId = 0, activeTab = 'world';
 let showSense = false, showBubbles = true, showMeaning = true, follow = false;
 let mapInfo = null, terrainSummer = null, terrainWinter = null, miniBase = null;
 let bubbles = [], animT = 0, lastView = '', toastTimer = null, centered = false, gotInit = false, welcomeOk = false;
@@ -174,6 +174,14 @@ function render() {
   ordered.sort((p, q) => cs[p + 2] - cs[q + 2]);
   for (const o of ordered) drawCreature(cs, o, false, wpp, ox, oy, gst);
   if (selO >= 0) drawCreature(cs, selO, true, wpp, ox, oy, gst);
+  if (relIds.size) {
+    for (let o = 0; o + CS_STRIDE <= cs.length; o += CS_STRIDE) if (relIds.has(cs[o])) {
+      const mx = rp((cs[o + 1] - ox) / wpp), my = rp((cs[o + 2] - oy) / wpp) - clamp(rp(cs[o + 4] / wpp * 1.8), 1, 26) - 8 - (Math.sin(animT * 0.1) > 0 ? 1 : 0);
+      if (mx < -10 || my < -10 || mx > BW + 10 || my > BH + 10) continue;
+      b.fillStyle = OUTLINE; b.fillRect(mx - 3, my - 1, 7, 3); b.fillRect(mx - 1, my - 3, 3, 7);
+      b.fillStyle = '#ffd84a'; b.fillRect(mx - 2, my, 5, 1); b.fillRect(mx, my - 2, 1, 5);
+    }
+  }
   if (meta.night > 0) { b.fillStyle = `rgba(8,12,40,${0.5 * meta.night})`; b.fillRect(0, 0, BW, BH); }
 
   ctx.imageSmoothingEnabled = false;
@@ -261,9 +269,11 @@ function renderWorld(p) {
     const meaning = showMeaning && e.vec ? ` <span class="muted">(${esc(describeVec(e.vec))}${e.sector >= 0 ? ', ' + esc(tSector(e.sector)) : ''})</span>` : '';
     return `<div>${who}: <b>${esc(e.words)}</b>${meaning}</div>`;
   }).join(''));
+  relIds = new Set((p.released || []).map(a => a.id));
   setHtml($('mine'), (p.adopted.length
     ? '<table>' + p.adopted.map(a => `<tr><td class="l"><a class="w" data-id="${a.id}" data-focus="1">${esc(a.name)}</a> <span class="muted">${esc(tPhase(a.phase))}</span></td><td>${a.asleep ? esc(t('mine.asleep')) : esc(tr('goals')[a.goal] || '')} | ${pct(a.wb)}</td></tr>`).join('') + '</table>'
     : `<div class="muted">${esc(t('mine.none'))}</div>`) +
+    ((p.released || []).length ? sub(esc(t('mine.released'))) + '<table>' + p.released.map(a => `<tr><td class="l"><a class="w" data-id="${a.id}" data-focus="1">${esc(a.name)}</a> <span class="muted">${esc(tPhase(a.phase))} | ${esc(t('tz.gen'))} ${a.gen}</span></td><td>${a.asleep ? esc(t('mine.asleep')) : esc(tr('goals')[a.goal] || '')} | ${esc(t('mine.kids', a.kids))}</td></tr>`).join('') + '</table>' : '') +
     (p.memorial.length ? sub(esc(t('mine.memorial'))) + '<table>' + p.memorial.map(m => `<tr><td class="l">${esc(m.name)}</td><td>${esc(t('mine.memRow', tDay(m.died), tCause(m.cause), m.children))}</td></tr>`).join('') + '</table>' : ''));
 }
 function renderResearch(p) {

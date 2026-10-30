@@ -105,6 +105,7 @@ const I18N = {
     'st.deaths2': 'Deaths drowned / frozen / heat / injury', 'st.macro': 'Visible mutations / boss changes',
     'st.neuronMut': 'Brain growth events',
 
+    'mine.released': 'Released into the wild (marked with a yellow cross)', 'mine.kids': '{0} children',
     'mine.none': 'None in the wild. Select a Wildling and click "Adopt into terrarium".', 'mine.memorial': 'In memory',
     'mine.memRow': '{0}, {1}, {2} children', 'mine.asleep': 'asleep',
     'lang.what': 'Words for situations', 'lang.where': 'Words for directions', 'lang.none': 'none yet',
@@ -365,6 +366,7 @@ const I18N = {
     'st.deaths2': 'Tode Ertrunken / Erfroren / Hitze / Verletzung', 'st.macro': 'Sichtbare Mutationen / Bosswechsel',
     'st.neuronMut': 'Gehirnwachstum (Ereignisse)',
 
+    'mine.released': 'In die Wildnis entlassen (gelbes Kreuz markiert)', 'mine.kids': '{0} Kinder',
     'mine.none': 'Keine in der Wildnis. Wählen Sie einen Wildling aus und klicken Sie auf "Ins Terrarium adoptieren".', 'mine.memorial': 'In Erinnerung',
     'mine.memRow': '{0}, {1}, {2} Kinder', 'mine.asleep': 'schläft',
     'lang.what': 'Wörter für Situationen', 'lang.where': 'Wörter für Richtungen', 'lang.none': 'noch keine',

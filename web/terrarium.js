@@ -107,7 +107,7 @@ function tzMake(r, st) {
     goal: null, goalT: 0, sleeping: false, bubble: null, bubbleUntil: 0, nextBubble: 0, heartUntil: 0, laughUntil: 0, danceUntil: 0, hopT: 0, moving: false, kick: 0, act: 0,
     px: 0, py: 0, pt: 0, stuck: 0, arrived: false
   };
-  c.soc = tzSoc(c);
+  c.soc = r.soc !== undefined ? tzClamp(r.soc, 0, 1) : tzSoc(c);
   c.fly = rec[9] > 0;
   tzGeom(c);
   if (st && st.y !== undefined) { c.y = st.y; c.lvl = st.lvl || 0; if (c.lvl >= TZ.lv.length) { c.lvl = 0; c.y = TZ_FLOOR; } }
@@ -167,7 +167,7 @@ async function tzReconcile() {
   tzBuildLevels();
   TZ.list = []; TZ.eggs = [];
   for (const q of rs) {
-    if (eggById.has(q.id)) { const e = eggById.get(q.id); TZ.eggs.push({ id: q.id, name: q.name, gen: q.gen, rec: q.rec, x: e.x, left: e.left, y: TZ_FLOOR, vy: 0 }); continue; }
+    if (eggById.has(q.id)) { const e = eggById.get(q.id); TZ.eggs.push({ id: q.id, name: q.name, gen: q.gen, rec: q.rec, learn: q.learn, cur: q.cur, soc: q.soc, x: e.x, left: e.left, y: TZ_FLOOR, vy: 0 }); continue; }
     const prev = old.get(q.id);
     if (prev) { prev.name = q.name; prev.rec = Array.from(q.rec); prev.kids = q.children; prev.words = q.words; TZ.list.push(prev); continue; }
     TZ.list.push(tzMake(q, stById.get(q.id) || null));
@@ -311,7 +311,7 @@ function tzHatch() {
   const keep = [];
   for (const e of TZ.eggs) {
     if (e.left > 0) { keep.push(e); continue; }
-    const c = tzMake({ id: e.id, name: e.name, gen: e.gen, rec: e.rec, growth: 0, children: 0, learn: e.learn, cur: e.cur }, { age: 0, x: e.x });
+    const c = tzMake({ id: e.id, name: e.name, gen: e.gen, rec: e.rec, growth: 0, children: 0, learn: e.learn, cur: e.cur, soc: e.soc }, { age: 0, x: e.x });
     c.heartUntil = Date.now() + 2500;
     TZ.list.push(c);
     tzBurst('star', c.x, c.y - c.half, 10);
@@ -349,7 +349,7 @@ async function tzBreeding() {
     c.love = o.love = 0;
     c.breedCool = o.breedCool = 180;
     if (r.ok) {
-      TZ.eggs.push({ id: r.id, name: r.name, gen: r.gen, rec: Array.from(r.rec), learn: r.learn, cur: r.cur, x: (c.x + o.x) / 2, y: Math.min(c.y, o.y) - 20, vy: 0, left: 90 });
+      TZ.eggs.push({ id: r.id, name: r.name, gen: r.gen, rec: Array.from(r.rec), learn: r.learn, cur: r.cur, soc: r.soc, x: (c.x + o.x) / 2, y: Math.min(c.y, o.y) - 20, vy: 0, left: 90 });
       c.kids++; o.kids++;
       c.heartUntil = o.heartUntil = Date.now() + 2500;
       tzBurst('heart', (c.x + o.x) / 2, c.y - c.half * 2, 6);
