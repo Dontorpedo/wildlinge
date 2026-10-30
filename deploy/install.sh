@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs or updates the Wildlinge server on Ubuntu 24.04 (run as root).
+# Installs or updates the Plimploms server on Ubuntu 24.04 (run as root).
 # Usage: sudo ./install.sh [--domain example.com] [--email you@example.com] [--port 80]
 set -euo pipefail
 

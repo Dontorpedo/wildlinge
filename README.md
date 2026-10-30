@@ -1,8 +1,8 @@
-# Wildlinge
+# Plimploms
 
 An open experiment in artificial life that runs entirely in your browser. Nobody gives the creatures body parts, behaviour or language: bodies, brains and words emerge through evolution and learning. Eine deutsche Beschreibung folgt weiter unten.
 
-(The working title "Wildlinge" will be replaced by an international name.)
+(Product name: Plimploms, plimploms.com. The creatures are called Wildlinge / Wildlings. Internal file and service names keep the old working title.)
 
 ## What is inside
 
@@ -44,7 +44,7 @@ License: MIT. Libraries: uPlot (MIT), d3-hierarchy (ISC), Silkscreen font (SIL O
 
 # Deutsch
 
-Wildlinge ist ein offenes Experiment zu künstlichem Leben, das komplett im Browser läuft. Körperteile, Gehirne und Sprache entstehen durch Evolution und Lernen, nichts davon ist vorgegeben.
+Plimploms ist ein offenes Experiment zu künstlichem Leben, das komplett im Browser läuft. Körperteile, Gehirne und Sprache entstehen durch Evolution und Lernen, nichts davon ist vorgegeben.
 
 **Bauen:** `npm ci`, dann `bash tools/build.sh`. Ergebnis ist die einzelne Datei `dist/wildlinge.html`. Voraussetzungen: Node 20+ und Rust nightly mit dem Ziel `wasm32-unknown-unknown`.
 
