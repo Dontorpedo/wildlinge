@@ -2615,23 +2615,33 @@ function crPickIdx(rec) {
 }
 const CR_PZ = { act: '', fr: 0, hue: 0, acc: 0, sx: 1, sy: 1, dy: 0, lean: 0, dx: 0, tp: 2, ep: 2, closed: false };
 /* kind: idle walk run sleep eat attack hop fly; H, W: sprite size in pixels */
-function crPose(kind, t, id, spd, H, W) {
+const crPoseState = new Map();
+function crPose(kind0, t, id, spd, H, W) {
+  let S = crPoseState.get(id);
+  if (!S) { if (crPoseState.size > 3000) crPoseState.clear(); S = { kind: kind0, pend: kind0, cnt: 0, t, w: id * 7, sp: spd || 0 }; crPoseState.set(id, S); }
+  if (kind0 === S.kind) S.cnt = 0;
+  else if (kind0 === S.pend) { if (++S.cnt >= 7) { S.kind = kind0; S.cnt = 0; } }
+  else { S.pend = kind0; S.cnt = 1; }
+  const kind = S.kind, dt = Math.max(0, Math.min(4, t - S.t));
+  S.t = t; S.sp += ((spd || 0) - S.sp) * Math.min(1, dt * 0.08);
   const z = CR_PZ; z.sx = 1; z.sy = 1; z.dy = 0; z.lean = 0; z.dx = 0; z.closed = false;
-  const sp = 0.5 + Math.min(1.5, spd || 0) * 0.5, ab = Math.abs;
+  const sp = 0.5 + Math.min(1.5, S.sp) * 0.5, ab = Math.abs;
+  S.w += dt * (kind === 'walk' ? sp : kind === 'run' ? sp * 1.5 : 1);
+  const w = S.w;
   let tw = 0.1 + 0.07 * sp, ear = 0;
   switch (kind) {
-    case 'walk': { const p = Math.sin(t * 0.26 * sp + id); z.sy = 1 - 0.06 * ab(p); z.sx = 1 + 0.04 * ab(p); z.lean = H * 0.07 * p; ear = Math.sin(t * 0.26 * sp + id + 1.2); break; }
-    case 'run': { const p = Math.sin(t * 0.4 * sp + id); z.dy = -Math.round(ab(p) * 0.14 * H); z.lean = H * 0.14 + H * 0.04 * p; z.sx = 1.06; z.sy = 1 - 0.04 * (1 - ab(p)); tw = 0.3; ear = Math.sin(t * 0.4 * sp + id + 1.5) * 1.6; break; }
-    case 'sleep': z.sy = 0.9 + 0.025 * Math.sin(t * 0.045 + id); z.sx = 1.06; z.closed = true; tw = 0.03; break;
-    case 'eat': { const n = Math.sin(t * 0.33 + id), m = Math.max(0, n); z.lean = H * 0.16 * m; z.sy = 1 - 0.05 * m; break; }
-    case 'attack': { const n = Math.max(0, Math.sin(t * 0.3 + id)); z.dx = Math.round(0.2 * W * n); z.lean = H * 0.18 * n; z.sx = 1 + 0.1 * n; z.sy = 1 - 0.04 * n; tw = 0.35; break; }
-    case 'hop': { const p = ab(Math.sin(t * 0.2 + id)); z.dy = -Math.round(p * 0.2 * H); z.sy = 1 + 0.05 * p - 0.05 * (1 - p); tw = 0.3; ear = Math.sin(t * 0.2 + id) * 1.5; break; }
-    case 'fly': { const p = Math.sin(t * 0.5 + id); z.sy = 1 + 0.05 * p; z.sx = 1 - 0.03 * p; z.lean = H * 0.06; ear = p * 1.3; break; }
-    default: z.sy = 1 + 0.025 * Math.sin(t * 0.07 + id); z.sx = 1 - 0.012 * Math.sin(t * 0.07 + id);
+    case 'walk': { const p = Math.sin(w * 0.26); z.sy = 1 - 0.06 * ab(p); z.sx = 1 + 0.04 * ab(p); z.lean = H * 0.07 * p; ear = Math.sin(w * 0.26 + 1.2); break; }
+    case 'run': { const p = Math.sin(w * 0.4); z.dy = -Math.round(ab(p) * 0.14 * H); z.lean = H * 0.14 + H * 0.04 * p; z.sx = 1.06; z.sy = 1 - 0.04 * (1 - ab(p)); tw = 0.3; ear = Math.sin(w * 0.4 + 1.5) * 1.6; break; }
+    case 'sleep': z.sy = 0.9 + 0.025 * Math.sin(w * 0.045); z.sx = 1.06; z.closed = true; tw = 0.03; break;
+    case 'eat': { const n = Math.sin(w * 0.33), m = Math.max(0, n); z.lean = H * 0.16 * m; z.sy = 1 - 0.05 * m; break; }
+    case 'attack': { const n = Math.max(0, Math.sin(w * 0.3)); z.dx = Math.round(0.2 * W * n); z.lean = H * 0.18 * n; z.sx = 1 + 0.1 * n; z.sy = 1 - 0.04 * n; tw = 0.35; break; }
+    case 'hop': { const p = ab(Math.sin(w * 0.2)); z.dy = -Math.round(p * 0.2 * H); z.sy = 1 + 0.05 * p - 0.05 * (1 - p); tw = 0.3; ear = Math.sin(w * 0.2) * 1.5; break; }
+    case 'fly': { const p = Math.sin(w * 0.5); z.sy = 1 + 0.05 * p; z.sx = 1 - 0.03 * p; z.lean = H * 0.06; ear = p * 1.3; break; }
+    default: z.sy = 1 + 0.025 * Math.sin(w * 0.07); z.sx = 1 - 0.012 * Math.sin(w * 0.07);
   }
   z.act = kind === 'walk' || kind === 'sleep' || kind === 'eat' || kind === 'attack' ? kind : kind === 'run' ? 'walk' : '';
-  z.fr = (Math.floor(t * (kind === 'sleep' ? 0.04 : kind === 'run' ? 0.4 : kind === 'attack' ? 0.22 : kind === 'eat' ? 0.15 : 0.11 * sp) + id) % 8 + 8) % 8;
-  z.tp = Math.max(0, Math.min(4, Math.round(2 + 2 * Math.sin(t * tw + id * 1.7) * (kind === 'sleep' ? 0.3 : 1))));
+  z.fr = (Math.floor(w * (kind === 'sleep' ? 0.04 : kind === 'run' ? 0.27 : kind === 'attack' ? 0.22 : kind === 'eat' ? 0.15 : 0.11)) % 8 + 8) % 8;
+  z.tp = Math.max(0, Math.min(4, Math.round(2 + 2 * Math.sin(w * tw + id * 1.7) * (kind === 'sleep' ? 0.3 : 1))));
   const q = (t + id * 53) % 230;
   if (kind !== 'sleep' && q < 16) ear += (((q / 3) | 0) % 2 ? 2 : -2);
   z.ep = Math.max(0, Math.min(4, Math.round(2 + ear)));
