@@ -446,6 +446,9 @@ function crCompose(rec, opt) {
   const bx = 55, bodyBottom = H - 4 - (lie ? 0 : leg.h - 8);
   const by = bodyBottom - bb[3];
   const legY = by + bb[3] - 8, bw = bb[2] - bb[0], gyF = legY + leg.h;
+  let sx = 0, sn = 0;
+  for (let y = bb[3] - 14; y < bb[3] - 4; y++) for (let x = 0; x < 64; x++) if (body.d[(y * 64 + x) * 4 + 3]) { sx += x; sn++; }
+  const bcx = sn ? sx / sn : (bb[0] + bb[2]) / 2;
   /* wings behind the body (flyers only), mirrored so they spread backwards */
   let nWings = 0;
   for (let i = 0; i < (rec[19] | 0); i++) if (KIND_KEYS[rec[26 + i * 7 + 5] | 0] === 'wing') nWings++;
@@ -460,12 +463,12 @@ function crCompose(rec, opt) {
   crBlit(dst, tp, bx + bb[0] + 5 - tbase[0], by + Math.round(bb[3] * 0.72) - tbase[1]);
   if (!lie) {
     const sw = Math.round(walk * 4), up = ph ? Math.max(0, lift) * 3 : 0, upF = ph ? Math.max(0, -lift) * 3 : 0;
-    crBlit(dst, legF, bx + bb[0] + bw * 0.64 - sw, legY - Math.round(upF));
+    crBlit(dst, legF, bx + bcx + 3 - leg.w / 2 - sw, legY - Math.round(upF));
   }
   crBlit(dst, body, bx, by);
   if (!lie) {
     const sw = Math.round(walk * 4), up = ph ? Math.max(0, lift) * 3 : 0;
-    crBlit(dst, leg, bx + bb[0] + bw * 0.22 + sw, legY - Math.round(up));
+    crBlit(dst, leg, bx + bcx - 6 - leg.w / 2 + sw, legY - Math.round(up));
   }
   let nFin = 0;
   for (let i = 0; i < (rec[19] | 0); i++) if (KIND_KEYS[rec[26 + i * 7 + 5] | 0] === 'fin') nFin++;
@@ -477,6 +480,12 @@ function crCompose(rec, opt) {
   const hx = bx + 38, hy = by + 13 + (lie ? 8 : 0);
   const hpx = hx - ((hb[0] + hb[2]) >> 1) - 2, hpy = hy + 7 - hb[3] + bob * 0;
   crBlit(dst, head, hpx, hpy);
+  let nHorn = 0;
+  for (let i = 0; i < (rec[19] | 0); i++) if (KIND_KEYS[rec[26 + i * 7 + 5] | 0] === 'weapon') nHorn++;
+  if (nHorn) {
+    const hrn = crCrop(crHalf(crTint('horns', crHash(rec, 8) % 16, hue, acc))), hcx2 = hpx + (hb[0] + hb[2]) / 2 + 6;
+    for (let k = 0; k < Math.min(2, nHorn); k++) crBlit(dst, hrn, hcx2 + k * 9 - hrn.w / 2, hpy + hb[1] + 7 - hrn.h);
+  }
   const ear = crRot(crHalf(crTint('ears', ie, hue, acc)), 28), eb = crBBox(ear);
   crBlit(dst, ear, hpx + hb[0] + Math.floor((hb[2] - hb[0]) * 0.08) - eb[0], hpy + hb[1] + Math.floor((hb[3] - hb[1]) * 0.52) - eb[3]);
   /* reduce to final size (x0.5), keep outlines */
