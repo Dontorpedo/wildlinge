@@ -296,6 +296,10 @@ function crBuild(rec, opt) {
 /* ---------- part atlas compositor (hand drawn parts, recoloured from the genome) ---------- */
 const CR_ATL = {};
 let crReady = false;
+let crStyle = 'classic';
+try { if (localStorage.getItem('plimploms-style') === 'drawn') crStyle = 'drawn'; } catch (e) { /* storage blocked */ }
+function crAtlasOn() { return crReady && crStyle === 'drawn'; }
+function crSetStyle(s) { crStyle = s === 'drawn' ? 'drawn' : 'classic'; try { localStorage.setItem('plimploms-style', crStyle); } catch (e) { /* ignore */ } crCache.clear(); }
 const crTintCache = new Map(), crBaseCache = new Map();
 function crAtlasInit() {
   if (typeof CR_ATLAS === 'undefined' || typeof Image === 'undefined') return;
@@ -559,7 +563,7 @@ function crScaleSprite(e, opt) {
 
 /* wild view: the same hand drawn sprite, scaled to the creature size, mirrored by heading */
 function crDrawWild(cs, o, px, py, r, baby, moving, st, hp) {
-  if (!crReady) return false;
+  if (!crAtlasOn()) return false;
   const rec = cs.subarray(o, o + CS_STRIDE), sl = cs[o + 12], dir = cs[o + 3];
   const fly = cs[o + 9] > 0;
   const ph = fly ? 1 + (((st.animT >> 1) + (cs[o] | 0)) % 4) : moving ? 1 + ((st.animT >> 2) % 4) : 0;

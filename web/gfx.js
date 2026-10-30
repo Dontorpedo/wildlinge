@@ -287,10 +287,12 @@ function bodySprite(hue, r, carn, light, look, dirQ, sh, baby, side) {
       const dx = px - R, dy = py - R, u = dx * ca + dy * sa, v = -dx * sa + dy * ca;
       const edge = px === 0 || py === 0 || px === d - 1 || py === d - 1 || !mask[py * d + px - 1] || !mask[py * d + px + 1] || !mask[(py - 1) * d + px] || !mask[(py + 1) * d + px];
       const shade = (dx + dy) / (2 * R + 1);
-      let L = light + (shade < -0.3 ? 5 : shade > 0.35 ? -7 : 0);
+      let band = shade < -0.3 ? 1 : shade > 0.3 ? -1 : 0;
+      if ((Math.abs(shade + 0.3) < 0.07 || Math.abs(shade - 0.3) < 0.07) && ((px + py) & 1)) band = band === 0 ? (shade < 0 ? 1 : -1) : 0;
+      let L = light + (band > 0 ? 6 : band < 0 ? -10 : 0), hh = band > 0 ? hue + 6 : band < 0 ? hue - 12 : hue;
       if (!edge) {
-        if (!mask[(py - 1) * d + px] || !mask[py * d + px - 1]) L += 6;
-        else if (!mask[(py + 1) * d + px] || !mask[py * d + px + 1]) L -= 6;
+        if (!mask[(py - 1) * d + px] || !mask[py * d + px - 1]) L += 8;
+        else if (!mask[(py + 1) * d + px] || !mask[py * d + px + 1]) { L -= 9; hh = hue - 14; }
       }
       const dh = u - g.uh;
       if (dh > g.rh * 0.2 && dh * dh + v * v <= g.rh * g.rh && Math.abs(v) < g.rh * 0.6) L += 7;
@@ -305,10 +307,10 @@ function bodySprite(hue, r, carn, light, look, dirQ, sh, baby, side) {
           case 5: useAcc = dh > -g.rh * 0.1 && dh * dh + v * v <= g.rh * g.rh && Math.abs(v) > g.rh * 0.15; break;
         }
       }
-      if (edge) x.fillStyle = `hsl(${hue},38%,${Math.max(30, light - 30)}%)`;
+      if (edge) x.fillStyle = `hsl(${(hue + 350) % 360},46%,${Math.max(16, light - 52) + (shade < 0 ? 5 : 0)}%)`;
       else if (m === 2) x.fillStyle = `hsl(350,80%,${Math.min(90, light + 6)}%)`;
-      else if (useAcc) x.fillStyle = `hsl(${accH},70%,${Math.min(90, L + 2)}%)`;
-      else x.fillStyle = `hsl(${hue},60%,${Math.min(95, L)}%)`;
+      else if (useAcc) x.fillStyle = `hsl(${(accH + (hh - hue) + 360) % 360},72%,${Math.min(90, L + 2)}%)`;
+      else x.fillStyle = `hsl(${(hh + 360) % 360},${band < 0 ? 58 : 66}%,${Math.min(95, L)}%)`;
       x.fillRect(px, py, 1, 1);
     }
   }
@@ -480,7 +482,7 @@ function drawCreature(cs, o, sel, wpp, ox, oy, st) {
   }
   const sh = [cs[o + 20], cs[o + 21], cs[o + 22], cs[o + 23], cs[o + 24]];
   const baby = cs[o + 25] > 0 ? 1 : 0;
-  const light = hp > 66 ? 80 : hp > 33 ? 73 : 64;
+  const light = hp > 66 ? 72 : hp > 33 ? 66 : 58;
   const dirQ = ((rp(dir / (TAU / 16)) % 16) + 16) % 16;
   const look = [cs[o + 82] | 0, cs[o + 83] | 0, cs[o + 84] | 0, cs[o + 85] | 0, cs[o + 86] | 0, cs[o + 87] | 0, cs[o + 88] | 0, cs[o + 89] | 0];
   const ent = bodySprite(hue, r, carn ? 1 : 0, light, look, dirQ, sh, baby);

@@ -164,6 +164,7 @@ footer{color:var(--muted);font-size:12px;padding:0 16px 20px}
     <label><span data-i18n="opt.speed"></span> <input id="speed" type="range" min="1" max="40" value="1"> <span id="speedVal">1x</span></label>
     <label><input type="checkbox" id="follow"> <span data-i18n="opt.follow"></span></label>
     <label><input type="checkbox" id="showSense"> <span data-i18n="opt.sense"></span></label>
+    <label><span data-i18n="opt.style"></span> <select id="styleSel"><option value="classic" data-i18n="opt.styleClassic"></option><option value="drawn" data-i18n="opt.styleDrawn"></option></select></label>
     <label><input type="checkbox" id="showBubbles" checked> <span data-i18n="opt.bubbles"></span></label>
     <label><input type="checkbox" id="showMeaning" checked> <span data-i18n="opt.meaning"></span></label>
     <div id="saveState" class="muted" style="margin-top:6px"></div>
@@ -758,6 +759,7 @@ const I18N = {
     'tz.accs.crown': 'crown',
     'tz.accs.flower': 'flower',
     'tz.wordPh': 'Word to teach',
+    'opt.style': 'Creature style', 'opt.styleClassic': 'Classic', 'opt.styleDrawn': 'Hand-drawn',
     'btn.shot': 'Screenshot', 'btn.clip': 'Clip 10 s', 'clip.rec': 'Recording {0} s', 'clip.na': 'Video recording is not supported in this browser.', 'legal.imp': 'Legal notice', 'legal.priv': 'Privacy',
     'tz.alone': 'This Plimplom is alone and will become lonely and sad. A second one or a plush toy helps.',
     'tz.maxLevels': 'At most 5 additional shelves',
@@ -1024,6 +1026,7 @@ const I18N = {
     'tz.accs.crown': 'Krone',
     'tz.accs.flower': 'Blume',
     'tz.wordPh': 'Wort zum Lehren',
+    'opt.style': 'Kreaturen-Stil', 'opt.styleClassic': 'Klassisch', 'opt.styleDrawn': 'Handgezeichnet',
     'btn.shot': 'Screenshot', 'btn.clip': 'Clip 10 s', 'clip.rec': 'Aufnahme {0} s', 'clip.na': 'Videoaufnahme wird von diesem Browser nicht unterstützt.', 'legal.imp': 'Impressum', 'legal.priv': 'Datenschutz',
     'tz.alone': 'Dieser Plimplom ist allein und wird einsam und traurig. Ein zweiter oder ein Kuscheltier hilft.',
     'tz.maxLevels': 'Höchstens 5 zusätzliche Regalbretter',
@@ -1644,10 +1647,12 @@ function bodySprite(hue, r, carn, light, look, dirQ, sh, baby, side) {
       const dx = px - R, dy = py - R, u = dx * ca + dy * sa, v = -dx * sa + dy * ca;
       const edge = px === 0 || py === 0 || px === d - 1 || py === d - 1 || !mask[py * d + px - 1] || !mask[py * d + px + 1] || !mask[(py - 1) * d + px] || !mask[(py + 1) * d + px];
       const shade = (dx + dy) / (2 * R + 1);
-      let L = light + (shade < -0.3 ? 5 : shade > 0.35 ? -7 : 0);
+      let band = shade < -0.3 ? 1 : shade > 0.3 ? -1 : 0;
+      if ((Math.abs(shade + 0.3) < 0.07 || Math.abs(shade - 0.3) < 0.07) && ((px + py) & 1)) band = band === 0 ? (shade < 0 ? 1 : -1) : 0;
+      let L = light + (band > 0 ? 6 : band < 0 ? -10 : 0), hh = band > 0 ? hue + 6 : band < 0 ? hue - 12 : hue;
       if (!edge) {
-        if (!mask[(py - 1) * d + px] || !mask[py * d + px - 1]) L += 6;
-        else if (!mask[(py + 1) * d + px] || !mask[py * d + px + 1]) L -= 6;
+        if (!mask[(py - 1) * d + px] || !mask[py * d + px - 1]) L += 8;
+        else if (!mask[(py + 1) * d + px] || !mask[py * d + px + 1]) { L -= 9; hh = hue - 14; }
       }
       const dh = u - g.uh;
       if (dh > g.rh * 0.2 && dh * dh + v * v <= g.rh * g.rh && Math.abs(v) < g.rh * 0.6) L += 7;
@@ -1662,10 +1667,10 @@ function bodySprite(hue, r, carn, light, look, dirQ, sh, baby, side) {
           case 5: useAcc = dh > -g.rh * 0.1 && dh * dh + v * v <= g.rh * g.rh && Math.abs(v) > g.rh * 0.15; break;
         }
       }
-      if (edge) x.fillStyle = `hsl(${hue},38%,${Math.max(30, light - 30)}%)`;
+      if (edge) x.fillStyle = `hsl(${(hue + 350) % 360},46%,${Math.max(16, light - 52) + (shade < 0 ? 5 : 0)}%)`;
       else if (m === 2) x.fillStyle = `hsl(350,80%,${Math.min(90, light + 6)}%)`;
-      else if (useAcc) x.fillStyle = `hsl(${accH},70%,${Math.min(90, L + 2)}%)`;
-      else x.fillStyle = `hsl(${hue},60%,${Math.min(95, L)}%)`;
+      else if (useAcc) x.fillStyle = `hsl(${(accH + (hh - hue) + 360) % 360},72%,${Math.min(90, L + 2)}%)`;
+      else x.fillStyle = `hsl(${(hh + 360) % 360},${band < 0 ? 58 : 66}%,${Math.min(95, L)}%)`;
       x.fillRect(px, py, 1, 1);
     }
   }
@@ -1837,7 +1842,7 @@ function drawCreature(cs, o, sel, wpp, ox, oy, st) {
   }
   const sh = [cs[o + 20], cs[o + 21], cs[o + 22], cs[o + 23], cs[o + 24]];
   const baby = cs[o + 25] > 0 ? 1 : 0;
-  const light = hp > 66 ? 80 : hp > 33 ? 73 : 64;
+  const light = hp > 66 ? 72 : hp > 33 ? 66 : 58;
   const dirQ = ((rp(dir / (TAU / 16)) % 16) + 16) % 16;
   const look = [cs[o + 82] | 0, cs[o + 83] | 0, cs[o + 84] | 0, cs[o + 85] | 0, cs[o + 86] | 0, cs[o + 87] | 0, cs[o + 88] | 0, cs[o + 89] | 0];
   const ent = bodySprite(hue, r, carn ? 1 : 0, light, look, dirQ, sh, baby);
@@ -2212,6 +2217,10 @@ function crBuild(rec, opt) {
 /* ---------- part atlas compositor (hand drawn parts, recoloured from the genome) ---------- */
 const CR_ATL = {};
 let crReady = false;
+let crStyle = 'classic';
+try { if (localStorage.getItem('plimploms-style') === 'drawn') crStyle = 'drawn'; } catch (e) { /* storage blocked */ }
+function crAtlasOn() { return crReady && crStyle === 'drawn'; }
+function crSetStyle(s) { crStyle = s === 'drawn' ? 'drawn' : 'classic'; try { localStorage.setItem('plimploms-style', crStyle); } catch (e) { /* ignore */ } crCache.clear(); }
 const crTintCache = new Map(), crBaseCache = new Map();
 function crAtlasInit() {
   if (typeof CR_ATLAS === 'undefined' || typeof Image === 'undefined') return;
@@ -2475,7 +2484,7 @@ function crScaleSprite(e, opt) {
 
 /* wild view: the same hand drawn sprite, scaled to the creature size, mirrored by heading */
 function crDrawWild(cs, o, px, py, r, baby, moving, st, hp) {
-  if (!crReady) return false;
+  if (!crAtlasOn()) return false;
   const rec = cs.subarray(o, o + CS_STRIDE), sl = cs[o + 12], dir = cs[o + 3];
   const fly = cs[o + 9] > 0;
   const ph = fly ? 1 + (((st.animT >> 1) + (cs[o] | 0)) % 4) : moving ? 1 + ((st.animT >> 2) % 4) : 0;
@@ -4320,6 +4329,8 @@ $('fileImport').onchange = e => {
 $('speed').oninput = e => { const v = +e.target.value; $('speedVal').textContent = v + 'x'; sendHost({ type: 'speed', v }); };
 $('follow').onchange = e => { follow = e.target.checked; };
 $('showSense').onchange = e => { showSense = e.target.checked; };
+$('styleSel').value = crStyle;
+$('styleSel').onchange = e => { crSetStyle(e.target.value); };
 $('showBubbles').onchange = e => { showBubbles = e.target.checked; if (!showBubbles) bubbles = []; };
 $('showMeaning').onchange = e => { showMeaning = e.target.checked; if (panel) renderPanel(panel); };
 $('chartSet').onchange = () => { upl = null; drawSeries(); };

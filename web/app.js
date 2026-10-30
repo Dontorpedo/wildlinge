@@ -889,6 +889,8 @@ $('fileImport').onchange = e => {
 $('speed').oninput = e => { const v = +e.target.value; $('speedVal').textContent = v + 'x'; sendHost({ type: 'speed', v }); };
 $('follow').onchange = e => { follow = e.target.checked; };
 $('showSense').onchange = e => { showSense = e.target.checked; };
+$('styleSel').value = crStyle;
+$('styleSel').onchange = e => { crSetStyle(e.target.value); };
 $('showBubbles').onchange = e => { showBubbles = e.target.checked; if (!showBubbles) bubbles = []; };
 $('showMeaning').onchange = e => { showMeaning = e.target.checked; if (panel) renderPanel(panel); };
 $('chartSet').onchange = () => { upl = null; drawSeries(); };
