@@ -296,10 +296,64 @@ function crBuild(rec, opt) {
 /* ---------- part atlas compositor (hand drawn parts, recoloured from the genome) ---------- */
 const CR_ATL = {};
 let crReady = false;
-let crStyle = 'classic';
-try { if (localStorage.getItem('plimploms-style') === 'drawn') crStyle = 'drawn'; } catch (e) { /* storage blocked */ }
+let crStyle = 'sprites';
+try { const sv = localStorage.getItem('plimploms-style'); if (sv === 'drawn' || sv === 'classic' || sv === 'sprites') crStyle = sv; } catch (e) { /* storage blocked */ }
 function crAtlasOn() { return crReady && crStyle === 'drawn'; }
-function crSetStyle(s) { crStyle = s === 'drawn' ? 'drawn' : 'classic'; try { localStorage.setItem('plimploms-style', crStyle); } catch (e) { /* ignore */ } crCache.clear(); }
+function crWholeOn() { return crWholeData !== null && crStyle === 'sprites'; }
+function crSetStyle(s) { crStyle = s === 'drawn' || s === 'classic' ? s : 'sprites'; try { localStorage.setItem('plimploms-style', crStyle); } catch (e) { /* ignore */ } crCache.clear(); }
+/* whole-creature sprites (AI drawn, recoloured from the genome) */
+let crWholeData = null;
+const crWholeCache = new Map(), crWingCache = new Map();
+function crWholeInit() {
+  if (typeof CR_WHOLE_IMG === 'undefined' || typeof Image === 'undefined') return;
+  const im = new Image();
+  im.onload = () => {
+    const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+    const x = c.getContext('2d'); x.drawImage(im, 0, 0);
+    crWholeData = x.getImageData(0, 0, im.width, im.height);
+  };
+  im.src = CR_WHOLE_IMG;
+}
+function crAccHue(i) { const c = crHex(CR_ACC[i % CR_ACC.length]); return crRgb2hsv(c[0], c[1], c[2])[0]; }
+function crWholeSprite(idx, hue, accIdx) {
+  const key = idx + '|' + hue + '|' + accIdx;
+  let e = crWholeCache.get(key);
+  if (e) return e;
+  const m = CR_WHOLE_META[idx], cx = (idx % 10) * 96, cy = ((idx / 10) | 0) * 64, A = crWholeData, ah = crAccHue(accIdx);
+  const cnv = document.createElement('canvas'); cnv.width = m.w; cnv.height = m.h;
+  const x = cnv.getContext('2d'), img = x.createImageData(m.w, m.h), d = img.data;
+  for (let y = 0; y < m.h; y++) for (let xx = 0; xx < m.w; xx++) {
+    const s = ((cy + y) * A.width + cx + xx) * 4, o = (y * m.w + xx) * 4, al = A.data[s + 3];
+    if (!al) continue;
+    let r = A.data[s], g = A.data[s + 1], b = A.data[s + 2];
+    const [h, sat, v] = crRgb2hsv(r, g, b);
+    if (!(sat < 0.28 && v > 0.7)) {
+      const dh = Math.abs(((h - m.dom + 540) % 360) - 180);
+      let nh = -1;
+      if (dh >= 135) nh = (hue + (h - m.dom) + 720) % 360; else if (sat > 0.3) nh = ah;
+      if (nh >= 0) { const c = crHsv2rgb(nh, sat, v); r = c[0]; g = c[1]; b = c[2]; }
+    }
+    d[o] = r; d[o + 1] = g; d[o + 2] = b; d[o + 3] = al;
+  }
+  x.putImageData(img, 0, 0);
+  e = { cnv, w: m.w, h: m.h };
+  if (crWholeCache.size > 700) crWholeCache.delete(crWholeCache.keys().next().value);
+  crWholeCache.set(key, e);
+  return e;
+}
+function crWingImg(i, hue, accIdx) {
+  const key = i + '|' + hue + '|' + accIdx;
+  let e = crWingCache.get(key);
+  if (e) return e;
+  const p = crTint('wings', i, hue, crAccHue(accIdx)), bb = crBBox(p), w = bb[2] - bb[0], h = bb[3] - bb[1];
+  const cnv = document.createElement('canvas'); cnv.width = Math.max(1, w); cnv.height = Math.max(1, h);
+  const x = cnv.getContext('2d'), img = x.createImageData(cnv.width, cnv.height);
+  for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) { const s = ((bb[1] + yy) * p.w + bb[0] + (w - 1 - xx)) * 4, o = (yy * w + xx) * 4; for (let k = 0; k < 4; k++) img.data[o + k] = p.d[s + k]; }
+  x.putImageData(img, 0, 0);
+  e = { cnv, w, h };
+  crWingCache.set(key, e);
+  return e;
+}
 const crTintCache = new Map(), crBaseCache = new Map();
 function crAtlasInit() {
   if (typeof CR_ATLAS === 'undefined' || typeof Image === 'undefined') return;
@@ -508,6 +562,7 @@ function crCompose(rec, opt) {
   return { out, ox, gy, A };
 }
 crAtlasInit();
+crWholeInit();
 
 function crFinish(c, opt) {
   const { out, ox, gy, A } = c, cnv = document.createElement('canvas');
@@ -562,7 +617,35 @@ function crScaleSprite(e, opt) {
 }
 
 /* wild view: the same hand drawn sprite, scaled to the creature size, mirrored by heading */
+function crDrawWhole(cs, o, px, py, r, baby, moving, st, hp) {
+  const rec = cs.subarray(o, o + CS_STRIDE), id = cs[o] | 0, dir = cs[o + 3], fly = cs[o + 9] > 0;
+  const hue = (Math.round(rec[5] / 12) * 12) % 360, acc = rec[82] | 0;
+  const sp = crWholeSprite(crHash(rec, 11) % CR_WHOLE_META.length, hue, acc);
+  let s = (r * 2.5 * (baby ? 0.75 : 1)) / sp.h;
+  s = s < 0.75 ? s : s < 1.5 ? 1 : Math.round(s);
+  const w = Math.max(1, Math.round(sp.w * s)), h = Math.max(1, Math.round(sp.h * s));
+  const flip = Math.cos(dir) < 0 ? -1 : 1;
+  const lift = fly ? Math.round(h * 0.45 + 2 + Math.sin(st.animT * 0.12 + id) * 1.3) : 0;
+  const squash = moving && !fly && s >= 1 ? ((st.animT >> 1) + id) % 4 === 0 : false;
+  const gy = Math.round(py + h / 2) - lift, hh = squash ? h - 1 : h;
+  st.sprTop = gy - hh;
+  if (fly && crReady) {
+    const wi = crWingImg(crHash(rec, 6) % 16, hue, acc), ph = ((st.animT >> 1) + id) % 4, f = [1, 0.62, 0.22, 0.62][ph];
+    const ww = Math.max(2, Math.round(w * 0.55)), wh = Math.max(2, Math.round(ww * wi.h / wi.w * f)), top = gy - hh - Math.round(wh * 0.45) + Math.round(hh * 0.25);
+    b.imageSmoothingEnabled = false;
+    b.save(); b.translate(px, 0); b.scale(flip, 1);
+    b.drawImage(wi.cnv, -Math.round(w * 0.5), top, ww, wh);
+    b.restore();
+  }
+  b.imageSmoothingEnabled = s < 0.75;
+  if (flip > 0) b.drawImage(sp.cnv, px - (w >> 1), gy - hh, w, hh);
+  else { b.save(); b.translate(px + (w >> 1), 0); b.scale(-1, 1); b.drawImage(sp.cnv, 0, gy - hh, w, hh); b.restore(); }
+  b.imageSmoothingEnabled = false;
+  if (fly) { b.fillStyle = 'rgba(20,30,40,.28)'; b.fillRect(px - (w >> 2), gy + lift + 1, w >> 1, 1); }
+  return true;
+}
 function crDrawWild(cs, o, px, py, r, baby, moving, st, hp) {
+  if (crWholeOn()) return crDrawWhole(cs, o, px, py, r, baby, moving, st, hp);
   if (!crAtlasOn()) return false;
   const rec = cs.subarray(o, o + CS_STRIDE), sl = cs[o + 12], dir = cs[o + 3];
   const fly = cs[o + 9] > 0;

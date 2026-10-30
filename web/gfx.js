@@ -487,10 +487,12 @@ function drawCreature(cs, o, sel, wpp, ox, oy, st) {
   const look = [cs[o + 82] | 0, cs[o + 83] | 0, cs[o + 84] | 0, cs[o + 85] | 0, cs[o + 86] | 0, cs[o + 87] | 0, cs[o + 88] | 0, cs[o + 89] | 0];
   const ent = bodySprite(hue, r, carn ? 1 : 0, light, look, dirQ, sh, baby);
   const g = ent.g, R = ent.R;
-  b.fillStyle = 'rgba(30,40,70,.22)';
-  const sw = Math.max(r, rp(-g.tmin * 0.6 + g.segs[0].b)), sy = rp(g.segs[0].b) + 1;
-  if (fly) b.fillRect(px - sw + 3, pyBase + sy + 3, 2 * sw, 1);
-  else { b.fillRect(px - sw + 1, pyBase + sy, 2 * sw, 1); b.fillRect(px - sw + 2, pyBase + sy + 1, 2 * sw - 2, 1); }
+  if (!(typeof crWholeOn === 'function' && crWholeOn())) {
+    b.fillStyle = 'rgba(30,40,70,.22)';
+    const sw = Math.max(r, rp(-g.tmin * 0.6 + g.segs[0].b)), sy = rp(g.segs[0].b) + 1;
+    if (fly) b.fillRect(px - sw + 3, pyBase + sy + 3, 2 * sw, 1);
+    else { b.fillRect(px - sw + 1, pyBase + sy, 2 * sw, 1); b.fillRect(px - sw + 2, pyBase + sy + 1, 2 * sw - 2, 1); }
+  }
   const np = cs[o + 19] | 0, detail = np > 0;
   st.sprFor = -1;
   if (typeof crDrawWild === 'function' && crDrawWild(cs, o, px, py, r, baby, moving, st, hp)) { st.sprFor = o; }
