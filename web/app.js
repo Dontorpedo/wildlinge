@@ -1,6 +1,6 @@
 'use strict';
 /* Plimploms user interface: rendering loop, panels, charts, input. The simulation runs in a worker (WebAssembly). */
-const BMC_URL = 'https://www.buymeacoffee.com/YOUR-NAME'; /* set your Buy-me-a-coffee link here */
+const BMC_URL = 'https://buymeacoffee.com/denisthedev'; /* set your Buy-me-a-coffee link here */
 const DB_NAME = 'wildlinge', STORE = 'saves', SAVE_KEY = 'world';
 const ZOOMS = [7.5, 5, 3.5, 2.5, 1.7, 1.2];
 const DRIVE_COL = ['#e5a94a', '#e0645a', '#f08a5d', '#9fd8ff', '#e27bd0', '#6fcf6a', '#ffd84a', '#8f8fe8'];
