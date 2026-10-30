@@ -467,6 +467,12 @@ function crCompose(rec, opt) {
     const sw = Math.round(walk * 4), up = ph ? Math.max(0, lift) * 3 : 0;
     crBlit(dst, leg, bx + bb[0] + bw * 0.22 + sw, legY - Math.round(up));
   }
+  let nFin = 0;
+  for (let i = 0; i < (rec[19] | 0); i++) if (KIND_KEYS[rec[26 + i * 7 + 5] | 0] === 'fin') nFin++;
+  if (nFin) {
+    const cr = crCrop(crHalf(crTint('crests', crHash(rec, 7) % 16, hue, acc)));
+    crBlit(dst, cr, bx + bb[0] - 9, by + bb[1] + Math.round((bb[3] - bb[1]) * 0.62) - cr.h + 3);
+  }
   const bob = ph ? (ph % 2 ? 1 : 0) : 0;
   const hx = bx + 38, hy = by + 13 + (lie ? 8 : 0);
   const hpx = hx - ((hb[0] + hb[2]) >> 1) - 2, hpy = hy + 7 - hb[3] + bob * 0;
