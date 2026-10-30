@@ -151,6 +151,7 @@ footer{color:var(--muted);font-size:12px;padding:0 16px 20px}
     <button data-ttool="teach" title="" data-i18n="tz.tool.teach"></button>
     <button data-ttool="level" title="" data-i18n="tz.tool.level"></button>
     <input type="text" id="tzWord" maxlength="12" data-i18n-ph="tz.wordPh">
+    <select id="tzMean"></select>
   </div>
   <div id="help" data-i18n="help.keys"></div>
 </div>
@@ -749,7 +750,7 @@ const I18N = {
     'tz.tip.call': 'Click: creatures come to that spot (they learn to obey)',
     'tz.tip.dress': 'Click a creature: next accessory',
     'tz.tip.party': 'Click: confetti, everyone dances',
-    'tz.tip.teach': 'Enter a word, click a creature: it links the word to what it is doing',
+    'tz.tip.teach': 'Enter a word, pick its meaning (or leave it on automatic), click a creature: it links the word to that need',
     'tz.tip.level': 'Click empty space: add a shelf, click a shelf: remove it',
     'tz.accs.none': 'none',
     'tz.accs.bow': 'bow',
@@ -759,13 +760,14 @@ const I18N = {
     'tz.accs.crown': 'crown',
     'tz.accs.flower': 'flower',
     'tz.wordPh': 'Word to teach',
+    'tz.meanAuto': 'Meaning: what it is doing',
     'opt.style': 'Creature style', 'opt.styleSprites': 'Pixel sprites', 'opt.styleClassic': 'Classic', 'opt.styleDrawn': 'Hand-drawn',
     'btn.shot': 'Screenshot', 'btn.clip': 'Clip 10 s', 'clip.rec': 'Recording {0} s', 'clip.na': 'Video recording is not supported in this browser.', 'legal.imp': 'Legal notice', 'legal.priv': 'Privacy',
     'tz.alone': 'This Plimplom is alone and will become lonely and sad. A second one or a plush toy helps.',
     'tz.maxLevels': 'At most 5 additional shelves',
     'tz.levelBlocked': 'A shelf is already there',
     'tz.levelUnreach': 'Creatures could not reach this shelf (too high above the next one)',
-    'tz.taught': '{0} links "{1}" with: {2}',
+    'tz.taught': '{0} now means "{1}" = {2}',
     'tz.noTeach': 'Teaching failed',
     'tz.skill': 'Puzzle skill',
     'tz.obey': 'Obedience',
@@ -1016,7 +1018,7 @@ const I18N = {
     'tz.tip.call': 'Klicken: Kreaturen kommen an diese Stelle (sie lernen zu gehorchen)',
     'tz.tip.dress': 'Kreatur anklicken: nächstes Accessoire',
     'tz.tip.party': 'Klicken: Konfetti, alle tanzen',
-    'tz.tip.teach': 'Wort eingeben, Kreatur anklicken: sie verknüpft das Wort mit ihrem Tun',
+    'tz.tip.teach': 'Wort eingeben, Bedeutung wählen (oder automatisch lassen), Kreatur anklicken: sie verknüpft das Wort mit diesem Bedürfnis',
     'tz.tip.level': 'Leeren Platz anklicken: Regalbrett hinzufügen, Brett anklicken: entfernen',
     'tz.accs.none': 'keins',
     'tz.accs.bow': 'Schleife',
@@ -1026,13 +1028,14 @@ const I18N = {
     'tz.accs.crown': 'Krone',
     'tz.accs.flower': 'Blume',
     'tz.wordPh': 'Wort zum Lehren',
+    'tz.meanAuto': 'Bedeutung: was es gerade tut',
     'opt.style': 'Kreaturen-Stil', 'opt.styleSprites': 'Pixel-Sprites', 'opt.styleClassic': 'Klassisch', 'opt.styleDrawn': 'Handgezeichnet',
     'btn.shot': 'Screenshot', 'btn.clip': 'Clip 10 s', 'clip.rec': 'Aufnahme {0} s', 'clip.na': 'Videoaufnahme wird von diesem Browser nicht unterstützt.', 'legal.imp': 'Impressum', 'legal.priv': 'Datenschutz',
     'tz.alone': 'Dieser Plimplom ist allein und wird einsam und traurig. Ein zweiter oder ein Kuscheltier hilft.',
     'tz.maxLevels': 'Höchstens 5 zusätzliche Regalbretter',
     'tz.levelBlocked': 'Dort ist schon ein Brett',
     'tz.levelUnreach': 'Die Kreaturen kämen nicht hinauf (zu hoch über dem nächsten Brett)',
-    'tz.taught': '{0} verknüpft "{1}" mit: {2}',
+    'tz.taught': '{0} versteht "{1}" jetzt als: {2}',
     'tz.noTeach': 'Lehren fehlgeschlagen',
     'tz.skill': 'Rätselgeschick',
     'tz.obey': 'Gehorsam',
@@ -3710,7 +3713,7 @@ function tzUp() {
 async function tzTeach(c) {
   const inp = tzEl('tzWord'), w = (inp.value || '').toLowerCase().replace(/[^a-zäöü]/g, '').slice(0, 12);
   if (!w) { toast(t('app.wordFirst')); inp.focus(); return; }
-  const need = TZ_GOALNEED[c.goal && c.goal.type] || 'fun', feat = TZ_FEAT[need] === undefined ? 9 : TZ_FEAT[need];
+  const mv = tzEl('tzMean').value, need = mv && TZ_FEAT[mv] !== undefined ? mv : TZ_GOALNEED[c.goal && c.goal.type] || 'fun', feat = TZ_FEAT[need] === undefined ? 9 : TZ_FEAT[need];
   const r = await tzCall({ type: 'tteach', id: c.id, word: w, feat });
   if (r.ok) { c.vocab[need] = w; c.words = r.words || c.words; c.heartUntil = Date.now() + 1500; toast(t('tz.taught', c.name, w, tr('tz.needs')[need])); tzSave(); } else toast(t('tz.noTeach'));
 }
@@ -3721,8 +3724,17 @@ function tzSetTool(name) {
   if (h && typeof viewMode !== 'undefined' && viewMode === 'terra') h.textContent = t('tz.help') + ' | ' + t('tz.tip.' + name);
   tzEl('terra').style.cursor = name === 'select' ? 'grab' : 'pointer';
 }
+function tzFillMean() {
+  const sel = tzEl('tzMean'), L = tr('tz.needs'), v = sel.value;
+  sel.innerHTML = '';
+  const o0 = document.createElement('option'); o0.value = ''; o0.textContent = t('tz.meanAuto'); sel.appendChild(o0);
+  for (const k of Object.keys(L)) { const o = document.createElement('option'); o.value = k; o.textContent = L[k]; sel.appendChild(o); }
+  sel.value = v;
+}
 function tzInit() {
   const cv2 = tzEl('terra');
+  tzFillMean();
+  const lg = document.getElementById('langSel'); if (lg) lg.addEventListener('change', () => setTimeout(tzFillMean, 0));
   cv2.addEventListener('pointerdown', tzDown);
   cv2.addEventListener('pointermove', tzMove);
   cv2.addEventListener('pointerup', tzUp);

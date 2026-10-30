@@ -920,7 +920,7 @@ function tzUp() {
 async function tzTeach(c) {
   const inp = tzEl('tzWord'), w = (inp.value || '').toLowerCase().replace(/[^a-zäöü]/g, '').slice(0, 12);
   if (!w) { toast(t('app.wordFirst')); inp.focus(); return; }
-  const need = TZ_GOALNEED[c.goal && c.goal.type] || 'fun', feat = TZ_FEAT[need] === undefined ? 9 : TZ_FEAT[need];
+  const mv = tzEl('tzMean').value, need = mv && TZ_FEAT[mv] !== undefined ? mv : TZ_GOALNEED[c.goal && c.goal.type] || 'fun', feat = TZ_FEAT[need] === undefined ? 9 : TZ_FEAT[need];
   const r = await tzCall({ type: 'tteach', id: c.id, word: w, feat });
   if (r.ok) { c.vocab[need] = w; c.words = r.words || c.words; c.heartUntil = Date.now() + 1500; toast(t('tz.taught', c.name, w, tr('tz.needs')[need])); tzSave(); } else toast(t('tz.noTeach'));
 }
@@ -931,8 +931,17 @@ function tzSetTool(name) {
   if (h && typeof viewMode !== 'undefined' && viewMode === 'terra') h.textContent = t('tz.help') + ' | ' + t('tz.tip.' + name);
   tzEl('terra').style.cursor = name === 'select' ? 'grab' : 'pointer';
 }
+function tzFillMean() {
+  const sel = tzEl('tzMean'), L = tr('tz.needs'), v = sel.value;
+  sel.innerHTML = '';
+  const o0 = document.createElement('option'); o0.value = ''; o0.textContent = t('tz.meanAuto'); sel.appendChild(o0);
+  for (const k of Object.keys(L)) { const o = document.createElement('option'); o.value = k; o.textContent = L[k]; sel.appendChild(o); }
+  sel.value = v;
+}
 function tzInit() {
   const cv2 = tzEl('terra');
+  tzFillMean();
+  const lg = document.getElementById('langSel'); if (lg) lg.addEventListener('change', () => setTimeout(tzFillMean, 0));
   cv2.addEventListener('pointerdown', tzDown);
   cv2.addEventListener('pointermove', tzMove);
   cv2.addEventListener('pointerup', tzUp);
