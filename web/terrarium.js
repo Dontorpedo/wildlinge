@@ -676,6 +676,7 @@ function tzSideWhole(c, sel, now) {
   const happy = c.danceUntil > now || c.laughUntil > now || c.hopT > 0;
   const kind = c.sleeping ? 'sleep' : c.held ? 'run' : c.fly ? 'fly' : c.kick > 0 ? 'attack' : happy ? 'hop' : eating ? 'eat' : walking ? 'walk' : 'idle';
   const t = now / 16.7, z = crPose(kind, t, c.id, Math.min(1.5, Math.abs(c.vx || 0) + 0.3), H, W);
+  z.hue = (Math.round(rec[5] / 12) * 12) % 360; z.acc = rec[82] | 0;
   if (c.laughUntil > now) z.closed = true;
   const cx = Math.round(c.x), gy = Math.round(c.y);
   const P = (u, v, w, h) => { w = w || 1; h = h || 1; b.fillRect(Math.round(f > 0 ? cx + u : cx - u - (w - 1)), Math.round(gy + v), w, h); };

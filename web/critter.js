@@ -314,6 +314,48 @@ function crWholeInit() {
   };
   im.src = CR_WHOLE_IMG;
 }
+/* optional AI animation frames (walk, sleep, eat, attack), recoloured like the base sprites */
+let crAnimData = null;
+const crAnimCache = new Map();
+function crAnimInit() {
+  if (typeof CR_ANIM_IMG === 'undefined' || typeof Image === 'undefined') return;
+  const im = new Image();
+  im.onload = () => {
+    const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+    const x = c.getContext('2d'); x.drawImage(im, 0, 0);
+    crAnimData = x.getImageData(0, 0, im.width, im.height);
+  };
+  im.src = CR_ANIM_IMG;
+}
+function crAnimHas(idx) { return crAnimData !== null && CR_ANIM_META.sp[idx] != null; }
+function crAnimFrame(sp, hue, acc, act, f) {
+  const am = CR_ANIM_META, a = am.sp[sp.idx], ai = am.acts.indexOf(act);
+  if (!a || ai < 0) return null;
+  const key = sp.idx + '|' + hue + '|' + acc + '|' + ai + '|' + f;
+  let e = crAnimCache.get(key);
+  if (e) return e;
+  const m = sp.m, cx = (ai * am.nf + f) * a.aw, cy = a.y, A = crAnimData, ah = crAccHue(acc);
+  const cnv = document.createElement('canvas'); cnv.width = a.aw; cnv.height = a.ah;
+  const x = cnv.getContext('2d'), img = x.createImageData(a.aw, a.ah), d = img.data;
+  for (let y = 0; y < a.ah; y++) for (let xx = 0; xx < a.aw; xx++) {
+    const s = ((cy + y) * A.width + cx + xx) * 4, o = (y * a.aw + xx) * 4, al = A.data[s + 3];
+    if (al < 128) continue;
+    let r = A.data[s], g = A.data[s + 1], b = A.data[s + 2];
+    const [h, sat, v] = crRgb2hsv(r, g, b);
+    if (!(sat < 0.28 && v > 0.7)) {
+      const dh = Math.abs(((h - m.dom + 540) % 360) - 180);
+      let nh = -1;
+      if (dh >= 135) nh = (hue + (h - m.dom) + 720) % 360; else if (sat > 0.3) nh = ah;
+      if (nh >= 0) { const c = crHsv2rgb(nh, sat, v); r = c[0]; g = c[1]; b = c[2]; }
+    }
+    d[o] = r; d[o + 1] = g; d[o + 2] = b; d[o + 3] = 255;
+  }
+  x.putImageData(img, 0, 0);
+  e = { cnv, pad: a.mb };
+  if (crAnimCache.size > 1500) crAnimCache.delete(crAnimCache.keys().next().value);
+  crAnimCache.set(key, e);
+  return e;
+}
 function crAccHue(i) { const c = crHex(CR_ACC[i % CR_ACC.length]); return crRgb2hsv(c[0], c[1], c[2])[0]; }
 function crWholeSprite(idx, hue, accIdx) {
   const key = idx + '|' + hue + '|' + accIdx;
@@ -564,6 +606,7 @@ function crCompose(rec, opt) {
 }
 crAtlasInit();
 crWholeInit();
+crAnimInit();
 
 function crFinish(c, opt) {
   const { out, ox, gy, A } = c, cnv = document.createElement('canvas');
@@ -643,7 +686,7 @@ function crPickIdx(rec) {
   crPickCache.set(id, { sig, idx });
   return idx;
 }
-const CR_PZ = { sx: 1, sy: 1, dy: 0, lean: 0, dx: 0, tp: 2, ep: 2, closed: false };
+const CR_PZ = { act: '', fr: 0, hue: 0, acc: 0, sx: 1, sy: 1, dy: 0, lean: 0, dx: 0, tp: 2, ep: 2, closed: false };
 /* kind: idle walk run sleep eat attack hop fly; H, W: sprite size in pixels */
 function crPose(kind, t, id, spd, H, W) {
   const z = CR_PZ; z.sx = 1; z.sy = 1; z.dy = 0; z.lean = 0; z.dx = 0; z.closed = false;
@@ -659,6 +702,8 @@ function crPose(kind, t, id, spd, H, W) {
     case 'fly': { const p = Math.sin(t * 0.5 + id); z.sy = 1 + 0.05 * p; z.sx = 1 - 0.03 * p; z.lean = H * 0.06; ear = p * 1.3; break; }
     default: z.sy = 1 + 0.025 * Math.sin(t * 0.07 + id); z.sx = 1 - 0.012 * Math.sin(t * 0.07 + id);
   }
+  z.act = kind === 'walk' || kind === 'sleep' || kind === 'eat' || kind === 'attack' ? kind : kind === 'run' ? 'walk' : '';
+  z.fr = (Math.floor(t * (kind === 'sleep' ? 0.04 : kind === 'run' ? 0.4 : kind === 'attack' ? 0.22 : kind === 'eat' ? 0.15 : 0.11 * sp) + id) % 8 + 8) % 8;
   z.tp = Math.max(0, Math.min(4, Math.round(2 + 2 * Math.sin(t * tw + id * 1.7) * (kind === 'sleep' ? 0.3 : 1))));
   const q = (t + id * 53) % 230;
   if (kind !== 'sleep' && q < 16) ear += (((q / 3) | 0) % 2 ? 2 : -2);
@@ -717,11 +762,24 @@ function crDeform(sp, closed, tp, ep) {
 function crWholeBlit(ctx, sp, px, gy, s, flip, z) {
   const fine = s >= 1;
   let src = sp.cnv, pad = 0;
+  if (fine && z.act && crAnimHas(sp.idx)) {
+    const af = crAnimFrame(sp, z.hue, z.acc, z.act, z.fr);
+    if (af) {
+      const sx0 = z.sx, sy0 = z.sy, ln = z.lean, dx0 = z.dx;
+      if (z.act !== 'walk' || z.dy === 0) { z.sx = 1; z.sy = 1; z.lean = 0; z.dx = 0; }
+      const r = crBlitSrc(ctx, af.cnv, af.pad, px, gy, s, flip, z);
+      z.sx = sx0; z.sy = sy0; z.lean = ln; z.dx = dx0;
+      return r + CR_ANIM_META.sp[sp.idx].mt * s;
+    }
+  }
   const closed = fine && z.closed && sp.m.ex0 !== undefined, tp = fine && sp.tail ? z.tp : 2, ep = fine && sp.ear ? z.ep : 2;
   if (tp !== 2 || ep !== 2) { const d = crDeform(sp, closed, tp, ep); src = d.cnv; pad = d.pad; }
   else if (closed) { const c = crClosed(sp); if (c) src = c; }
+  return crBlitSrc(ctx, src, pad, px, gy, s, flip, z);
+}
+function crBlitSrc(ctx, src, pad, px, gy, s, flip, z) {
   const cw = src.width, ch = src.height, Wd = Math.max(1, Math.round(cw * s * z.sx)), Hd = Math.max(1, Math.round(ch * s * z.sy)), bottom = gy + z.dy + Math.round(pad * s * z.sy);
-  const nb = Hd >= 24 && Math.abs(z.lean) >= 1 && fine ? 3 : 1;
+  const nb = Hd >= 24 && Math.abs(z.lean) >= 1 && s >= 1 ? 3 : 1;
   ctx.imageSmoothingEnabled = s < 0.75;
   let X = px;
   if (flip < 0) { ctx.save(); ctx.translate(px, 0); ctx.scale(-1, 1); X = 0; }
@@ -747,6 +805,7 @@ function crDrawWhole(cs, o, px, py, r, baby, moving, st, hp) {
   const flip = Math.cos(dir) < 0 ? -1 : 1;
   const kind = sl ? 'sleep' : fly ? 'fly' : act === 3 ? 'attack' : act === 4 && !moving ? 'eat' : act === 2 ? 'run' : act === 8 || act === 7 || act === 5 ? 'hop' : moving ? 'walk' : 'idle';
   const z = crPose(kind, st.animT, id, cs[o + 18], h, w);
+  z.hue = hue; z.acc = acc;
   const lift = fly ? Math.round(h * 0.45 + 2 + Math.sin(st.animT * 0.12 + id) * 1.3) : 0;
   const gy = Math.round(py + h / 2) - lift;
   const hasW = CR_TAGS[idx].includes('w');

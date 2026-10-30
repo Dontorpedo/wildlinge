@@ -1,5 +1,5 @@
 // Bundles web/ and the WebAssembly core into one self-contained dist/wildlinge.html
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 
 const rd = p => readFileSync(new URL('../' + p, import.meta.url));
 const txt = p => rd(p).toString('utf8');
@@ -31,7 +31,7 @@ const parts = {
   LIBS: libs,
   I18N: txt('web/i18n.js'),
   GFX: 'const TILE_STAMPS=' + txt('web/assets/tiles/stamps.json') + ';\n' + txt('web/gfx.js'),
-  CRITTER: 'const CR_WHOLE_IMG=' + JSON.stringify('data:image/png;base64,' + rd('web/assets/whole/whole.png').toString('base64')) + ';\nconst CR_WHOLE_META=' + txt('web/assets/whole/whole.json') + ';\nconst CR_ATLAS=' + JSON.stringify(Object.fromEntries(['heads', 'bodies', 'ears', 'tails', 'legs', 'wings', 'crests', 'horns'].map(n => [n, 'data:image/png;base64,' + rd('web/assets/parts/' + n + '.png').toString('base64')]))) + ';\n' + txt('web/critter.js'),
+  CRITTER: (existsSync(new URL('../web/assets/whole/anim.png', import.meta.url)) ? 'const CR_ANIM_IMG=' + JSON.stringify('data:image/png;base64,' + rd('web/assets/whole/anim.png').toString('base64')) + ';\nconst CR_ANIM_META=' + txt('web/assets/whole/anim.json') + ';\n' : '') + 'const CR_WHOLE_IMG=' + JSON.stringify('data:image/png;base64,' + rd('web/assets/whole/whole.png').toString('base64')) + ';\nconst CR_WHOLE_META=' + txt('web/assets/whole/whole.json') + ';\nconst CR_ATLAS=' + JSON.stringify(Object.fromEntries(['heads', 'bodies', 'ears', 'tails', 'legs', 'wings', 'crests', 'horns'].map(n => [n, 'data:image/png;base64,' + rd('web/assets/parts/' + n + '.png').toString('base64')]))) + ';\n' + txt('web/critter.js'),
   TERRA: txt('web/terrarium.js'),
   APP: txt('web/app.js')
 };
