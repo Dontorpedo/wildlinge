@@ -566,9 +566,10 @@ function crDrawWild(cs, o, px, py, r, baby, moving, st, hp) {
   const k = Math.max(0.2, (r * 2.7) / Math.max(1, sp.hAbove)), w = Math.max(1, Math.round(sp.W * k)), h = Math.max(1, Math.round(sp.H * k));
   const flip = Math.cos(dir) < 0 ? -1 : 1, gy = Math.round(py + (sp.hAbove * k) / 2), ox = Math.round(sp.ox * k), goy = Math.round(sp.gy * k);
   st.sprTop = gy - Math.round(sp.hAbove * k);
-  b.imageSmoothingEnabled = false;
+  b.imageSmoothingEnabled = k < 0.8;
   if (flip > 0) b.drawImage(sp.cnv, px - ox, gy - goy, w, h);
   else { b.save(); b.translate(px + ox, 0); b.scale(-1, 1); b.drawImage(sp.cnv, 0, gy - goy, w, h); b.restore(); }
+  b.imageSmoothingEnabled = false;
   const F = sp.A.face;
   if (F && r >= 7) {
     const ew = Math.max(1, Math.round(sp.A.ew * k)), eh = Math.max(2, Math.round(sp.A.eh * k)), ex = px + flip * Math.round(F.eye[0] * k) - (flip > 0 ? 0 : ew - 1), ey = gy + Math.round(F.eye[1] * k) - (eh >> 1);
