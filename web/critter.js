@@ -40,6 +40,35 @@ function crRng(seed) {
   return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 }
 const crClamp = (v, a, b) => Math.min(b, Math.max(a, v));
+/* Catmull-Rom spline through control points -> flattened polygon */
+function crSpline(pts, closed, seg) {
+  seg = seg || 6;
+  const n = pts.length, out = [], cnt = closed ? n : n - 1;
+  const P = i => (closed ? pts[((i % n) + n) % n] : pts[Math.max(0, Math.min(n - 1, i))]);
+  for (let i = 0; i < cnt; i++) {
+    const p0 = P(i - 1), p1 = P(i), p2 = P(i + 1), p3 = P(i + 2);
+    for (let k = 0; k < seg; k++) {
+      const t = k / seg, t2 = t * t, t3 = t2 * t, f = d => 0.5 * (2 * p1[d] + (-p0[d] + p2[d]) * t + (2 * p0[d] - 5 * p1[d] + 4 * p2[d] - p3[d]) * t2 + (-p0[d] + 3 * p1[d] - 3 * p2[d] + p3[d]) * t3);
+      out.push([f(0), f(1)]);
+    }
+  }
+  if (!closed) out.push(pts[n - 1]);
+  return out;
+}
+/* closed smooth shape: returns { inside(x,y), bb } */
+function crShape(pts, seg) {
+  const poly = crSpline(pts, true, seg || 6), n = poly.length;
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const q of poly) { x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); y0 = Math.min(y0, q[1]); y1 = Math.max(y1, q[1]); }
+  const inside = (x, y) => {
+    if (x < x0 || x > x1 || y < y0 || y > y1) return false;
+    let c = false;
+    for (let i = 0, j = n - 1; i < n; j = i++) { const a = poly[i], b = poly[j]; if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) c = !c; }
+    return c;
+  };
+  return { inside, bb: [x0 - 2, y0 - 2, x1 + 2, y1 + 2] };
+}
+const crScale = (pts, cx, cy, k) => pts.map(q => [cx + (q[0] - cx) * k, cy + (q[1] - cy) * k]);
 
 /* rec: creature frame record; opt: { r, baby, ph (0 idle, 1..4 walk), lie } */
 function crBuild(rec, opt) {
@@ -90,14 +119,18 @@ function crBuild(rec, opt) {
   const bcy = Y(bc), huC = X(nseg > 1 ? ge.uh : a * 0.62 + (lie ? a * 0.1 : 0)), hvC = lie ? Y(-rh * 0.85) : Y(bc - b - rh * 0.12);
   const rnd = crRng((hue * 7 + look[1] * 131 + (rec[20] * 977 | 0) + (rec[21] * 331 | 0) + nLegs * 17) | 0);
 
-  /* far wing */
+  /* wings: scalloped membrane with finger bones */
   const wing = (far) => {
-    const wl = Math.max(4, r * 0.8), ww = Math.max(2, r * 0.34), ang = -0.95 + Math.sin(ph * 1.6 + (far ? 1.2 : 0)) * 0.22 + (kinds.wing > 1 ? 0 : 0);
-    const cx = X(-a * 0.1 - (far ? 3 : 0)) - Math.cos(ang) * wl * 0.15, cy = bcy - b * 0.85 + Math.sin(ang) * wl * 0.15;
-    const ca = Math.cos(ang), sa = Math.sin(ang);
-    const ins = (x, y) => { const dx = x - cx, dy = y - cy, u = dx * ca + dy * sa, v = -dx * sa + dy * ca; return Math.pow(Math.abs(u - wl * 0.5) / (wl * 0.55), 2) + Math.pow(Math.abs(v) / (ww * (1 - Math.max(0, (u / wl)) * 0.45)), 2) <= 1 && u >= -wl * 0.05; };
-    layer(cx - wl - 2, cy - wl - 2, cx + wl + 2, cy + wl + 2, ins, (x, y) => { const dx = x - cx, dy = y - cy, v = -dx * sa + dy * ca; return Math.abs(v) < 0.55 && (dx * ca + dy * sa) > wl * 0.2 ? CR.WVEIN : CR.WING; }, false);
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (g[y * W + x] === CR.OUT && ins(x + 0.5, y + 0.5) === false) { /* keep body outline colour */ }
+    const wl = Math.max(5, r * 0.85), ww = Math.max(2.2, r * 0.36), ang = -1.85 + Math.sin(ph * 1.6 + (far ? 1.2 : 0)) * 0.22;
+    const ca = Math.cos(ang), sa = Math.sin(ang), cx = X(-a * 0.05 - (far ? 3 : 0)), cy = bcy - b * 0.8;
+    const loc = [[0, 0], [wl * .3, -ww * 1.2], [wl * .72, -ww * 1.5], [wl * 1.05, -ww * .6], [wl * .78, -ww * .05], [wl * .84, ww * .9], [wl * .5, ww * .25], [wl * .46, ww * 1.1], [wl * .2, ww * .5]];
+    const sh = crShape(loc.map(q => [cx + q[0] * ca - q[1] * sa, cy + q[0] * sa + q[1] * ca]), 5);
+    layer(sh.bb[0], sh.bb[1], sh.bb[2], sh.bb[3], sh.inside, (x, y) => {
+      const dx = x - cx, dy = y - cy, u = dx * ca + dy * sa, v = -dx * sa + dy * ca;
+      if (Math.abs(v + ww * 1.05 * Math.sin(Math.min(1, u / wl) * 2.2)) < 0.6 && u > 0) return CR.WVEIN;
+      if ((Math.abs(u - wl * 0.5) < 0.55 || Math.abs(u - wl * 0.78) < 0.55) && v > -ww * 0.6) return CR.WVEIN;
+      return CR.WING;
+    }, false);
   };
   if (kinds.wing) wing(true);
 
@@ -126,11 +159,9 @@ function crBuild(rec, opt) {
       layer(lx - 3, bot - 4, lx + 3, bot + 1, ell(lx, bot - 2, 2.6, 2.4), () => cPaw);
       return;
     }
-    const lx = x0 + sw * 0.4;
-    layer(lx - w, top, lx + w + 2, bot, (x, y) => {
-      if (y > bot - 3) return Math.abs(x - (lx + 0.8)) <= w / 2 + 1.1;
-      return Math.abs(x - lx) <= w / 2;
-    }, (x, y) => {
+    const lx = x0 + sw * 0.4, L = bot - top;
+    const lg = crShape([[lx - w * .55, top], [lx + w * .55, top], [lx + w * .5, top + L * .45], [lx + w * .42, bot - 4], [lx + w * .95 + 1, bot - 2.2], [lx + w * .85 + 1, bot + .4], [lx - w * .35, bot + .4], [lx - w * .5, bot - 3], [lx - w * .45, top + L * .5]], 4);
+    layer(lg.bb[0], lg.bb[1], lg.bb[2], lg.bb[3], lg.inside, (x, y) => {
       if (y > bot - 3) return (x > lx + w / 2 + 0.2 && y > bot - 1.2) ? cPawSh : cPaw;
       return x - lx > 0 ? cBase : cSh;
     });
@@ -151,9 +182,15 @@ function crBuild(rec, opt) {
     else if (ts === 4) { tpts.push([X(ux - 1), y0, Math.max(2, lb * 0.4)], [X(ux - lb * 0.75), y0 - 1, Math.max(3, lb * 0.62)]); }
     else { for (let k = -2; k <= 2; k++) tpts.push([X(ux - lb * 0.6 - Math.abs(k) * 0.4), y0 + k * Math.max(1.3, lb * 0.32) - lb * 0.1, Math.max(1.3, lb * 0.32)]); }
     const last = tpts[tpts.length - 1];
-    if (ts === 0 || ts === 3) { const f = Math.max(3, lb * 0.7); tpts.push([last[0] - f * 0.55, last[1] - f * 0.2, f], [last[0] - f * 0.2, last[1] - f * 0.7, f * 0.75], [last[0] - f * 0.2, last[1] + f * 0.55, f * 0.7]); }
-    const bb = bbox(tpts), tipX = last[0] - Math.max(1, lb * 0.1);
-    layer(bb[0], bb[1], bb[2], bb[3], blob(tpts), (x, y) => {
+    let fanIn = null, fanBB = null;
+    if (ts === 0 || ts === 3) {
+      const f = Math.max(3, lb * 0.75), lx = last[0], ly = last[1];
+      const fs = crShape([[lx + f * .1, ly], [lx - f * .5, ly - f * .95], [lx - f * 1.5, ly - f * .75], [lx - f * 2.0, ly - f * .05], [lx - f * 1.5, ly + f * .7], [lx - f * .5, ly + f * .9]], 5);
+      fanIn = fs.inside; fanBB = fs.bb;
+    }
+    const bb = bbox(tpts), tipX = last[0] - Math.max(1, lb * 0.1), tb = blob(tpts);
+    if (fanBB) { bb[0] = Math.min(bb[0], fanBB[0]); bb[1] = Math.min(bb[1], fanBB[1]); bb[2] = Math.max(bb[2], fanBB[2]); bb[3] = Math.max(bb[3], fanBB[3]); }
+    layer(bb[0], bb[1], bb[2], bb[3], fanIn ? (x, y) => tb(x, y) || fanIn(x, y) : tb, (x, y) => {
       if (ts === 0 || ts === 3) { if (x < tipX) return (y > last[1] + 3 || x < tipX - Math.max(3, lb * 0.5)) ? CR.ACCSH : CR.ACC; return y > last[1] + 2 ? CR.SH : CR.BASE; }
       if (ts === 4 && x < tpts[1][0] + 1) return CR.HI;
       if (ts === 5 && x < tpts[0][0] - lb * 0.3) return CR.ACC;
@@ -198,23 +235,33 @@ function crBuild(rec, opt) {
     const cB = farE ? CR.FAR : CR.BASE, cI = farE ? CR.FARSH : CR.PINK, eL = Math.max(4, Math.round(hr * (ear === 2 ? 1.4 : 1.25)));
     if (ear === 0) {
       const b1x = hu - hr * 0.25 + dxo, b1y = hv - hr * 0.92, b2x = hu - hr * 1.0 + dxo, b2y = hv + hr * 0.05, ax = hu - hr * 1.62 + dxo, ay = hv - hr * 1.0;
-      layer(ax - 2, ay - 3, b1x + 3, b2y + 3, tri(b1x, b1y, b2x, b2y, ax, ay), (x, y) => (tri(b1x - 1.2, b1y + 1.5, b2x + 1.6, b2y - 0.2, ax + hr * 0.2, ay + 1.4)(x, y) ? cI : cB));
+      const pts = [[b1x, b1y], [(b1x + ax) / 2 + hr * 0.05, (b1y + ay) / 2 - hr * 0.3], [ax, ay], [(ax + b2x) / 2 + hr * 0.1, (ay + b2y) / 2 + hr * 0.12], [b2x, b2y]];
+      const o = crShape(pts, 6), inn = crShape(crScale(pts, (b1x + b2x) / 2 + hr * 0.1, (b1y + b2y) / 2, 0.58), 6);
+      layer(o.bb[0], o.bb[1], o.bb[2], o.bb[3], o.inside, (x, y) => (inn.inside(x, y) ? cI : cB));
     } else if (ear === 3) {
       const bx = hu - hr * 0.35 + dxo, by = hv - hr * 0.8, ew = hr * 0.55;
-      layer(bx - ew - 2, by - eL - 2, bx + ew + 2, by + 3, tri(bx - ew, by + 2, bx + ew, by + 1, bx - ew * 0.2, by - eL), (x, y) => (tri(bx - ew * 0.5, by + 1, bx + ew * 0.5, by, bx - ew * 0.2, by - eL * 0.65)(x, y) ? cI : cB));
+      const pts = [[bx - ew, by + 2], [bx - ew * 1.05, by - eL * 0.5], [bx - ew * 0.2, by - eL], [bx + ew * 0.8, by - eL * 0.45], [bx + ew, by + 1]];
+      const o = crShape(pts, 6), inn = crShape(crScale(pts, bx, by + 2, 0.55), 6);
+      layer(o.bb[0], o.bb[1], o.bb[2], o.bb[3], o.inside, (x, y) => (inn.inside(x, y) ? cI : cB));
     } else if (ear === 1) {
       const bx = hu - hr * 0.45 + dxo, by = hv - hr * 0.85, ew = hr * 0.5;
       layer(bx - ew - 1, by - ew * 1.4 - 1, bx + ew + 1, by + 3, ell(bx, by - ew * 0.4, ew, ew * 1.05), (x, y) => (ell(bx, by - ew * 0.35, ew * 0.55, ew * 0.6)(x, y) ? cI : cB));
     } else {
-      const bx = hu - hr * 0.4 + dxo, by = hv - hr * 0.8, ew = hr * 0.32, lean = hr * 0.35;
-      layer(bx - ew - lean - 3, by - eL * 1.7, bx + ew + 3, by + 3, (x, y) => { const t = (by - y) / (eL * 1.6), cxl = bx - lean * t; return t > -0.1 && t < 1.05 && Math.abs(x - cxl) <= ew * (1 - t * 0.25); }, (x, y) => { const t = (by - y) / (eL * 1.6), cxl = bx - lean * t; return Math.abs(x - cxl) < ew * 0.45 && t < 0.85 ? cI : cB; });
+      const bx = hu - hr * 0.4 + dxo, by = hv - hr * 0.8, ew = hr * 0.38, lean = hr * 0.35;
+      const pts = [[bx - ew, by + 2], [bx - ew * 1.1 - lean * 0.45, by - eL * 0.8], [bx - lean * 1.1, by - eL * 1.65], [bx + ew * 0.9 - lean * 0.45, by - eL * 0.85], [bx + ew, by + 2]];
+      const o = crShape(pts, 6), inn = crShape(crScale(pts, bx, by + 2, 0.5), 6);
+      layer(o.bb[0], o.bb[1], o.bb[2], o.bb[3], o.inside, (x, y) => (inn.inside(x, y) ? cI : cB));
     }
   };
   earBase(hr * 0.35, true);
   const nH = kinds.weapon ? Math.min(2, kinds.weapon + 1) : 0;
   for (let k = 0; k < nH; k++) {
     const bx = hu - hr * (0.0 - k * 0.5), by = hv - hr * (0.9 - k * 0.1), hh = Math.max(4, Math.round(hr * 0.78) - k), bw = Math.max(2, hr * 0.22);
-    layer(bx - bw - 3, by - hh - 2, bx + bw + 3, by + 3, tri(bx - bw, by + 2, bx + bw, by + 2, bx - hh * 0.22, by - hh), (x, y) => (y < by - hh * 0.55 ? ((x + y) % 4 < 1 ? CR.ACCSH : CR.ACC) : (y < by - hh * 0.25 ? CR.BEL : CR.BASE)));
+    const hp = [];
+    for (let j = 0; j <= 10; j++) { const t = j / 10, u = 1 - t; hp.push([u * u * bx + 2 * u * t * (bx + hh * 0.12) + t * t * (bx - hh * 0.5), u * u * (by + 2) + 2 * u * t * (by - hh * 0.6) + t * t * (by - hh), Math.max(0.7, bw * (1 - t * 0.85))]);
+    }
+    const hb = bbox(hp);
+    layer(hb[0], hb[1], hb[2], hb[3], blob(hp), (x, y) => (y < by - hh * 0.55 ? ((x + y) % 4 < 1 ? CR.ACCSH : CR.ACC) : (y < by - hh * 0.25 ? CR.BEL : CR.BASE)));
   }
   if (kinds.display) for (let k = 0; k < 3; k++) { const bx = hu - hr * (0.55 - k * 0.22), by = hv - hr * 0.95 - k * 0.3, hh = Math.max(3, Math.round(hr * 0.5)); layer(bx - 3, by - hh - 1, bx + 3, by + 2, tri(bx - 2, by + 1, bx + 2, by + 1, bx - 1.5, by - hh), () => (k === 1 ? CR.ACCSH : CR.ACC)); }
   if (kinds.sense) {
@@ -228,7 +275,8 @@ function crBuild(rec, opt) {
 
   /* head */
   const hsx = hr * 1.04, hsy = hr * 0.94;
-  layer(hu - hsx - 1, hv - hsy - 1, hu + hsx + 1, hv + hsy + 1, ell(hu, hv, hsx, hsy), (x, y) => {
+  const hs = crShape([[0.05, -1.0], [0.7, -0.8], [1.03, -0.1], [0.92, 0.55], [0.4, 0.99], [-0.3, 0.99], [-1.0, 0.56], [-1.04, -0.1], [-0.7, -0.8]].map(q => [hu + q[0] * hsx, hv + q[1] * hsy]), 6);
+  layer(hs.bb[0], hs.bb[1], hs.bb[2], hs.bb[3], hs.inside, (x, y) => {
     const nx = (x - hu) / hsx, ny = (y - hv) / hsy;
     const muz = Math.pow((x - (hu + hr * 0.52)) / (hr * 0.66), 2) + Math.pow((y - (hv + hr * 0.3)) / (hr * 0.78), 2) <= 1 || (nx > 0.2 && ny > 0.35);
     if (muz) return ny > 0.78 ? CR.BELSH : CR.BEL;
