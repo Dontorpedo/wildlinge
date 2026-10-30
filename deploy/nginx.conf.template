@@ -1,0 +1,33 @@
+map $http_upgrade $wl_connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+limit_conn_zone $binary_remote_addr zone=wl_conn:10m;
+
+server {
+    listen @PORT@;
+    server_name @DOMAIN@;
+    root /var/www/wildlinge;
+    index index.html;
+    gzip on;
+    gzip_types text/html;
+    gzip_min_length 1024;
+
+    location = / {
+        try_files /index.html =404;
+        add_header Cache-Control "no-cache";
+    }
+    location /ws {
+        limit_conn wl_conn 8;
+        proxy_pass http://127.0.0.1:8787;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $wl_connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 60s;
+    }
+    location / {
+        return 404;
+    }
+}

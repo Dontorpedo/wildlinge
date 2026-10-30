@@ -240,7 +240,7 @@ pub fn panel(w: &World, sel: u32) -> String {
     let events: Vec<Value> = w.events.iter().rev().take(16).map(|e| json!([World::day_of(e.t), e.k, e.p])).collect();
     let log: Vec<Value> = w.log.iter().rev().take(16).map(|e| json!({"words": e.words, "id": e.id, "name": e.name, "carn": e.carn, "vec": e.vec, "sector": e.sector})).collect();
     let adopted: Vec<Value> = cs.iter().filter(|c| c.adopted).map(|c| json!({"id": c.id, "name": c.name, "phase": c.phase(), "wb": c.wellbeing, "goal": c.goal, "asleep": c.asleep})).collect();
-    let released: Vec<Value> = cs.iter().filter(|c| c.released && !c.adopted).map(|c| json!({"id": c.id, "name": c.name, "phase": c.phase(), "wb": c.wellbeing, "goal": c.goal, "asleep": c.asleep, "kids": c.children, "gen": c.gen})).collect();
+    let released: Vec<Value> = cs.iter().filter(|c| c.released && !c.adopted && c.owner == w.viewer).map(|c| json!({"id": c.id, "name": c.name, "phase": c.phase(), "wb": c.wellbeing, "goal": c.goal, "asleep": c.asleep, "kids": c.children, "gen": c.gen})).collect();
     let memorial: Vec<Value> = w.memorial.iter().rev().take(8).map(|m| json!({"name": m.name, "cause": m.cause, "died": World::day_of(m.died), "children": m.children})).collect();
     let mut mini: Vec<f32> = Vec::with_capacity(cs.len() * 3);
     let bosses: Vec<u32> = w.species.iter().map(|s| s.boss_id).collect();
@@ -422,6 +422,34 @@ pub fn command(w: &mut World, v: &Value) -> Value {
                 None => json!({"ok": false}),
             }
         }
+        "move" => {
+            let id = v.get("id").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+            let (x, y) = (f(v, "x", 20.0, WORLD_W - 20.0, 0.0), f(v, "y", 20.0, WORLD_H - 20.0, 0.0));
+            let maxd = f(v, "max", 0.0, 1.0e6, 1.0e6);
+            let b = w.bio_at(x, y);
+            if BIOMES[b].water != 0 {
+                return json!({"ok": false, "water": true});
+            }
+            match w.creatures.iter().position(|c| c.id == id) {
+                Some(i) => {
+                    let (dx, dy) = (x - w.creatures[i].x, y - w.creatures[i].y);
+                    let d = (dx * dx + dy * dy).sqrt();
+                    if d > maxd {
+                        return json!({"ok": false, "far": true, "d": d});
+                    }
+                    let t = w.t;
+                    let c = &mut w.creatures[i];
+                    c.x = x;
+                    c.y = y;
+                    c.fear = (c.fear + 0.2 + d / 4000.0).min(1.0);
+                    c.cf = -1;
+                    c.note(t, "d.carried", "");
+                    w.reindex();
+                    json!({"ok": true, "d": d})
+                }
+                None => json!({"ok": false}),
+            }
+        }
         "tlist" => json!({"list": w.terra.iter().map(terra_json).collect::<Vec<Value>>()}),
         "trename" => {
             let id = v.get("id").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
@@ -474,6 +502,7 @@ pub fn command(w: &mut World, v: &Value) -> Value {
                     c.health = f(v, "hp", 20.0, 100.0, 100.0);
                     c.adopted = false;
                     c.released = true;
+                    c.owner = w.viewer;
                     c.energy = c.max_e() * 0.8;
                     c.note(w.t, "d.fromTerrarium", "");
                     let nm = c.name.clone();

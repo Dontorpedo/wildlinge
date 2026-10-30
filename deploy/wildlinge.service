@@ -1,0 +1,25 @@
+[Unit]
+Description=Wildlinge shared world
+After=network.target
+
+[Service]
+User=wildlinge
+Group=wildlinge
+Environment=WL_BIND=127.0.0.1:8787
+Environment=WL_DATA=/var/lib/wildlinge
+Environment=WL_RATE=20
+EnvironmentFile=-/etc/wildlinge.env
+ExecStart=/opt/wildlinge/wildlinge-server
+Restart=always
+RestartSec=3
+KillSignal=SIGTERM
+TimeoutStopSec=60
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/wildlinge
+MemoryMax=1200M
+
+[Install]
+WantedBy=multi-user.target

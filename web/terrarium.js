@@ -138,7 +138,7 @@ function tzAlone() { return TZ.list.length <= 1; }
 async function tzAdopt(id) {
   if (TZ.list.length + TZ.eggs.length >= TZ.MAX) { toast(t('tz.full')); return; }
   const r = await tzCall({ type: 'take', id });
-  if (!r.ok) { toast(r.full ? t('tz.full') : t('tz.noTake')); return; }
+  if (!r.ok) { toast(r.full ? t('tz.full') : r.kraft ? t('t.kraft') : r.low ? t('tz.low') : t('tz.noTake')); return; }
   const c = tzMake(r, null);
   TZ.list.push(c);
   TZ.sel = c.id;

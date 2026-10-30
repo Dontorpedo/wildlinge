@@ -21,6 +21,7 @@ const chart = $('chart'), cctx = chart.getContext('2d');
 const mini = $('minimap'), mctx = mini.getContext('2d');
 const cam = { x: WORLD_W / 2, y: WORLD_H / 2, zi: 4 };
 
+let carryId = 0, carryWait = false, serverMode = false, srvWs = null, srvChain = Promise.resolve(), srvMs = 125, srvAt = 0, srvRetry = 0;
 let sendHost = () => {}, worker = null, mode = 'worker', labWorker = null;
 let viewMode = 'wild';
 let relIds = new Set(), frame = null, panel = null, tool = 'select', running = true, selId = 0, activeTab = 'world';
@@ -121,6 +122,7 @@ function render() {
   if (viewMode === 'terra') { tzRender(); if (activeTab === 'terra') tzPanel(false); return; }
   if (!frame || !terrainSummer) return;
   const fr = frame, cs = fr.cs, meta = fr.meta;
+  if (serverMode) lerpFrame(fr);
   let selO = -1;
   if (selId) for (let o = 0; o + CS_STRIDE <= cs.length; o += CS_STRIDE) if (cs[o] === selId) { selO = o; break; }
   if (follow && selO >= 0) { cam.x += (cs[selO + 1] - cam.x) * 0.15; cam.y += (cs[selO + 2] - cam.y) * 0.15; }
@@ -568,6 +570,7 @@ function receive(m) {
       break;
     }
     case 'frame': {
+      if (serverMode) prepInterp(m);
       frame = m;
       if (showBubbles) for (const q of m.meta.bub || []) bubbles.push({ x: q.x, y: q.y, text: q.kind === 2 ? tBody(q.text) : q.text, kind: q.kind, until: performance.now() + (q.kind === 2 ? 1100 : 1600) });
       if (bubbles.length > 90) bubbles.splice(0, bubbles.length - 90);
@@ -575,7 +578,12 @@ function receive(m) {
       break;
     }
     case 'panel': panel = JSON.parse(m.json); if (panel.sel) selId = panel.sel.id; else if (selId && !panel.sel) selId = 0; renderPanel(panel); break;
-    case 'sel': selId = m.id; if (m.id) setTab('creature'); break;
+    case 'sel':
+      selId = m.id;
+      if (carryWait) { carryWait = false; if (m.id) { carryId = m.id; toast(t('t.carryPick')); } else toast(t('t.miss')); break; }
+      if (m.id) setTab('creature');
+      break;
+    case 'kraft': showKraft(m); break;
     case 'persist': persist(m); break;
     case 'tres': tzResolve(m); break;
     case 'toast': toast(tToast(m.o)); break;
@@ -613,10 +621,108 @@ function useMainThread() {
   hostPost = msg => setTimeout(() => receive(msg), 0);
   sendHost = msg => { hostHandle(msg); };
 }
+/* ---------- shared server mode ---------- */
+function srvToken() {
+  try {
+    let tk = localStorage.getItem('wildlinge-token');
+    if (!tk || !/^[A-Za-z0-9_-]{16,64}$/.test(tk)) {
+      const a = new Uint8Array(24); crypto.getRandomValues(a);
+      tk = Array.from(a, x => x.toString(16).padStart(2, '0')).join('');
+      localStorage.setItem('wildlinge-token', tk);
+    }
+    return tk;
+  } catch (e) {
+    if (!window.__wlTok) { const a = new Uint8Array(24); crypto.getRandomValues(a); window.__wlTok = Array.from(a, x => x.toString(16).padStart(2, '0')).join(''); }
+    return window.__wlTok;
+  }
+}
+const SRV_SEND = new Set(['view', 'select', 'pick', 'action', 'move', 'tcmd', 'series', 'hidden']);
+function srvSend(msg) {
+  if (!srvWs || srvWs.readyState !== 1 || !SRV_SEND.has(msg.type)) return;
+  srvWs.send(JSON.stringify(msg));
+}
+async function inflate(u8) {
+  const s = new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate'));
+  return await new Response(s).arrayBuffer();
+}
+async function srvIn(d) {
+  if (typeof d === 'string') { receive(JSON.parse(d)); return; }
+  const u8 = new Uint8Array(d), kind = u8[0], dv = new DataView(d);
+  if (kind === 1) {
+    const hl = dv.getUint32(1, true), cn = dv.getUint32(5, true), fn = dv.getUint32(9, true);
+    const raw = await inflate(u8.subarray(13));
+    const m = JSON.parse(new TextDecoder().decode(new Uint8Array(raw, 0, hl)));
+    m.cs = new Float32Array(raw.slice(hl, hl + cn * 4));
+    m.foods = new Float32Array(raw.slice(hl + cn * 4, hl + cn * 4 + fn * 4));
+    receive(m);
+  } else if (kind === 2) {
+    const hl = dv.getUint32(1, true);
+    const m = JSON.parse(new TextDecoder().decode(u8.subarray(5, 5 + hl)));
+    m.bio = u8.slice(5 + hl);
+    m.fresh = true;
+    receive(m);
+  } else if (kind === 3) {
+    const raw = await inflate(u8.subarray(1));
+    receive(JSON.parse(new TextDecoder().decode(raw)));
+  }
+}
+function trySrv() {
+  if (!/^https?:$/.test(location.protocol) || typeof DecompressionStream === 'undefined' || typeof WebSocket === 'undefined') return Promise.resolve(false);
+  return new Promise(res => {
+    let opened = false, done = false;
+    const fin = v => { if (!done) { done = true; res(v); } };
+    let ws;
+    try { ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws'); } catch (e) { fin(false); return; }
+    ws.binaryType = 'arraybuffer';
+    const tm = setTimeout(() => { if (!opened) { try { ws.close(); } catch (e) { /* ignore */ } fin(false); } }, 3500);
+    ws.onopen = () => {
+      opened = true; clearTimeout(tm);
+      srvWs = ws; sendHost = srvSend; serverMode = true;
+      ws.send(JSON.stringify({ type: 'hello', token: srvToken() }));
+      for (const id of ['btnExport', 'btnImport', 'btnReset', 'btnRun', 'speed']) { const el = $(id); const l = el && (el.closest('label') || el); if (l) l.style.display = 'none'; }
+      $('saveState').textContent = t('srv.state');
+      fin(true);
+    };
+    ws.onmessage = e => { srvChain = srvChain.then(() => srvIn(e.data)).catch(() => {}); };
+    ws.onerror = () => fin(false);
+    ws.onclose = () => {
+      if (!opened) { fin(false); return; }
+      $('clock').textContent = t('srv.lost');
+      srvRetry = setTimeout(() => location.reload(), 5000);
+    };
+  });
+}
+document.addEventListener('visibilitychange', () => { if (serverMode) sendHost({ type: 'hidden', v: document.hidden }); });
+function showKraft(m) {
+  const el = $('kraft');
+  el.style.display = 'inline';
+  el.textContent = t('srv.kraft', Math.round(m.v), Math.round(m.max), m.online);
+}
+function prepInterp(m) {
+  const now = performance.now();
+  if (srvAt) srvMs = clamp(srvMs * 0.7 + (now - srvAt) * 0.3, 60, 400);
+  srvAt = now;
+  const n = m.cs.length / CS_STRIDE, fx = new Float32Array(n), fy = new Float32Array(n), prev = new Map(), old = frame;
+  if (old && old.tx) for (let i = 0; i < old.tx.length; i++) prev.set(old.ids[i], i);
+  m.ids = new Float32Array(n); m.tx = new Float32Array(n); m.ty = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const o = i * CS_STRIDE; m.ids[i] = m.cs[o]; m.tx[i] = m.cs[o + 1]; m.ty[i] = m.cs[o + 2];
+    const j = prev.get(m.cs[o]);
+    if (j !== undefined && Math.abs(old.tx[j] - m.tx[i]) < 150 && Math.abs(old.ty[j] - m.ty[i]) < 150) { fx[i] = old.tx[j]; fy[i] = old.ty[j]; } else { fx[i] = m.tx[i]; fy[i] = m.ty[i]; }
+  }
+  m.fx = fx; m.fy = fy; m.at = now;
+}
+function lerpFrame(fr) {
+  if (!fr.fx) return;
+  const k = clamp((performance.now() - fr.at) / srvMs, 0, 1), cs = fr.cs, n = fr.fx.length;
+  for (let i = 0; i < n; i++) { const o = i * CS_STRIDE; cs[o + 1] = fr.fx[i] + (fr.tx[i] - fr.fx[i]) * k; cs[o + 2] = fr.fy[i] + (fr.ty[i] - fr.fy[i]) * k; }
+}
+
 async function startApp() {
   if (typeof WebAssembly === 'undefined') { $('clock').textContent = t('app.noWasm'); return; }
   let saved = null;
   try { saved = await idbDo('readonly', st => st.get(SAVE_KEY)); } catch (e) { $('saveState').textContent = t('app.noStorage'); }
+  if (await trySrv()) { serverMode = true; requestAnimationFrame(render); return; }
   const bootMsg = () => ({ type: 'boot', role: 'sim', wasm: wasmBuffer(), save: saved || null });
   try {
     worker = new Worker(URL.createObjectURL(new Blob([$('worker-src').textContent], { type: 'text/javascript' })));
@@ -678,6 +784,10 @@ cv.addEventListener('pointerup', e => {
   if (wasDrag) return;
   const [x, y] = screenToWorld(e), r = 8 * ZOOMS[cam.zi];
   if (tool === 'select') { sendHost({ type: 'pick', x, y, r }); return; }
+  if (tool === 'carry') {
+    if (!carryId) { carryWait = true; sendHost({ type: 'pick', x, y, r }); } else { sendHost({ type: 'move', id: carryId, x, y }); carryId = 0; }
+    return;
+  }
   const tokens = tokensFromInput();
   if ((tool === 'say' || tool === 'teach') && !tokens.length) { toast(t('app.wordFirst')); $('wordIn').focus(); return; }
   sendHost({ type: 'action', tool, x, y, r, tokens });
@@ -686,8 +796,8 @@ cv.addEventListener('wheel', e => { e.preventDefault(); const [x, y] = screenToW
 window.addEventListener('keydown', e => {
   const ae = document.activeElement;
   if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT')) return;
-  const step = 60 * ZOOMS[cam.zi], tools = ['select', 'stroke', 'scold', 'teach', 'say', 'food', 'mirror'];
-  if (e.key >= '1' && e.key <= '7') setTool(tools[+e.key - 1]);
+  const step = 60 * ZOOMS[cam.zi], tools = ['select', 'stroke', 'scold', 'teach', 'say', 'food', 'mirror', 'carry'];
+  if (e.key >= '1' && e.key <= '8') setTool(tools[+e.key - 1]);
   else if (e.key === 'ArrowLeft') cam.x -= step;
   else if (e.key === 'ArrowRight') cam.x += step;
   else if (e.key === 'ArrowUp') cam.y -= step;

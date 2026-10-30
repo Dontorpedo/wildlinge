@@ -172,6 +172,7 @@ async function hostHandle(msg) {
       } else hostPost({ type: 'tres', rid: msg.rid, res: {} });
       break;
     }
+    case 'move': { const r = cmd({ type: 'move', id: num(msg.id, 0, 4294967295, 0) >>> 0, x: msg.x, y: msg.y }); hostPost({ type: 'toast', o: { k: r.ok ? 't.moved' : r.water ? 't.moveWater' : 't.miss', p: [] } }); break; }
     case 'knock': cmd({ type: 'knock', key: String(msg.key || ''), v: !!msg.v }); H.lastPanel = 0; break;
     case 'save': hostSave(); break;
     case 'export': E.wl_save(Date.now()); download(`wildlinge-${E.wl_seed()}-${E.wl_step(0)}.json`, 'application/json', out()); break;

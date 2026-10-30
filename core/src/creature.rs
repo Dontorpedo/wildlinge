@@ -52,6 +52,8 @@ pub struct Creature {
     pub adopted: bool,
     #[serde(default)]
     pub released: bool,
+    #[serde(default)]
+    pub owner: u64,
     pub diary: Vec<Diary>,
     pub x: f32,
     pub y: f32,

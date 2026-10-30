@@ -12,7 +12,7 @@ const csp = [
   "style-src 'unsafe-inline'",
   'img-src data: blob:',
   'font-src data:',
-  "connect-src 'none'",
+  "connect-src 'self' ws: wss:",
   "base-uri 'none'",
   "form-action 'none'"
 ].join('; ');

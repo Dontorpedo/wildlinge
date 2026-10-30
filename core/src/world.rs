@@ -283,6 +283,8 @@ pub struct World {
     #[serde(skip)]
     pub plants: usize,
     #[serde(skip)]
+    pub viewer: u64,
+    #[serde(skip)]
     pub dets: usize,
     #[serde(default)]
     pub fert: u32,
@@ -375,14 +377,7 @@ impl World {
             c.rebuild();
         }
         for c in w.terra.iter_mut() {
-            sanitize(&mut c.g);
-            c.lex.sanitize(MAX_PROTO);
-            c.dlex.sanitize(8);
-            c.name = clean_name(&c.name);
-            if c.name.is_empty() {
-                c.name = "Wildling".into();
-            }
-            c.rebuild();
+            Self::sanitize_creature(c);
         }
         w.terra.truncate(crate::api::TERRA_MAX);
         for h in w.hof.iter_mut() {
@@ -409,6 +404,33 @@ impl World {
         w.dets = w.foods.iter().filter(|f| f.det).count();
         w.rebuild_food_grid();
         Ok(w)
+    }
+
+    pub fn sanitize_creature(c: &mut Creature) {
+        sanitize(&mut c.g);
+        c.lex.sanitize(MAX_PROTO);
+        c.dlex.sanitize(8);
+        c.name = clean_name(&c.name);
+        if c.name.is_empty() {
+            c.name = "Wildling".into();
+        }
+        c.rebuild();
+    }
+
+    pub fn terra_to_json(v: &mut [Creature]) -> String {
+        for c in v.iter_mut() {
+            c.save_prepare();
+        }
+        serde_json::to_string(&*v).unwrap_or_default()
+    }
+
+    pub fn terra_from_json(text: &str) -> Result<Vec<Creature>, String> {
+        let mut v: Vec<Creature> = serde_json::from_str(text).map_err(|e| format!("{}", e))?;
+        v.truncate(crate::api::TERRA_MAX);
+        for c in v.iter_mut() {
+            Self::sanitize_creature(c);
+        }
+        Ok(v)
     }
 
     pub fn to_json(&mut self, now: f64) -> String {

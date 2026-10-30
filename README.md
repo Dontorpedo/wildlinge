@@ -51,3 +51,8 @@ Wildlinge ist ein offenes Experiment zu künstlichem Leben, das komplett im Brow
 **Speichern:** Die Welt liegt im Browser (IndexedDB). Beim nächsten Besuch wird die Abwesenheit nachsimuliert. Es wird nichts an einen Server gesendet.
 
 **Forschung:** Die Oberfläche bietet Messreihen als CSV, den Stammbaum als Newick, ein Labor für kontrollierte Experimente (mit und ohne eine Fähigkeit, Welch-Test) und den Export für PyPhi.
+
+## Shared server
+
+`server/` runs one persistent world (Rust, WebSocket) with one terrarium per visitor token. The browser page connects to `/ws` of the same host and falls back to the single-player mode if no server answers. Install on Ubuntu 24.04: `tools/pack-server.sh`, upload `dist/wildlinge-server.tar.gz`, unpack, run `sudo ./install.sh [--domain example.com --email you@example.com]`.
+Visitors act as guardians with limited guardian power: stroke, scold, speak, teach, feed, mirror, carry (pick up and put down), adopt into their own terrarium and release.

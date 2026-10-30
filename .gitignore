@@ -2,3 +2,6 @@
 *.wasm
 !/dist/*.wasm
 node_modules
+/server/target
+/dist/wildlinge-deploy
+/dist/*.tar.gz
