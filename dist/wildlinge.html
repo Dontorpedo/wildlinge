@@ -1452,6 +1452,24 @@ function buildTerrain(map, winter, seed) {
       if (near && ((x + y) & 1) === 0) { const o = (y * tw + x) * 4; d[o] = foam[0]; d[o + 1] = foam[1]; d[o + 2] = foam[2]; }
     }
   }
+  /* beach band on land next to water, wet sand and a light surf line on the water side */
+  if (!winter) {
+    const out = new Uint8ClampedArray(d), isW = (x, y) => cls[y * tw + x] <= 1;
+    for (let y = 4; y < th - 4; y++) for (let x = 4; x < tw - 4; x++) {
+      const bi = cls[y * tw + x], o = (y * tw + x) * 4;
+      let dist = 9;
+      for (let k = 1; k <= 4 && dist === 9; k++) if (isW(x - k, y) !== isW(x, y) || isW(x + k, y) !== isW(x, y) || isW(x, y - k) !== isW(x, y) || isW(x, y + k) !== isW(x, y)) dist = k;
+      if (dist === 9) continue;
+      const nz = vnoise(x / 5, y / 5, seed + 9);
+      if (bi === 2 || bi === 3) {
+        if (dist <= 2 + (nz > 0.5 ? 1 : 0)) { const c = dist === 1 ? [235, 186, 111] : (nz > 0.45 ? [242, 203, 124] : [231, 172, 103]); out[o] = c[0]; out[o + 1] = c[1]; out[o + 2] = c[2]; }
+      } else if (bi === 1) {
+        if (dist === 1) { out[o] = 222; out[o + 1] = 246; out[o + 2] = 240; }
+        else if (dist === 2) { out[o] = 154; out[o + 1] = 222; out[o + 2] = 206; }
+      }
+    }
+    d.set(out);
+  }
   x2.putImageData(img, 0, 0);
   const rng = mulberry32(seed * 31 + 7);
   const N = Math.floor(tw * th / 35);
