@@ -437,13 +437,13 @@ function crHash(rec, salt) {
 function crCompose(rec, opt) {
   const look = [82, 83, 84, 85, 86, 87, 88, 89].map(i => rec[i] | 0);
   const hue = (Math.round(rec[5] / 12) * 12) % 360, accc = crHex(CR_ACC[look[0] % CR_ACC.length]), acc = crRgb2hsv(accc[0], accc[1], accc[2])[0];
-  const ph = opt.ph | 0, lie = !!opt.lie, walk = Math.sin(ph * Math.PI / 2), lift = Math.cos(ph * Math.PI / 2);
+  const ph = opt.ph | 0, lie = !!opt.lie, fly = !!opt.fly, nolegs = lie || fly, walk = Math.sin(ph * Math.PI / 2), lift = Math.cos(ph * Math.PI / 2);
   const ih = crHash(rec, 1) % 16, ib = crHash(rec, 2) % 16, ie = CR_EAR_OK[crHash(rec, 3) % CR_EAR_OK.length], it = crHash(rec, 4) % 16, il = crHash(rec, 5) % 16;
   const W = 150, H = 190, dst = { w: W, h: H, d: new Uint8ClampedArray(W * H * 4) };
   const body = crTint('bodies', ib, hue, acc), bb = crBBox(body);
   const head = crTint('heads', ih, hue, acc), hb = crBBox(head);
   const leg = crCrop(crHalf(crTint('legs', il, hue, acc))), legF = crShadeP(leg, 0.78);
-  const bx = 55, bodyBottom = H - 4 - (lie ? 0 : leg.h - 8);
+  const bx = 55, bodyBottom = H - 4 - (nolegs ? 0 : leg.h - 8);
   const by = bodyBottom - bb[3];
   const legY = by + bb[3] - 8, bw = bb[2] - bb[0], gyF = legY + leg.h;
   let sx = 0, sn = 0;
@@ -455,18 +455,18 @@ function crCompose(rec, opt) {
   if (nWings) {
     const wp = crTint('wings', crHash(rec, 6) % 16, hue, acc), wh = crCrop(wp), wf = { w: wh.w, h: wh.h, d: new Uint8ClampedArray(wh.d.length) };
     for (let y = 0; y < wh.h; y++) for (let x = 0; x < wh.w; x++) { const a = (y * wh.w + x) * 4, o = (y * wh.w + (wh.w - 1 - x)) * 4; for (let k = 0; k < 4; k++) wf.d[o + k] = wh.d[a + k]; }
-    const flap = ph ? Math.round(Math.sin(ph * Math.PI / 2) * 3) : 0;
+    const flap = ph ? Math.round(Math.sin(ph * Math.PI / 2) * (fly ? 7 : 3)) : 0;
     crBlit(dst, wf, bx + bb[0] + 18 - wf.w, by + Math.round(bb[3] * 0.42) - wf.h + 4 - flap);
   }
   /* tail behind the body */
   const tp = crTint('tails', it, hue, acc), tbase = crTailBase(it);
   crBlit(dst, tp, bx + bb[0] + 5 - tbase[0], by + Math.round(bb[3] * 0.72) - tbase[1]);
-  if (!lie) {
+  if (!nolegs) {
     const sw = Math.round(walk * 4), up = ph ? Math.max(0, lift) * 3 : 0, upF = ph ? Math.max(0, -lift) * 3 : 0;
     crBlit(dst, legF, bx + bcx + 3 - leg.w / 2 - sw, legY - Math.round(upF));
   }
   crBlit(dst, body, bx, by);
-  if (!lie) {
+  if (!nolegs) {
     const sw = Math.round(walk * 4), up = ph ? Math.max(0, lift) * 3 : 0;
     crBlit(dst, leg, bx + bcx - 6 - leg.w / 2 + sw, legY - Math.round(up));
   }
@@ -497,7 +497,7 @@ function crCompose(rec, opt) {
   const u = x => x - ox, v = y => y - gy;
   const eyeX = Math.round(mx0 + (mx1 - mx0) * 0.3), eyeY = Math.round(my0 - 2);
   const A = {
-    hu: u(hcx), hv: v(hcy), hr: Math.round(hw / 2), ew: 5, eh: 6, top: v(0), legL: lie ? 0 : Math.round(leg.h / 2), a: Math.round(bw / 4), b: Math.round((bb[3] - bb[1]) / 4), bcv: v(by / 2 - fb[1] + (bb[1] + bb[3]) / 4),
+    hu: u(hcx), hv: v(hcy), hr: Math.round(hw / 2), ew: 5, eh: 6, top: v(0), legL: nolegs ? 0 : Math.round(leg.h / 2), a: Math.round(bw / 4), b: Math.round((bb[3] - bb[1]) / 4), bcv: v(by / 2 - fb[1] + (bb[1] + bb[3]) / 4),
     iris: CR_IRIS[look[2] % CR_IRIS.length], cheek: CR_CHEEK[look[4] % CR_CHEEK.length], cheekKind: look[4], ear: 0, earH: 8, nLegs: 2, nseg: 1,
     face: { eye: [u(eyeX), v(eyeY)], nose: [u(mx1 - 1), v(my0 + 1)], mouth: [u((mx0 + mx1) / 2 - 1), v(my1 - 2)], cheek: [u(mx0 - 3), v(my0 + 1)], hat: [u(hcx), v(hpy / 2 - fb[1] + 4)] }
   };
@@ -518,7 +518,7 @@ function crFinish(c, opt) {
 
 function crSprite(rec, opt) {
   const sh = opt.baby ? 1 : 0;
-  let key = [Math.round(rec[5] / 12), opt.r, sh, opt.ph | 0, opt.lie ? 1 : 0, rec[19], rec[20].toFixed(1), rec[21].toFixed(1), rec[22] | 0, rec[23].toFixed(1), rec[24].toFixed(1), ...[82, 83, 84, 85, 86, 87, 88, 89].map(i => rec[i] | 0), (() => { let s = ''; for (let i = 0; i < (rec[19] | 0); i++) s += (rec[26 + i * 7 + 5] | 0) + ((rec[26 + i * 7 + 1] > 0) ? 's' : 'a') + (Math.round(rec[26 + i * 7 + 2] * 4)); return s; })()].join('|');
+  let key = [Math.round(rec[5] / 12), opt.r, sh, opt.ph | 0, opt.lie ? 1 : opt.fly ? 2 : 0, rec[19], rec[20].toFixed(1), rec[21].toFixed(1), rec[22] | 0, rec[23].toFixed(1), rec[24].toFixed(1), ...[82, 83, 84, 85, 86, 87, 88, 89].map(i => rec[i] | 0), (() => { let s = ''; for (let i = 0; i < (rec[19] | 0); i++) s += (rec[26 + i * 7 + 5] | 0) + ((rec[26 + i * 7 + 1] > 0) ? 's' : 'a') + (Math.round(rec[26 + i * 7 + 2] * 4)); return s; })()].join('|');
   if (crReady) key += '|A';
   let e = crCache.get(key);
   if (e) return e;
@@ -561,8 +561,10 @@ function crScaleSprite(e, opt) {
 function crDrawWild(cs, o, px, py, r, baby, moving, st, hp) {
   if (!crReady) return false;
   const rec = cs.subarray(o, o + CS_STRIDE), sl = cs[o + 12], dir = cs[o + 3];
-  const ph = moving ? 1 + ((st.animT >> 2) % 4) : 0;
-  const sp = crSprite(rec, { r: 22, baby: false, ph, lie: false });
+  const fly = cs[o + 9] > 0;
+  const ph = fly ? 1 + (((st.animT >> 1) + (cs[o] | 0)) % 4) : moving ? 1 + ((st.animT >> 2) % 4) : 0;
+  const sp = crSprite(rec, { r: 22, baby: false, ph, lie: false, fly });
+  if (fly) py -= Math.round(r * 0.8 + 2 + Math.sin(st.animT * 0.12 + (cs[o] | 0)) * 1.3);
   const k = Math.max(0.2, (r * 2.7) / Math.max(1, sp.hAbove)), w = Math.max(1, Math.round(sp.W * k)), h = Math.max(1, Math.round(sp.H * k));
   const flip = Math.cos(dir) < 0 ? -1 : 1, gy = Math.round(py + (sp.hAbove * k) / 2), ox = Math.round(sp.ox * k), goy = Math.round(sp.gy * k);
   st.sprTop = gy - Math.round(sp.hAbove * k);
