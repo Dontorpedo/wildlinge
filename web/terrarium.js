@@ -122,7 +122,16 @@ function tzSoc(c) {
   return tzClamp((c.rec[6] > 0 ? 0.15 : 0.35) + u * 0.65, 0, 1);
 }
 function tzGrowth(c) { return Math.min(1, c.age / TZ.GROW); }
+function tzWholeGeom(c) {
+  const g = tzGrowth(c), r = Math.max(2, Math.round(c.rT * (0.5 + 0.5 * g))), idx = crPickIdx(c.rec);
+  const sp = crWholeSprite(idx, (Math.round(c.rec[5] / 12) * 12) % 360, c.rec[82] | 0);
+  const s = Math.max(1, Math.round(r * 2.4 / sp.h));
+  c.r = r; c.ws = s; c.wsp = sp;
+  c.half = Math.max(8, sp.h * s / 2); c.halfW = Math.max(8, sp.w * s * 0.45); c.bodyH = sp.h * s * 0.6; c.legL = 3 * s;
+  return sp;
+}
 function tzGeom(c) {
+  if (crWholeOn()) { tzWholeGeom(c); return; }
   const g = tzGrowth(c), r = Math.max(2, Math.round(c.rT * (0.5 + 0.5 * g)));
   const sp = crSprite(c.rec, { r, baby: g < 0.5, ph: 0 });
   c.r = r;
@@ -660,7 +669,53 @@ function tzEye(P, cu, cv, ew, eh, iris, open, look) {
   }
   if (ew >= 3) { b.fillStyle = '#ffffff'; P(ex + 1, ey + 1, ew >= 5 ? 2 : 1, ew >= 5 ? 2 : 1); if (ew >= 4) { P(ex + ew - 2, ey + eh - 2, 1, 1); } }
 }
+function tzSideWhole(c, sel, now) {
+  const sp = tzWholeGeom(c), s = c.ws, m = sp.m, f = c.face >= 0 ? 1 : -1, rec = c.rec, W = sp.w * s, H = sp.h * s;
+  const walking = c.moving && !c.sleeping && !c.held && (c.ground || c.fly);
+  const g0 = c.goal, eating = g0 && (g0.type === 'food' || g0.type === 'water' || g0.type === 'treat') && !c.moving;
+  const happy = c.danceUntil > now || c.laughUntil > now || c.hopT > 0;
+  const kind = c.sleeping ? 'sleep' : c.held ? 'run' : c.fly ? 'fly' : c.kick > 0 ? 'attack' : happy ? 'hop' : eating ? 'eat' : walking ? 'walk' : 'idle';
+  const t = now / 16.7, z = crPose(kind, t, c.id, Math.min(1.5, Math.abs(c.vx || 0) + 0.3), H, W);
+  if (c.laughUntil > now) z.closed = true;
+  const cx = Math.round(c.x), gy = Math.round(c.y);
+  const P = (u, v, w, h) => { w = w || 1; h = h || 1; b.fillRect(Math.round(f > 0 ? cx + u : cx - u - (w - 1)), Math.round(gy + v), w, h); };
+  if (c.fly && !c.held) { b.fillStyle = 'rgba(70,50,80,.16)'; const sy = TZ.lv[tzLevelOf(c.y)].y, sw = W >> 2; b.fillRect(cx - sw, sy, sw * 2, 1); }
+  const topY = crWholeBlit(b, sp, cx, gy, s, f, z);
+  const lean = z.lean * 0.85 + z.dx, dyz = z.dy;
+  const hr = Math.max(4, Math.round(H * 0.28)), hu = Math.round((m.hx - sp.w / 2) * s + lean), topv = Math.round(topY - gy), hv = Math.round(topv + hr * 0.93);
+  const eu = Math.round(((m.ex0 === undefined ? m.hx : (m.ex0 + m.ex1) / 2) - sp.w / 2 + 0.5) * s + lean), ev = Math.round(((m.ex0 === undefined ? sp.h * 0.5 : (m.ey0 + m.ey1) / 2) - sp.h + 0.5) * s + dyz + (H * (1 - z.sy)) * 0);
+  const ew = m.ex0 === undefined ? 2 * s : (m.ex1 - m.ex0 + 1) * s, eh = m.ex0 === undefined ? 2 * s : (m.ey1 - m.ey0 + 1) * s;
+  const mood = tzMood(c) / 100, sad = (c.soc > 0.35 && c.needs.social < 25) || mood < 0.35, fear = c.stress > 60;
+  if (!c.sleeping && !z.closed) {
+    if (sad) { b.fillStyle = '#6aaaf0'; const tq = Math.round((now / 120) % 6); P(eu - (ew >> 1) + 1, ev + (eh >> 1) + tq, 1, 2); b.fillStyle = '#3a2f58'; P(eu - (ew >> 1), ev - (eh >> 1) - 2, ew + 1, 1); }
+    if (fear) { b.fillStyle = '#9ad8ff'; const tq = Math.round((now / 90) % 5); P(eu - ew - 2, ev - eh + tq, 1, 2); }
+  }
+  if (((rec[87] | 0) === 1) && (((now / 16 + c.id * 7) % 48) < 4)) { b.fillStyle = '#fff6b0'; P(hu - hr, topv + hr, 1, 3); P(hu - hr - 1, topv + hr + 1, 3, 1); }
+  const top = topv;
+  switch (TZ_ACC[c.acc]) {
+    case 'bow': { const u = Math.round(hu - hr * 0.55), v = top + 1; b.fillStyle = '#ff7aa8'; P(u - 3, v - 2, 3, 4); P(u + 1, v - 2, 3, 4); b.fillStyle = '#ffc0d6'; P(u - 2, v - 1, 1, 1); P(u + 2, v - 1, 1, 1); b.fillStyle = '#d04a80'; P(u, v - 1, 1, 2); break; }
+    case 'hat': { const u = hu, v = top + 2; b.fillStyle = '#3b3560'; P(u - 5, v, 11, 2); P(u - 3, v - 6, 7, 6); b.fillStyle = '#d8506a'; P(u - 3, v - 2, 7, 2); break; }
+    case 'glasses': { b.fillStyle = '#2a2236'; const x0 = eu - (ew >> 1) - 2, y0 = ev - (eh >> 1) - 2, gw = ew + 4, gh = eh + 4; P(x0, y0, gw, 1); P(x0, y0 + gh - 1, gw, 1); P(x0, y0, 1, gh); P(x0 + gw - 1, y0, 1, gh); P(x0 - 5, y0 + 1, 5, 1); break; }
+    case 'scarf': { const u = Math.round(hu - hr * 0.7), v = Math.round(hv + hr * 0.7); b.fillStyle = '#e8506a'; P(u, v, 5, 3); b.fillStyle = '#ffb0c0'; P(u + 1, v + 1, 1, 1); P(u + 3, v + 1, 1, 1); b.fillStyle = '#e8506a'; P(u - 1, v + 3, 3, 5); break; }
+    case 'crown': { const u = hu, v = top + 2; b.fillStyle = '#ffd84a'; P(u - 4, v - 1, 9, 3); P(u - 4, v - 3, 1, 2); P(u, v - 4, 1, 3); P(u + 4, v - 3, 1, 2); b.fillStyle = '#e04a4a'; P(u, v, 1, 1); break; }
+    case 'flower': { const u = Math.round(hu - hr * 0.35), v = top + 3; b.fillStyle = '#ffa0d0'; P(u - 1, v - 2, 3, 1); P(u - 1, v + 2, 3, 1); P(u - 2, v - 1, 1, 3); P(u + 2, v - 1, 1, 3); b.fillStyle = '#ffe070'; P(u - 1, v - 1, 3, 3); break; }
+  }
+  const tp = topY - 4;
+  if (sel || c.hp < 60) {
+    const w = Math.round(W * 0.6);
+    b.fillStyle = OUTLINE; b.fillRect(cx - (w >> 1) - 1, tp - 3, w + 2, 2);
+    b.fillStyle = c.hp > 50 ? '#6fd36f' : c.hp > 25 ? '#e5c14a' : '#e05a4a';
+    b.fillRect(cx - (w >> 1), tp - 3, Math.max(1, Math.round(w * Math.max(0, c.hp) / 100)), 1);
+  }
+  if (sel) {
+    const sw = (W >> 1) + 4, x0 = Math.round(cx - sw), x1 = Math.round(cx + sw), y0 = Math.round(tp - 1), y1 = Math.round(c.y + 2);
+    b.fillStyle = '#ffd84a';
+    b.fillRect(x0, y0, 3, 1); b.fillRect(x0, y0, 1, 3); b.fillRect(x1 - 2, y0, 3, 1); b.fillRect(x1, y0, 1, 3);
+    b.fillRect(x0, y1, 3, 1); b.fillRect(x0, y1 - 2, 1, 3); b.fillRect(x1 - 2, y1, 3, 1); b.fillRect(x1, y1 - 2, 1, 3);
+  }
+}
 function tzSide(c, sel, now) {
+  if (crWholeOn()) return tzSideWhole(c, sel, now);
   const g = tzGrowth(c), baby = g < 0.5, rec = c.rec, f = c.face >= 0 ? 1 : -1;
   const walking = c.moving && !c.sleeping && c.ground && !c.held && !c.fly;
   const ph = walking ? 1 + (Math.floor(now / 110) % 4) : 0;

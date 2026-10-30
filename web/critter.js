@@ -336,7 +336,8 @@ function crWholeSprite(idx, hue, accIdx) {
     d[o] = r; d[o + 1] = g; d[o + 2] = b; d[o + 3] = al;
   }
   x.putImageData(img, 0, 0);
-  e = { cnv, w: m.w, h: m.h };
+  const tg = CR_TAGS[idx] || '';
+  e = { cnv, w: m.w, h: m.h, m, idx, cl: undefined, def: new Map(), tail: tg.includes('t'), ear: tg.includes('e') };
   if (crWholeCache.size > 700) crWholeCache.delete(crWholeCache.keys().next().value);
   crWholeCache.set(key, e);
   return e;
@@ -616,31 +617,148 @@ function crScaleSprite(e, opt) {
   return { cnv: c, W: w, H: h, ox: f(e.ox), gy: f(e.gy), A: A2, hAbove: e.hAbove * m, wHalf: e.wHalf * m };
 }
 
-/* wild view: the same hand drawn sprite, scaled to the creature size, mirrored by heading */
+/* ---------- whole sprites: tags, selection by body parts, pose animation ---------- */
+const CR_TAGS = ['r', 'a', 'lt', 'g', 'ga', 't', 'lst', 'e', 'e', 'he', 'h', 'c', 'e', 'r', 'e', 'r', 'he', 'c', 'w', 'w', 'a', 'n', 's', 't', 'r', 'lft', 'a', 'n', 's', 'et', 'lt', 'rt',
+  'l', 'lf', 'et', 'ge', 'ft', 'e', 'h', 'f', 'ft', 'cs', 'sr', 'r', 'r', 'a', 'l', 'rt', 'lt', 'lt', 'lt', 'lt', 'lt', 'lt', 'lt', 'lt', 're', 'wn', 'et', 'pt', 'wn', 'he', 'te', 'e',
+  'n', 'et', 'tp', 'wt', 'r', 'e', 'n', 'et', 'tp', 'wt', 'e', 'n', 'wh', 'tr', 'we', 're', 'cs', 'nh', 'wn', 'f', 'et', 'pa', 't', 'w', 'et', 'f', 'h', 'ts'];
+const crPickCache = new Map();
+function crPickIdx(rec) {
+  const sig = rec[5] * 31 + rec[19] * 977 + rec[20] * 131 + rec[22] * 17 + rec[23] * 7 + rec[9] * 3;
+  const id = rec[0] | 0, c = crPickCache.get(id);
+  if (c && c.sig === sig) return c.idx;
+  const np = rec[19] | 0, k = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  for (let i = 0; i < np; i++) k[rec[26 + i * 7 + 5] | 0]++;
+  const wing = k[2] > 0 || rec[9] > 0, elong = rec[20] > 0.55, seg = Math.floor(rec[22]) >= 3, tail = (rec[89] | 0) > 0;
+  const want = { w: wing, f: k[1] > 0, h: k[3] > 0, s: k[7] > 0 || k[3] > 1, a: k[4] > 0, n: k[5] > 0, c: k[8] > 0, p: k[8] > 0, r: k[6] > 0 || (!elong && !seg), l: elong, g: seg, t: tail, e: true };
+  const wt = { w: 7, f: 5, h: 4, s: 4, a: 5, n: 4, c: 4, p: 2, r: 1.5, l: 4, g: 5, t: 2, e: 0.5 };
+  let best = -1e9; const sc = new Array(CR_TAGS.length);
+  for (let i = 0; i < CR_TAGS.length; i++) {
+    const tg = CR_TAGS[i]; let v = 0;
+    for (const q in wt) { const has = tg.includes(q); if (want[q]) { if (has) v += wt[q]; else if (q === 'w' || q === 'f' || q === 'a' || q === 'g' || q === 'l') v -= wt[q] * 0.6; } else if (has && q !== 'e' && q !== 't' && q !== 'r') v -= wt[q] * 0.8; }
+    sc[i] = v; if (v > best) best = v;
+  }
+  const cand = []; for (let i = 0; i < sc.length; i++) if (sc[i] >= best - 1) cand.push(i);
+  const idx = cand[crHash(rec, 11) % cand.length];
+  if (crPickCache.size > 4000) crPickCache.clear();
+  crPickCache.set(id, { sig, idx });
+  return idx;
+}
+const CR_PZ = { sx: 1, sy: 1, dy: 0, lean: 0, dx: 0, tp: 2, ep: 2, closed: false };
+/* kind: idle walk run sleep eat attack hop fly; H, W: sprite size in pixels */
+function crPose(kind, t, id, spd, H, W) {
+  const z = CR_PZ; z.sx = 1; z.sy = 1; z.dy = 0; z.lean = 0; z.dx = 0; z.closed = false;
+  const sp = 0.5 + Math.min(1.5, spd || 0) * 0.5, ab = Math.abs;
+  let tw = 0.1 + 0.07 * sp, ear = 0;
+  switch (kind) {
+    case 'walk': { const p = Math.sin(t * 0.26 * sp + id); z.sy = 1 - 0.06 * ab(p); z.sx = 1 + 0.04 * ab(p); z.lean = H * 0.07 * p; ear = Math.sin(t * 0.26 * sp + id + 1.2); break; }
+    case 'run': { const p = Math.sin(t * 0.4 * sp + id); z.dy = -Math.round(ab(p) * 0.14 * H); z.lean = H * 0.14 + H * 0.04 * p; z.sx = 1.06; z.sy = 1 - 0.04 * (1 - ab(p)); tw = 0.3; ear = Math.sin(t * 0.4 * sp + id + 1.5) * 1.6; break; }
+    case 'sleep': z.sy = 0.9 + 0.025 * Math.sin(t * 0.045 + id); z.sx = 1.06; z.closed = true; tw = 0.03; break;
+    case 'eat': { const n = Math.sin(t * 0.33 + id), m = Math.max(0, n); z.lean = H * 0.16 * m; z.sy = 1 - 0.05 * m; break; }
+    case 'attack': { const n = Math.max(0, Math.sin(t * 0.3 + id)); z.dx = Math.round(0.2 * W * n); z.lean = H * 0.18 * n; z.sx = 1 + 0.1 * n; z.sy = 1 - 0.04 * n; tw = 0.35; break; }
+    case 'hop': { const p = ab(Math.sin(t * 0.2 + id)); z.dy = -Math.round(p * 0.2 * H); z.sy = 1 + 0.05 * p - 0.05 * (1 - p); tw = 0.3; ear = Math.sin(t * 0.2 + id) * 1.5; break; }
+    case 'fly': { const p = Math.sin(t * 0.5 + id); z.sy = 1 + 0.05 * p; z.sx = 1 - 0.03 * p; z.lean = H * 0.06; ear = p * 1.3; break; }
+    default: z.sy = 1 + 0.025 * Math.sin(t * 0.07 + id); z.sx = 1 - 0.012 * Math.sin(t * 0.07 + id);
+  }
+  z.tp = Math.max(0, Math.min(4, Math.round(2 + 2 * Math.sin(t * tw + id * 1.7) * (kind === 'sleep' ? 0.3 : 1))));
+  const q = (t + id * 53) % 230;
+  if (kind !== 'sleep' && q < 16) ear += (((q / 3) | 0) % 2 ? 2 : -2);
+  z.ep = Math.max(0, Math.min(4, Math.round(2 + ear)));
+  if (kind !== 'sleep' && ((t + id * 13) % 170) < 6) z.closed = true;
+  return z;
+}
+function crClosed(sp) {
+  if (sp.cl !== undefined) return sp.cl;
+  const m = sp.m; sp.cl = null;
+  if (m.ex0 === undefined) return null;
+  const c = document.createElement('canvas'); c.width = sp.w; c.height = sp.h;
+  const x = c.getContext('2d'); x.drawImage(sp.cnv, 0, 0);
+  const im = x.getImageData(0, 0, sp.w, sp.h), d = im.data, W = sp.w, H = sp.h;
+  const x0 = m.ex0 - 1, x1 = m.ex1 + 1, y0 = m.ey0 - 1, y1 = m.ey1 + 1, cnt = new Map();
+  let best = -1, bn = 0;
+  for (let y = y0 - 2; y <= y1 + 2; y++) for (let xx = x0 - 2; xx <= x1 + 2; xx++) {
+    if (xx < 0 || y < 0 || xx >= W || y >= H || (xx >= x0 && xx <= x1 && y >= y0 && y <= y1)) continue;
+    const i = (y * W + xx) * 4; if (d[i + 3] < 200 || Math.max(d[i], d[i + 1], d[i + 2]) < 100) continue;
+    const key = (d[i] << 16) | (d[i + 1] << 8) | d[i + 2], n = (cnt.get(key) || 0) + 1; cnt.set(key, n);
+    if (n > bn) { bn = n; best = key; }
+  }
+  if (best < 0) return null;
+  for (let y = Math.max(0, y0); y <= Math.min(H - 1, y1); y++) for (let xx = Math.max(0, x0); xx <= Math.min(W - 1, x1); xx++) {
+    const i = (y * W + xx) * 4; if (d[i + 3] < 100) continue;
+    d[i] = best >> 16; d[i + 1] = (best >> 8) & 255; d[i + 2] = best & 255; d[i + 3] = 255;
+  }
+  for (let xx = m.ex0; xx <= m.ex1; xx++) { const i = (m.ey1 * W + xx) * 4; d[i] = 42; d[i + 1] = 36; d[i + 2] = 80; d[i + 3] = 255; }
+  x.putImageData(im, 0, 0);
+  sp.cl = c;
+  return c;
+}
+const CR_PAD = 3;
+/* tail wag (column strips) and ear twitch (row shear); tp, ep: 0..4, 2 = neutral */
+function crDeform(sp, closed, tp, ep) {
+  const key = (closed ? 25 : 0) + tp * 5 + ep;
+  let e = sp.def.get(key);
+  if (e) return e;
+  const src = closed && crClosed(sp) ? sp.cl : sp.cnv, w = sp.w, h = sp.h, P = CR_PAD, m = sp.m;
+  const c = document.createElement('canvas'); c.width = w + 2 * P; c.height = h + 2 * P;
+  const x = c.getContext('2d');
+  const xt = sp.tail && tp !== 2 ? Math.round(w * 0.27) : 0, amp = Math.max(2, Math.round(h * 0.12)), k = (tp - 2) / 2;
+  x.drawImage(src, xt, 0, w - xt, h, P + xt, P, w - xt, h);
+  for (let i = 0; i < xt; i++) x.drawImage(src, i, 0, 1, h, P + i, P + Math.round(amp * k * (1 - i / xt)), 1, h);
+  if (sp.ear && ep !== 2) {
+    const hx = m.hx, cx0 = Math.max(0, Math.round(hx - w * 0.35)), cx1 = Math.min(w, Math.round(hx + w * 0.1)), top = m.top, eb = Math.max(3, Math.round(h * 0.35)), sh = ep - 2;
+    x.clearRect(P + cx0, P + top, cx1 - cx0, eb);
+    for (let y = 0; y < eb; y++) x.drawImage(src, cx0, top + y, cx1 - cx0, 1, P + cx0 + Math.round(sh * (1 - y / eb)), P + top + y, cx1 - cx0, 1);
+  }
+  e = { cnv: c, pad: P };
+  if (sp.def.size > 40) sp.def.clear();
+  sp.def.set(key, e);
+  return e;
+}
+/* draws a whole sprite bottom-centred at (px, gy); returns the top y */
+function crWholeBlit(ctx, sp, px, gy, s, flip, z) {
+  const fine = s >= 1;
+  let src = sp.cnv, pad = 0;
+  const closed = fine && z.closed && sp.m.ex0 !== undefined, tp = fine && sp.tail ? z.tp : 2, ep = fine && sp.ear ? z.ep : 2;
+  if (tp !== 2 || ep !== 2) { const d = crDeform(sp, closed, tp, ep); src = d.cnv; pad = d.pad; }
+  else if (closed) { const c = crClosed(sp); if (c) src = c; }
+  const cw = src.width, ch = src.height, Wd = Math.max(1, Math.round(cw * s * z.sx)), Hd = Math.max(1, Math.round(ch * s * z.sy)), bottom = gy + z.dy + Math.round(pad * s * z.sy);
+  const nb = Hd >= 24 && Math.abs(z.lean) >= 1 && fine ? 3 : 1;
+  ctx.imageSmoothingEnabled = s < 0.75;
+  let X = px;
+  if (flip < 0) { ctx.save(); ctx.translate(px, 0); ctx.scale(-1, 1); X = 0; }
+  for (let i = 0; i < nb; i++) {
+    const s0 = Math.floor(ch * i / nb), s1 = Math.floor(ch * (i + 1) / nb), d0 = Math.round(Hd * i / nb), d1 = Math.round(Hd * (i + 1) / nb);
+    if (s1 <= s0 || d1 <= d0) continue;
+    const off = nb === 1 ? Math.round(z.lean * 0.5) : Math.round(z.lean * (nb - 1 - i + 0.5) / nb);
+    ctx.drawImage(src, 0, s0, cw, s1 - s0, X - (Wd >> 1) + z.dx + off, bottom - Hd + d0, Wd, d1 - d0);
+  }
+  if (flip < 0) ctx.restore();
+  ctx.imageSmoothingEnabled = false;
+  return bottom - Hd;
+}
+
+/* wild view: whole sprite chosen by body parts, animated by activity, mirrored by heading */
 function crDrawWhole(cs, o, px, py, r, baby, moving, st, hp) {
-  const rec = cs.subarray(o, o + CS_STRIDE), id = cs[o] | 0, dir = cs[o + 3], fly = cs[o + 9] > 0;
-  const hue = (Math.round(rec[5] / 12) * 12) % 360, acc = rec[82] | 0;
-  const sp = crWholeSprite(crHash(rec, 11) % CR_WHOLE_META.length, hue, acc);
+  const rec = cs.subarray(o, o + CS_STRIDE), id = cs[o] | 0, dir = cs[o + 3], fly = cs[o + 9] > 0, act = cs[o + 90] | 0, sl = cs[o + 12] > 0.5;
+  const hue = (Math.round(rec[5] / 12) * 12) % 360, acc = rec[82] | 0, idx = crPickIdx(rec);
+  const sp = crWholeSprite(idx, hue, acc);
   let s = (r * 2.5 * (baby ? 0.75 : 1)) / sp.h;
   s = s < 0.75 ? s : s < 1.5 ? 1 : Math.round(s);
   const w = Math.max(1, Math.round(sp.w * s)), h = Math.max(1, Math.round(sp.h * s));
   const flip = Math.cos(dir) < 0 ? -1 : 1;
+  const kind = sl ? 'sleep' : fly ? 'fly' : act === 3 ? 'attack' : act === 4 && !moving ? 'eat' : act === 2 ? 'run' : act === 8 || act === 7 || act === 5 ? 'hop' : moving ? 'walk' : 'idle';
+  const z = crPose(kind, st.animT, id, cs[o + 18], h, w);
   const lift = fly ? Math.round(h * 0.45 + 2 + Math.sin(st.animT * 0.12 + id) * 1.3) : 0;
-  const squash = moving && !fly && s >= 1 ? ((st.animT >> 1) + id) % 4 === 0 : false;
-  const gy = Math.round(py + h / 2) - lift, hh = squash ? h - 1 : h;
-  st.sprTop = gy - hh;
-  if (fly && crReady) {
+  const gy = Math.round(py + h / 2) - lift;
+  const hasW = CR_TAGS[idx].includes('w');
+  if (fly && !hasW && crReady) {
     const wi = crWingImg(crHash(rec, 6) % 16, hue, acc), ph = ((st.animT >> 1) + id) % 4, f = [1, 0.62, 0.22, 0.62][ph];
-    const ww = Math.max(2, Math.round(w * 0.55)), wh = Math.max(2, Math.round(ww * wi.h / wi.w * f)), top = gy - hh - Math.round(wh * 0.45) + Math.round(hh * 0.25);
+    const ww = Math.max(2, Math.round(w * 0.55)), wh = Math.max(2, Math.round(ww * wi.h / wi.w * f)), top = gy - h - Math.round(wh * 0.45) + Math.round(h * 0.25);
     b.imageSmoothingEnabled = false;
     b.save(); b.translate(px, 0); b.scale(flip, 1);
     b.drawImage(wi.cnv, -Math.round(w * 0.5), top, ww, wh);
     b.restore();
   }
-  b.imageSmoothingEnabled = s < 0.75;
-  if (flip > 0) b.drawImage(sp.cnv, px - (w >> 1), gy - hh, w, hh);
-  else { b.save(); b.translate(px + (w >> 1), 0); b.scale(-1, 1); b.drawImage(sp.cnv, 0, gy - hh, w, hh); b.restore(); }
-  b.imageSmoothingEnabled = false;
+  st.sprTop = crWholeBlit(b, sp, px, gy, s, flip, z);
   if (fly) { b.fillStyle = 'rgba(20,30,40,.28)'; b.fillRect(px - (w >> 2), gy + lift + 1, w >> 1, 1); }
   return true;
 }
