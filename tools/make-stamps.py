@@ -31,5 +31,35 @@ for n, c in SHEETS.items():
                 sub[~m[ys.min():ys.max() + 1, xs.min():xs.max() + 1]] = 0
                 lst.append({'w': int(w), 'h': int(h), 'd': base64.b64encode(sub.tobytes()).decode()})
     out[n] = lst
+
+def half(p):
+    h, w = p.shape[0] // 2, p.shape[1] // 2
+    o = np.zeros((h, w, 4), np.uint8)
+    for y in range(h):
+        for x in range(w):
+            blk = [p[y * 2 + j, x * 2 + i] for j in (0, 1) for i in (0, 1) if p[y * 2 + j, x * 2 + i][3] > 128]
+            if len(blk) < 2:
+                continue
+            lum = [px[0] * 0.3 + px[1] * 0.59 + px[2] * 0.11 for px in blk]
+            k = int(np.argmin(lum))
+            o[y, x] = blk[k] if lum[k] < 95 else blk[0]
+            o[y, x, 3] = 255
+    return o
+
+im = np.array(Image.open(D + 'objects.png').convert('RGBA'))
+for row, name in enumerate(['tree', 'pine', 'orock', 'bush', 'mush', 'cactus', 'snowtree', 'reed']):
+    lst = []
+    for q in range(8):
+        cell = im[row * 32:(row + 1) * 32, q * 32:(q + 1) * 32]
+        ys, xs = np.where(cell[:, :, 3] > 128)
+        if not len(ys):
+            continue
+        sub = half(cell[ys.min():ys.max() + 1, xs.min():xs.max() + 1].copy())
+        ys, xs = np.where(sub[:, :, 3] > 0)
+        if not len(ys):
+            continue
+        sub = sub[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+        lst.append({'w': int(sub.shape[1]), 'h': int(sub.shape[0]), 'd': base64.b64encode(sub.tobytes()).decode()})
+    out[name] = lst
 json.dump(out, open(D + 'stamps.json', 'w'))
 print({k: len(v) for k, v in out.items()})

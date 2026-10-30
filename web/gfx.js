@@ -135,15 +135,16 @@ function buildTerrain(map, winter, seed) {
   }
   x2.putImageData(img, 0, 0);
   const rng = mulberry32(seed * 31 + 7);
-  const N = Math.floor(tw * th / 35);
+  const N = Math.floor(tw * th / 35), objs = [];
   for (let i = 0; i < N; i++) {
     const x = (rng() * (tw - 8) + 4) | 0, y = (rng() * (th - 8) + 4) | 0, bi = cls[y * tw + x], r = rng();
     if (bi === 3) {
-      if (r < 0.5) drawTree(x2, x, y, winter, r < 0.06);
+      if (r < 0.36) { if (typeof TILE_STAMPS !== 'undefined') objs.push([y, winter ? 'snowtree' : (rng() < 0.65 ? 'pine' : 'tree'), x, rng()]); else drawTree(x2, x, y, winter, r < 0.06); }
       else if (r < 0.8 && drawStamp(x2, winter ? 'snow' : 'grass', x, y, rng())) { /* stamp */ }
       else { x2.fillStyle = winter ? '#e9f0f3' : '#3f7a33'; x2.fillRect(x, y - 1, 1, 2); x2.fillRect(x + 1, y, 1, 1); }
     } else if (bi === 2) {
-      if (r < 0.7 && drawStamp(x2, winter ? 'snow' : 'grass', x, y, rng())) { /* stamp */ }
+      if (r >= 0.7 && r < 0.84 && typeof TILE_STAMPS !== 'undefined') objs.push([y, r < 0.745 ? (winter ? 'snowtree' : 'tree') : r < 0.8 ? 'bush' : r < 0.82 ? 'orock' : 'mush', x, rng()]);
+      else if (r < 0.7 && drawStamp(x2, winter ? 'snow' : 'grass', x, y, rng())) { /* stamp */ }
       else if (r < 0.5) {
         x2.fillStyle = winter ? '#ffffff' : '#78a84c'; x2.fillRect(x, y - 1, 1, 2);
         x2.fillStyle = winter ? '#b8c6cf' : '#2f4d27'; x2.fillRect(x - 1, y, 1, 1); x2.fillRect(x + 1, y, 1, 1);
@@ -156,7 +157,8 @@ function buildTerrain(map, winter, seed) {
         x2.fillStyle = winter ? '#ffffff' : '#9c9e92'; x2.fillRect(x, y, 2, 1);
       }
     } else if (bi === 4) {
-      if (r > 0.45 && r < 0.7 && drawStamp(x2, 'sand', x, y, rng())) { /* stamp */ }
+      if (r >= 0.7 && r < 0.8 && typeof TILE_STAMPS !== 'undefined') objs.push([y, r < 0.76 ? 'cactus' : 'orock', x, rng()]);
+      else if (r > 0.45 && r < 0.7 && drawStamp(x2, 'sand', x, y, rng())) { /* stamp */ }
       else if (r < 0.2) {
         x2.fillStyle = winter ? '#6d7f5a' : '#3f6a2a'; x2.fillRect(x, y - 3, 2, 5); x2.fillRect(x - 2, y - 2, 2, 1); x2.fillRect(x + 2, y - 1, 2, 1);
         x2.fillStyle = winter ? '#dfe8d8' : '#7fb04a'; x2.fillRect(x, y - 3, 1, 3);
@@ -165,18 +167,23 @@ function buildTerrain(map, winter, seed) {
         x2.fillStyle = '#e0cd92'; x2.fillRect(x, y - 1, 2, 1);
       }
     } else if (bi === 5) {
-      if (r > 0.55 && r < 0.75 && drawStamp(x2, r > 0.7 ? 'rock' : 'snow', x, y, rng())) { /* stamp */ }
+      if (r >= 0.75 && r < 0.83 && typeof TILE_STAMPS !== 'undefined') objs.push([y, r < 0.8 ? 'orock' : (winter ? 'snowtree' : 'orock'), x, rng()]);
+      else if (r > 0.55 && r < 0.75 && drawStamp(x2, winter ? 'snow' : 'rock', x, y, rng())) { /* stamp */ }
       else if (r < 0.1) {
         x2.fillStyle = '#2f302b'; x2.fillRect(x, y + 1, 4, 1); x2.fillRect(x + 1, y - 1, 3, 2);
         x2.fillStyle = winter ? '#d8e0e4' : '#8a8c80'; x2.fillRect(x + 1, y, 3, 1);
         x2.fillStyle = '#ffffff'; x2.fillRect(x + 1, y - 1, 2, 1);
       }
+    } else if (bi === 1 && !winter && r < 0.05 && typeof TILE_STAMPS !== 'undefined') {
+      objs.push([y, 'reed', x, rng()]);
     } else if (bi === 1 && !winter && r < 0.18) {
       x2.fillStyle = '#4a8a46'; x2.fillRect(x, y, 3, 2);
       x2.fillStyle = '#7fc46a'; x2.fillRect(x, y, 2, 1);
       if (r < 0.03) { x2.fillStyle = '#ffb6d0'; x2.fillRect(x + 1, y - 1, 1, 1); }
     }
   }
+  objs.sort((p, q) => p[0] - q[0]);
+  for (const [oy, grp, ox2, rr] of objs) drawStamp(x2, grp, ox2, oy, rr);
   return c2;
 }
 function buildMini(map) {
