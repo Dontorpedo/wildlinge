@@ -681,12 +681,20 @@ function tzSide(c, sel, now) {
   const blink = ((now / 16 + c.id * 13) % 170) < 5, closed = c.sleeping || blink || laugh;
   if (hr >= 4) {
     const ew = A.ew, eh = A.eh, iris = fear ? '#c03a50' : A.iris;
-    tzEye(P, hu + hr * 0.5, hv - hr * 0.02, ew, eh, iris, !closed, laugh ? 'laugh' : '');
+    const F = A.face, eu = F ? F.eye[0] : hu + hr * 0.5, ev = F ? F.eye[1] : hv - hr * 0.02;
+    if (F && !c.sleeping) {
+      b.fillStyle = '#fffaf2';
+      for (let j = -1; j <= eh; j++) for (let i = -1; i <= ew; i++) {
+        const nx = (i + 0.5 - ew / 2) / (ew / 2 + 1), ny = (j + 0.5 - eh / 2) / (eh / 2 + 1);
+        if (nx * nx + ny * ny <= 1.1) P(Math.round(eu - ew / 2) + i, Math.round(ev - eh / 2) + j, 1, 1);
+      }
+    }
+    tzEye(P, eu, ev, ew, eh, iris, !closed, laugh ? 'laugh' : '');
     if (hr >= 99 && !c.sleeping) tzEye(P, hu + hr * 0.9, hv - hr * 0.1, Math.max(2, ew - 1), Math.max(3, eh - 1), iris, !closed, laugh ? 'laugh' : '');
-    if (sad && !c.sleeping && !closed) { b.fillStyle = '#6aaaf0'; const tq = Math.round((now / 120) % 6); P(Math.round(hu + hr * 0.4 - ew / 2), Math.round(hv + eh / 2 - 1 + tq), 1, 2); b.fillStyle = '#3a2f58'; P(Math.round(hu + hr * 0.4 - ew / 2 - 1), Math.round(hv - eh / 2 - 2), ew + 1, 1); }
+    if (sad && !c.sleeping && !closed) { b.fillStyle = '#6aaaf0'; const tq = Math.round((now / 120) % 6); P(Math.round(eu - ew / 2 + 1), Math.round(ev + eh + tq), 1, 2); b.fillStyle = '#3a2f58'; P(Math.round(eu - 1), Math.round(ev - 2), ew + 1, 1); }
     /* nose and mouth */
-    b.fillStyle = '#5a3a58'; P(Math.round(hu + hr * 1.0), Math.round(hv + hr * 0.2), 2, 2);
-    const mu = Math.round(hu + hr * 0.62), mv = Math.round(hv + hr * 0.52);
+    b.fillStyle = '#5a3a58'; P(Math.round(F ? F.nose[0] : hu + hr * 1.0), Math.round(F ? F.nose[1] : hv + hr * 0.2), 2, 2);
+    const mu = Math.round(F ? F.mouth[0] : hu + hr * 0.62), mv = Math.round(F ? F.mouth[1] : hv + hr * 0.52);
     if (hr >= 5) {
       b.fillStyle = '#8a4660';
       if (laugh) { P(mu - 1, mv - 1, 4, 3); b.fillStyle = '#ff8fae'; P(mu, mv + 1, 2, 1); }
@@ -698,7 +706,7 @@ function tzSide(c, sel, now) {
     }
     /* cheek blush */
     if (!c.sleeping) {
-      const bu = Math.round(hu + hr * 0.08), bv = Math.round(hv + hr * 0.36);
+      const bu = Math.round(F ? F.cheek[0] : hu + hr * 0.08), bv = Math.round(F ? F.cheek[1] : hv + hr * 0.36);
       b.globalAlpha = 0.85; b.fillStyle = A.cheek;
       if (A.cheekKind === 1) { P(bu, bv, 1, 1); P(bu + 2, bv, 1, 1); P(bu, bv + 1, 3, 1); P(bu + 1, bv + 2, 1, 1); }
       else if (A.cheekKind === 2) { P(bu + 1, bv, 1, 3); P(bu, bv + 1, 3, 1); }

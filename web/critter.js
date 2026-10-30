@@ -292,11 +292,227 @@ function crBuild(rec, opt) {
   };
 }
 
+
+/* ---------- part atlas compositor (hand drawn parts, recoloured from the genome) ---------- */
+const CR_ATL = {};
+let crReady = false;
+const crTintCache = new Map(), crBaseCache = new Map();
+function crAtlasInit() {
+  if (typeof CR_ATLAS === 'undefined' || typeof Image === 'undefined') return;
+  const names = Object.keys(CR_ATLAS);
+  let n = 0;
+  for (const k of names) {
+    const im = new Image();
+    im.onload = () => {
+      const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+      const x = c.getContext('2d'); x.drawImage(im, 0, 0);
+      CR_ATL[k] = x.getImageData(0, 0, im.width, im.height);
+      if (++n === names.length) { crReady = true; crCache.clear(); }
+    };
+    im.src = CR_ATLAS[k];
+  }
+}
+function crCellOf(name, i) {
+  const a = CR_ATL[name], w = 64, d = new Uint8ClampedArray(w * w * 4), cx = (i % 4) * 64, cy = ((i / 4) | 0) * 64;
+  for (let y = 0; y < w; y++) for (let x = 0; x < w; x++) { const s = ((cy + y) * a.width + cx + x) * 4, o = (y * w + x) * 4; d[o] = a.data[s]; d[o + 1] = a.data[s + 1]; d[o + 2] = a.data[s + 2]; d[o + 3] = a.data[s + 3]; }
+  return { w, h: w, d };
+}
+function crRgb2hsv(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let h = 0;
+  if (d) { if (mx === r) h = ((g - b) / d) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4; h *= 60; if (h < 0) h += 360; }
+  return [h, mx ? d / mx : 0, mx];
+}
+function crHsv2rgb(h, s, v) {
+  const f = n => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); };
+  return [Math.round(f(5) * 255), Math.round(f(3) * 255), Math.round(f(1) * 255)];
+}
+function crTint(name, i, hue, acc) {
+  const key = name + i + '|' + hue + '|' + acc;
+  let p = crTintCache.get(key);
+  if (p) return p;
+  p = crCellOf(name, i);
+  const d = p.d;
+  for (let o = 0; o < d.length; o += 4) {
+    if (!d[o + 3]) continue;
+    const [h, s, v] = crRgb2hsv(d[o], d[o + 1], d[o + 2]);
+    if (s < 0.28 && v > 0.7) continue;
+    let nh;
+    if (h >= 175 && h <= 260) nh = hue; else if (s > 0.3) nh = acc; else continue;
+    const c = crHsv2rgb(nh, s, v); d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2];
+  }
+  if (crTintCache.size > 600) crTintCache.delete(crTintCache.keys().next().value);
+  crTintCache.set(key, p);
+  return p;
+}
+function crBBox(p) {
+  let x0 = p.w, y0 = p.h, x1 = -1, y1 = -1;
+  for (let y = 0; y < p.h; y++) for (let x = 0; x < p.w; x++) if (p.d[(y * p.w + x) * 4 + 3]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  return x1 < 0 ? [0, 0, 0, 0] : [x0, y0, x1 + 1, y1 + 1];
+}
+/* halve a part; outline pixels win so the contour stays closed */
+function crHalf(p) {
+  const w = p.w >> 1, h = p.h >> 1, d = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    let n = 0, best = -1, bl = 1e9, tl = -1;
+    for (let k = 0; k < 4; k++) {
+      const s = ((y * 2 + (k >> 1)) * p.w + x * 2 + (k & 1)) * 4;
+      if (p.d[s + 3] < 128) continue;
+      n++;
+      const l = p.d[s] * 0.3 + p.d[s + 1] * 0.59 + p.d[s + 2] * 0.11;
+      if (tl < 0) tl = s;
+      if (l < bl) { bl = l; best = s; }
+    }
+    if (n < 2 && !(n === 1 && bl < 90)) continue;
+    const s = bl < 95 ? best : tl, o = (y * w + x) * 4;
+    d[o] = p.d[s]; d[o + 1] = p.d[s + 1]; d[o + 2] = p.d[s + 2]; d[o + 3] = 255;
+  }
+  return { w, h, d };
+}
+function crCrop(p) {
+  const b = crBBox(p), w = b[2] - b[0], h = b[3] - b[1], d = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const s = ((y + b[1]) * p.w + x + b[0]) * 4, o = (y * w + x) * 4; d[o] = p.d[s]; d[o + 1] = p.d[s + 1]; d[o + 2] = p.d[s + 2]; d[o + 3] = p.d[s + 3]; }
+  return { w, h, d };
+}
+function crRot(p, deg) {
+  const t = deg * Math.PI / 180, c = Math.cos(t), s = Math.sin(t), W = Math.ceil(Math.abs(p.w * c) + Math.abs(p.h * s)) + 1, H = Math.ceil(Math.abs(p.w * s) + Math.abs(p.h * c)) + 1;
+  const d = new Uint8ClampedArray(W * H * 4);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const dx = x + 0.5 - W / 2, dy = y + 0.5 - H / 2, sx = Math.floor(dx * c - dy * s + p.w / 2), sy = Math.floor(dx * s + dy * c + p.h / 2);
+    if (sx < 0 || sy < 0 || sx >= p.w || sy >= p.h) continue;
+    const a = (sy * p.w + sx) * 4, o = (y * W + x) * 4;
+    if (p.d[a + 3] < 128) continue;
+    d[o] = p.d[a]; d[o + 1] = p.d[a + 1]; d[o + 2] = p.d[a + 2]; d[o + 3] = 255;
+  }
+  return { w: W, h: H, d };
+}
+function crShadeP(p, f) {
+  const d = new Uint8ClampedArray(p.d);
+  for (let o = 0; o < d.length; o += 4) if (d[o + 3]) { d[o] *= f; d[o + 1] *= f; d[o + 2] *= f * 1.08; }
+  return { w: p.w, h: p.h, d };
+}
+function crBlit(dst, p, x, y) {
+  x = Math.round(x); y = Math.round(y);
+  for (let j = 0; j < p.h; j++) for (let i = 0; i < p.w; i++) {
+    const dx = x + i, dy = y + j;
+    if (dx < 0 || dy < 0 || dx >= dst.w || dy >= dst.h) continue;
+    const s = (j * p.w + i) * 4;
+    if (!p.d[s + 3]) continue;
+    const o = (dy * dst.w + dx) * 4;
+    dst.d[o] = p.d[s]; dst.d[o + 1] = p.d[s + 1]; dst.d[o + 2] = p.d[s + 2]; dst.d[o + 3] = 255;
+  }
+}
+function crTailBase(i) {
+  let b = crBaseCache.get(i);
+  if (b) return b;
+  const p = crCellOf('tails', i), d = p.d;
+  let ox = 0, oy = 0, n = 0;
+  for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) { const o = (y * 64 + x) * 4; if (d[o + 3] && d[o] > 200 && d[o + 1] > 120 && d[o + 1] < 200 && d[o + 2] < 120) { ox += x; oy += y; n++; } }
+  b = [32, 60];
+  if (n) {
+    ox /= n; oy /= n; let bd = -1;
+    for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) { const o = (y * 64 + x) * 4; if (d[o + 3] && d[o + 2] > d[o]) { const q = (x - ox) ** 2 + (y - oy) ** 2; if (q > bd) { bd = q; b = [x, y]; } } }
+  }
+  crBaseCache.set(i, b);
+  return b;
+}
+/* muzzle (cream) bounding box of a head part, for the face anchors */
+function crMuzzle(p) {
+  let x0 = 99, y0 = 99, x1 = -1, y1 = -1;
+  for (let y = 0; y < p.h; y++) for (let x = 0; x < p.w; x++) {
+    const o = (y * p.w + x) * 4;
+    if (!p.d[o + 3]) continue;
+    const [h, s, v] = crRgb2hsv(p.d[o], p.d[o + 1], p.d[o + 2]);
+    if (s < 0.4 && v > 0.8 && h > 20 && h < 70 && x > p.w * 0.45) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  return x1 < 0 ? null : [x0, y0, x1, y1];
+}
+const CR_EAR_OK = [0, 1, 2, 3, 6, 7, 8, 9, 11, 12, 13, 14];
+function crHash(rec, salt) {
+  let h = (2166136261 ^ (salt * 7919)) >>> 0;
+  for (const i of [5, 19, 20, 21, 22, 23, 24, 82, 83, 84, 85, 86, 87, 88, 89]) { h ^= Math.round((rec[i] || 0) * 10) + 0x9e3779b9; h = Math.imul(h, 16777619); h ^= h >>> 13; }
+  return h >>> 0;
+}
+function crCompose(rec, opt) {
+  const look = [82, 83, 84, 85, 86, 87, 88, 89].map(i => rec[i] | 0);
+  const hue = (Math.round(rec[5] / 12) * 12) % 360, accc = crHex(CR_ACC[look[0] % CR_ACC.length]), acc = crRgb2hsv(accc[0], accc[1], accc[2])[0];
+  const ph = opt.ph | 0, lie = !!opt.lie, walk = Math.sin(ph * Math.PI / 2), lift = Math.cos(ph * Math.PI / 2);
+  const ih = crHash(rec, 1) % 16, ib = crHash(rec, 2) % 16, ie = CR_EAR_OK[crHash(rec, 3) % CR_EAR_OK.length], it = crHash(rec, 4) % 16, il = crHash(rec, 5) % 16;
+  const W = 150, H = 190, dst = { w: W, h: H, d: new Uint8ClampedArray(W * H * 4) };
+  const body = crTint('bodies', ib, hue, acc), bb = crBBox(body);
+  const head = crTint('heads', ih, hue, acc), hb = crBBox(head);
+  const leg = crCrop(crHalf(crTint('legs', il, hue, acc))), legF = crShadeP(leg, 0.78);
+  const bx = 55, bodyBottom = H - 4 - (lie ? 0 : leg.h - 8);
+  const by = bodyBottom - bb[3];
+  const legY = by + bb[3] - 8, bw = bb[2] - bb[0], gyF = legY + leg.h;
+  /* wings behind the body (flyers only), mirrored so they spread backwards */
+  let nWings = 0;
+  for (let i = 0; i < (rec[19] | 0); i++) if (KIND_KEYS[rec[26 + i * 7 + 5] | 0] === 'wing') nWings++;
+  if (nWings) {
+    const wp = crTint('wings', crHash(rec, 6) % 16, hue, acc), wh = crCrop(wp), wf = { w: wh.w, h: wh.h, d: new Uint8ClampedArray(wh.d.length) };
+    for (let y = 0; y < wh.h; y++) for (let x = 0; x < wh.w; x++) { const a = (y * wh.w + x) * 4, o = (y * wh.w + (wh.w - 1 - x)) * 4; for (let k = 0; k < 4; k++) wf.d[o + k] = wh.d[a + k]; }
+    const flap = ph ? Math.round(Math.sin(ph * Math.PI / 2) * 3) : 0;
+    crBlit(dst, wf, bx + bb[0] + 18 - wf.w, by + Math.round(bb[3] * 0.42) - wf.h + 4 - flap);
+  }
+  /* tail behind the body */
+  const tp = crTint('tails', it, hue, acc), tbase = crTailBase(it);
+  crBlit(dst, tp, bx + bb[0] + 5 - tbase[0], by + Math.round(bb[3] * 0.72) - tbase[1]);
+  if (!lie) {
+    const sw = Math.round(walk * 4), up = ph ? Math.max(0, lift) * 3 : 0, upF = ph ? Math.max(0, -lift) * 3 : 0;
+    crBlit(dst, legF, bx + bb[0] + bw * 0.64 - sw, legY - Math.round(upF));
+  }
+  crBlit(dst, body, bx, by);
+  if (!lie) {
+    const sw = Math.round(walk * 4), up = ph ? Math.max(0, lift) * 3 : 0;
+    crBlit(dst, leg, bx + bb[0] + bw * 0.22 + sw, legY - Math.round(up));
+  }
+  const bob = ph ? (ph % 2 ? 1 : 0) : 0;
+  const hx = bx + 38, hy = by + 13 + (lie ? 8 : 0);
+  const hpx = hx - ((hb[0] + hb[2]) >> 1) - 2, hpy = hy + 7 - hb[3] + bob * 0;
+  crBlit(dst, head, hpx, hpy);
+  const ear = crRot(crHalf(crTint('ears', ie, hue, acc)), 28), eb = crBBox(ear);
+  crBlit(dst, ear, hpx + hb[0] + Math.floor((hb[2] - hb[0]) * 0.08) - eb[0], hpy + hb[1] + Math.floor((hb[3] - hb[1]) * 0.52) - eb[3]);
+  /* reduce to final size (x0.5), keep outlines */
+  const full = crHalf(dst), fb = crBBox(full), fw = fb[2] - fb[0], fh = fb[3] - fb[1];
+  const out = crCrop(full), px = hpx / 2 - fb[0], py = hpy / 2 - fb[1];
+  const mz = crMuzzle(head), hcx = (hpx + (hb[0] + hb[2]) / 2) / 2 - fb[0], hcy = (hpy + (hb[1] + hb[3]) / 2) / 2 - fb[1];
+  const ox = Math.round((bx + (bb[0] + bb[2]) / 2) / 2 - fb[0]), gy = Math.round(gyF / 2 - fb[1]) - 1;
+  const hw = (hb[2] - hb[0]) / 2, mx0 = mz ? (hpx + mz[0]) / 2 - fb[0] : hcx + 4, my0 = mz ? (hpy + mz[1]) / 2 - fb[1] : hcy, mx1 = mz ? (hpx + mz[2]) / 2 - fb[0] : hcx + 10, my1 = mz ? (hpy + mz[3]) / 2 - fb[1] : hcy + 6;
+  const u = x => x - ox, v = y => y - gy;
+  const eyeX = Math.round(mx0 + (mx1 - mx0) * 0.3), eyeY = Math.round(my0 - 2);
+  const A = {
+    hu: u(hcx), hv: v(hcy), hr: Math.round(hw / 2), ew: 5, eh: 6, top: v(0), legL: lie ? 0 : Math.round(leg.h / 2), a: Math.round(bw / 4), b: Math.round((bb[3] - bb[1]) / 4), bcv: v(by / 2 - fb[1] + (bb[1] + bb[3]) / 4),
+    iris: CR_IRIS[look[2] % CR_IRIS.length], cheek: CR_CHEEK[look[4] % CR_CHEEK.length], cheekKind: look[4], ear: 0, earH: 8, nLegs: 2, nseg: 1,
+    face: { eye: [u(eyeX), v(eyeY)], nose: [u(mx1 - 1), v(my0 + 1)], mouth: [u((mx0 + mx1) / 2 - 1), v(my1 - 2)], cheek: [u(mx0 - 3), v(my0 + 1)], hat: [u(hcx), v(hpy / 2 - fb[1] + 4)] }
+  };
+  return { out, ox, gy, A };
+}
+crAtlasInit();
+
+function crFinish(c, opt) {
+  const { out, ox, gy, A } = c, cnv = document.createElement('canvas');
+  cnv.width = out.w; cnv.height = out.h;
+  const cx = cnv.getContext('2d'), img = cx.createImageData(out.w, out.h);
+  img.data.set(out.d); cx.putImageData(img, 0, 0);
+  let x0 = out.w, x1 = 0, top = out.h;
+  for (let y = 0; y < out.h; y++) for (let x = 0; x < out.w; x++) if (out.d[(y * out.w + x) * 4 + 3]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < top) top = y; }
+  A.top = top - gy;
+  return { cnv, W: out.w, H: out.h, ox, gy, A, hAbove: gy - top, wHalf: Math.max(ox - x0, x1 - ox) };
+}
+
 function crSprite(rec, opt) {
   const sh = opt.baby ? 1 : 0;
-  const key = [Math.round(rec[5] / 12), opt.r, sh, opt.ph | 0, opt.lie ? 1 : 0, rec[19], rec[20].toFixed(1), rec[21].toFixed(1), rec[22] | 0, rec[23].toFixed(1), rec[24].toFixed(1), ...[82, 83, 84, 85, 86, 87, 88, 89].map(i => rec[i] | 0), (() => { let s = ''; for (let i = 0; i < (rec[19] | 0); i++) s += (rec[26 + i * 7 + 5] | 0) + ((rec[26 + i * 7 + 1] > 0) ? 's' : 'a') + (Math.round(rec[26 + i * 7 + 2] * 4)); return s; })()].join('|');
+  let key = [Math.round(rec[5] / 12), opt.r, sh, opt.ph | 0, opt.lie ? 1 : 0, rec[19], rec[20].toFixed(1), rec[21].toFixed(1), rec[22] | 0, rec[23].toFixed(1), rec[24].toFixed(1), ...[82, 83, 84, 85, 86, 87, 88, 89].map(i => rec[i] | 0), (() => { let s = ''; for (let i = 0; i < (rec[19] | 0); i++) s += (rec[26 + i * 7 + 5] | 0) + ((rec[26 + i * 7 + 1] > 0) ? 's' : 'a') + (Math.round(rec[26 + i * 7 + 2] * 4)); return s; })()].join('|');
+  if (crReady) key += '|A';
   let e = crCache.get(key);
   if (e) return e;
+  if (crReady) {
+    e = crScaleSprite(crFinish(crCompose(rec, opt), opt), opt);
+    if (crCache.size > 400) crCache.delete(crCache.keys().next().value);
+    crCache.set(key, e);
+    return e;
+  }
   const s = crBuild(rec, opt), cnv = document.createElement('canvas');
   cnv.width = s.W; cnv.height = s.H;
   const cx = cnv.getContext('2d'), img = cx.createImageData(s.W, s.H);
@@ -311,4 +527,17 @@ function crSprite(rec, opt) {
   if (crCache.size > 400) crCache.delete(crCache.keys().next().value);
   crCache.set(key, e);
   return e;
+}
+
+/* size gene / age: nearest-neighbour rescale of the finished sprite */
+function crScaleSprite(e, opt) {
+  const m = Math.max(0.6, Math.min(1.0, Math.round((opt.r / 22) * 20) / 20));
+  if (m >= 0.99) return e;
+  const w = Math.max(1, Math.round(e.W * m)), h = Math.max(1, Math.round(e.H * m)), c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(e.cnv, 0, 0, w, h);
+  const A = e.A, f = q => Math.round(q * m);
+  const A2 = Object.assign({}, A, { hu: A.hu * m, hv: A.hv * m, hr: Math.max(3, f(A.hr)), top: A.top * m, legL: f(A.legL), a: f(A.a), b: f(A.b), bcv: A.bcv * m });
+  if (A.face) { const g = k => [A.face[k][0] * m, A.face[k][1] * m]; A2.face = { eye: g('eye'), nose: g('nose'), mouth: g('mouth'), cheek: g('cheek'), hat: g('hat') }; }
+  return { cnv: c, W: w, H: h, ox: f(e.ox), gy: f(e.gy), A: A2, hAbove: e.hAbove * m, wHalf: e.wHalf * m };
 }
