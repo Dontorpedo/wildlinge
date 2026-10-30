@@ -1,6 +1,6 @@
 'use strict';
-/* Wildlinge graphics: pixel terrain and creatures with mutable shapes (elongation, boxiness, segments, head, taper). */
-const WORLD_W = 4000, WORLD_H = 2400, TAU = Math.PI * 2, VIEW_W = 1600, VIEW_H = 800, YEAR_LEN = 6000, DAY_LEN = 400, CS_STRIDE = 90, MEAT_DECAY = 1500;
+/* Plimploms graphics: pixel terrain and creatures with mutable shapes (elongation, boxiness, segments, head, taper). */
+const WORLD_W = 4000, WORLD_H = 2400, TAU = Math.PI * 2, VIEW_W = 1600, VIEW_H = 800, YEAR_LEN = 36000, DAY_LEN = 2400, CS_STRIDE = 91, MEAT_DECAY = 1500;
 const S = 2, BW = Math.ceil(VIEW_W / S), BH = Math.ceil(VIEW_H / S), TPX = 3;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const rp = Math.round;
@@ -447,6 +447,16 @@ function drawFace(cs, o, px, py, ent, look, carn, st) {
 }
 
 /* ---------- one creature ---------- */
+const ACT_ICONS = {
+  1: ['#9ab8ff', ['11110', '00100', '01000', '10000', '11110']],
+  2: ['#ff5a5a', ['00100', '00100', '00100', '00000', '00100']],
+  3: ['#ff8a3a', ['10001', '01010', '00100', '01010', '10001']],
+  4: ['#7fd05a', ['00110', '01100', '11110', '11110', '01100']],
+  5: ['#ff6fa8', ['01010', '11111', '11111', '01110', '00100']],
+  6: ['#e8d060', ['01110', '10001', '00110', '00000', '00100']],
+  7: ['#ffffff', ['11111', '10001', '10001', '11111', '00100']],
+  8: ['#ff9ac8', ['01010', '10101', '10001', '01010', '00100']]
+};
 function drawCreature(cs, o, sel, wpp, ox, oy, st) {
   const x = cs[o + 1], y = cs[o + 2], dir = cs[o + 3], size = cs[o + 4];
   const r = clamp(rp(size / wpp * 1.8), 1, 26);
@@ -480,7 +490,8 @@ function drawCreature(cs, o, sel, wpp, ox, oy, st) {
   if (fly) b.fillRect(px - sw + 3, pyBase + sy + 3, 2 * sw, 1);
   else { b.fillRect(px - sw + 1, pyBase + sy, 2 * sw, 1); b.fillRect(px - sw + 2, pyBase + sy + 1, 2 * sw - 2, 1); }
   const np = cs[o + 19] | 0, detail = np > 0;
-  if (r >= 5 && typeof crDrawWild === 'function' && crDrawWild(cs, o, px, py, r, baby, moving, st, hp)) { /* hand drawn parts */ }
+  st.sprFor = -1;
+  if (r >= 5 && typeof crDrawWild === 'function' && crDrawWild(cs, o, px, py, r, baby, moving, st, hp)) { st.sprFor = o; }
   else {
     if (detail) for (let i = 0; i < np; i++) { drawPart(cs, o, i, 1, px, py, g, false, st); if (cs[o + 26 + i * 7 + 1]) drawPart(cs, o, i, -1, px, py, g, false, st); }
     b.drawImage(ent.cnv, px - R, py - R);
@@ -500,12 +511,21 @@ function drawCreature(cs, o, sel, wpp, ox, oy, st) {
   }
   const ext = Math.max(g.rh + g.uh, g.segs[0].b, R * 0.7);
   let top = py - rp(ext) - 3;
+  if (st.sprTop !== undefined && st.sprFor === o) top = Math.min(top, st.sprTop - 3);
   if (sel || hp < 60) {
     const w = 2 * r + 3;
     b.fillStyle = OUTLINE; b.fillRect(px - r - 1, top, w, 1);
     b.fillStyle = hp > 50 ? '#6fd36f' : hp > 25 ? '#e5c14a' : '#e05a4a';
     b.fillRect(px - r - 1, top, Math.max(1, rp(w * Math.max(0, hp) / 100)), 1);
     top -= 2;
+  }
+  const act = cs[o + 90] | 0;
+  if (act > 0 && r >= 7 && st.showAct !== false) {
+    const ic = ACT_ICONS[act], yy = top - 7, xx = px - 3;
+    b.fillStyle = 'rgba(30,30,50,.72)'; b.fillRect(xx - 1, yy - 1, 7, 7);
+    b.fillStyle = ic[0];
+    for (let j = 0; j < 5; j++) for (let i = 0; i < 5; i++) if (ic[1][j][i] === '1') b.fillRect(xx + i, yy + j, 1, 1);
+    top -= 8;
   }
   if (cs[o + 14]) {
     const yy = top - 1;

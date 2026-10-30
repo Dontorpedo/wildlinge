@@ -1,5 +1,5 @@
 'use strict';
-/* Terrarium: side-view care room for adopted Wildlings.
+/* Terrarium: side-view care room for adopted Plimploms.
    Genomes, brains and language live in the WebAssembly world (world.terra); needs, positions and objects live here. */
 const TZ = {
   MAX: 8, GROW: 600, ADULT: 0.98, list: [], eggs: [], items: [], parts: [], graves: [], sel: 0, tool: 'select',

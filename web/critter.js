@@ -565,6 +565,7 @@ function crDrawWild(cs, o, px, py, r, baby, moving, st, hp) {
   const sp = crSprite(rec, { r: 22, baby: false, ph, lie: false });
   const k = Math.max(0.2, (r * 2.7) / Math.max(1, sp.hAbove)), w = Math.max(1, Math.round(sp.W * k)), h = Math.max(1, Math.round(sp.H * k));
   const flip = Math.cos(dir) < 0 ? -1 : 1, gy = Math.round(py + (sp.hAbove * k) / 2), ox = Math.round(sp.ox * k), goy = Math.round(sp.gy * k);
+  st.sprTop = gy - Math.round(sp.hAbove * k);
   b.imageSmoothingEnabled = false;
   if (flip > 0) b.drawImage(sp.cnv, px - ox, gy - goy, w, h);
   else { b.save(); b.translate(px + ox, 0); b.scale(-1, 1); b.drawImage(sp.cnv, 0, gy - goy, w, h); b.restore(); }

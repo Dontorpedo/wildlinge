@@ -1,7 +1,7 @@
 'use strict';
 /* Wildlinge host: runs the WebAssembly core, either inside a Web Worker or (fallback) on the main thread.
    Roles: 'sim' runs the persistent world, 'lab' runs controlled experiments. */
-const WH = { YEAR_LEN: 6000, DAY_LEN: 400, WORLD_W: 4000, WORLD_H: 2400 };
+const WH = { YEAR_LEN: 36000, DAY_LEN: 2400, WORLD_W: 4000, WORLD_H: 2400 };
 let hostPost = () => {};
 const H = {
   E: null, role: 'sim', running: true, speed: 1, acc: 0, sel: 0, tickN: 0, stepMs: 0,

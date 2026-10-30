@@ -117,6 +117,14 @@ pub struct Creature {
     pub gut_own: f32,
     pub push: [f32; 2],
     pub last_ate: i64,
+    #[serde(skip)]
+    pub last_atk: i64,
+    #[serde(skip)]
+    pub last_birth: i64,
+    #[serde(skip)]
+    pub actv: u8,
+    #[serde(default)]
+    pub actc: [u32; 9],
     pub eaten: u32,
     pub reacts: u32,
     pub self_recog: bool,
@@ -212,6 +220,10 @@ impl Creature {
             wb_avg: 0.7,
             sp: -1,
             last_ate: -1_000_000_000,
+            last_atk: -1_000_000_000,
+            last_birth: -1_000_000_000,
+            actv: 0,
+            actc: [0; 9],
             err: 0.6,
             fw: vec![0.0; 3 * NF],
             visited: vec![0u64; 16],

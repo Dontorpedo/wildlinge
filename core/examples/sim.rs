@@ -26,6 +26,21 @@ fn main() {
             w.stroke(0, 1.0);
         }
         if i % 3000 == 0 {
+            let mut now = [0usize; 9];
+            let mut life = [0u64; 9];
+            for c in &w.creatures {
+                now[c.actv as usize] += 1;
+                for k in 0..9 {
+                    life[k] += c.actc[k] as u64;
+                }
+            }
+            let tl = life.iter().sum::<u64>().max(1) as f64;
+            let tn = now.iter().sum::<usize>().max(1) as f64;
+            println!(
+                "  act now% {:?} | life% {:?}",
+                now.iter().map(|&v| (100.0 * v as f64 / tn).round() as u32).collect::<Vec<_>>(),
+                life.iter().map(|&v| (100.0 * v as f64 / tl).round() as u32).collect::<Vec<_>>()
+            );
             let r = w.series.last().unwrap();
             let el = t1.elapsed().as_secs_f64() * 1000.0;
             println!(

@@ -11,7 +11,7 @@ async function main() {
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
   await page.goto('file://' + file);
-  await page.waitForFunction(() => document.getElementById('clock').textContent.includes('Wildlings'), null, { timeout: 30000 });
+  await page.waitForFunction(() => document.getElementById('clock').textContent.includes('Plimploms'), null, { timeout: 30000 });
   const shot = async n => { if (shots) await page.screenshot({ path: path.join(shots, n + '.png') }); };
   await page.click('#welcomeOk');
   await page.waitForTimeout(4000);

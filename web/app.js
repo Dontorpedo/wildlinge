@@ -1,5 +1,5 @@
 'use strict';
-/* Wildlinge user interface: rendering loop, panels, charts, input. The simulation runs in a worker (WebAssembly). */
+/* Plimploms user interface: rendering loop, panels, charts, input. The simulation runs in a worker (WebAssembly). */
 const BMC_URL = 'https://www.buymeacoffee.com/YOUR-NAME'; /* set your Buy-me-a-coffee link here */
 const DB_NAME = 'wildlinge', STORE = 'saves', SAVE_KEY = 'world';
 const ZOOMS = [7.5, 5, 3.5, 2.5, 1.7, 1.2];
@@ -245,6 +245,7 @@ function renderWorld(p) {
     row(t('st.herbCarn'), `${st.herb} / ${st.carn}`) +
     row(t('st.plants'), `${st.plants} / ${st.asleep}`) +
     row(t('st.cycle'), `${st.dets} / ${st.fert}`) +
+    (st.acts ? tr('acts').map((n, k) => (st.acts[k] ? row(t('st.acts') + ': ' + n, `${st.acts[k]} (${Math.round(100 * st.acts[k] / Math.max(1, st.acts.reduce((p, q) => p + q, 0)))}%)`) : '')).join('') : '') +
     row(t('st.gen'), st.gen) +
     row(t('st.wb'), pct(st.wb)) +
     row(t('st.neurons'), `${st.neurons.toFixed(1)} / ${st.conns.toFixed(0)}`) +
@@ -328,7 +329,10 @@ function renderSel(s) {
     row(t('sel.age'), esc(t('sel.ageOf', s.age, s.life))) +
     row(t('sel.energy'), `${esc(t('sel.of', s.energy.toFixed(0), s.maxE.toFixed(0)))} / ${s.health.toFixed(0)}`) +
     row(t('sel.place'), esc(tBiome(s.biome))) +
+    row(t('sel.nowDoing'), esc(tr('acts')[s.act] || '-')) +
     row(t('sel.state'), s.asleep ? esc(s.dream >= 0 ? t('sel.dreams', tr('features')[s.dream]) : t('sel.sleeps')) : esc(t('sel.awake'))) +
+    '</table>' + sub(esc(t('sel.acts'))) + '<table>' +
+    (() => { const ac = s.actc || [], tot = Math.max(1, ac.reduce((p, q) => p + q, 0)); return tr('acts').map((n, k) => `<tr><td>${esc(n)}</td><td>${barHtml(ac[k] / tot, '#8fb8e8')}</td></tr>`).join(''); })() +
     '</table>' + sub(esc(t('sel.drives'))) + '<table>' +
     `<tr class="goal"><td>${esc(t('sel.goal'))}</td><td>${esc(tr('goals')[s.goal] || '')}</td></tr>` +
     dr.map((n, i) => `<tr><td>${esc(n)} <span class="muted">(${s.dw[i].toFixed(2)})</span></td><td>${barHtml(s.D[i], DRIVE_COL[i])}</td></tr>`).join('') +
@@ -722,7 +726,13 @@ async function startApp() {
   if (typeof WebAssembly === 'undefined') { $('clock').textContent = t('app.noWasm'); return; }
   let saved = null;
   try { saved = await idbDo('readonly', st => st.get(SAVE_KEY)); } catch (e) { $('saveState').textContent = t('app.noStorage'); }
-  if (await trySrv()) { serverMode = true; requestAnimationFrame(render); return; }
+  const online = /^https?:$/.test(location.protocol) && !/[#?&]offline\b/.test(location.href);
+  for (;;) {
+    if (await trySrv()) { serverMode = true; requestAnimationFrame(render); return; }
+    if (!online) break;
+    $('clock').textContent = t('srv.down');
+    await new Promise(r => setTimeout(r, 4000));
+  }
   const bootMsg = () => ({ type: 'boot', role: 'sim', wasm: wasmBuffer(), save: saved || null });
   try {
     worker = new Worker(URL.createObjectURL(new Blob([$('worker-src').textContent], { type: 'text/javascript' })));

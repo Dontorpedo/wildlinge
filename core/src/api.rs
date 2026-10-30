@@ -7,7 +7,7 @@ use crate::world::*;
 use serde_json::{json, Value};
 use std::cell::RefCell;
 
-pub const CS_STRIDE: usize = 90;
+pub const CS_STRIDE: usize = 91;
 pub const FOOD_STRIDE: usize = 6;
 
 #[derive(Default)]
@@ -97,6 +97,7 @@ pub fn fill_rec(c: &crate::creature::Creature, bosses: &[u32], detail: bool, r: 
     r[18] = c.v;
     r[20..25].copy_from_slice(&c.g.shape);
     r[25] = if c.mature() { 0.0 } else { 1.0 };
+    r[90] = c.actv as f32;
     for (i, v) in crate::genome::look_pheno(&c.g).iter().enumerate() {
         r[82 + i] = *v as f32;
     }
@@ -268,7 +269,8 @@ pub fn panel(w: &World, sel: u32) -> String {
         "stats": {"herb": cs.len() - carn, "carn": carn, "plants": w.plants, "dets": w.dets, "fert": w.fert, "gen": w.max_gen, "wb": avg(&|c| c.wellbeing),
             "neurons": avg(&|c| c.net.hidden as f32), "conns": avg(&|c| c.net.w.len() as f32), "cert": avg(&|c| c.certainty()),
             "parts": avg(&|c| c.pp.len() as f32), "rate": w.rate, "sentences": w.sentences, "births": w.births, "deaths": w.deaths,
-            "macro": w.macro_n, "neuronsN": w.neurons_n, "bossChanges": w.boss_changes, "asleep": cs.iter().filter(|c| c.asleep).count(), "words": words},
+            "macro": w.macro_n, "neuronsN": w.neurons_n, "bossChanges": w.boss_changes, "asleep": cs.iter().filter(|c| c.asleep).count(), "words": words,
+            "acts": (0..9usize).map(|k| cs.iter().filter(|c| c.actv as usize == k).count()).collect::<Vec<_>>()},
         "hist": &w.hist[w.hist.len().saturating_sub(170)..],
         "lang": {"what": what, "where": whr},
         "species": species, "phylo": phylo, "events": events, "log": log, "adopted": adopted, "released": released, "memorial": memorial,
@@ -327,7 +329,7 @@ fn sel_json(w: &World, i: usize) -> Value {
         "parts": kc.iter().map(|(k, n)| json!([KIND_KEYS[*k], n])).collect::<Vec<_>>(), "abil": abil, "fly": s.fly, "shape": g.shape,
         "look": {"ph": crate::genome::look_pheno(g), "al": g.look, "rarity": r3(crate::genome::look_rarity(g))},
         "size": s.size(), "sizeG": g.tr[T_SIZE], "speed": g.tr[T_SPEED], "sense": s.sense_r, "diet": g.tr[T_DIET], "mutation": s.mutation,
-        "children": s.children, "kills": s.kills, "fear": s.fear, "focus": s.focus_f, "protos": s.protos.iter().filter(|p| p.is_some()).count(),
+        "children": s.children, "kills": s.kills, "fear": s.fear, "focus": s.focus_f, "act": s.actv, "actc": s.actc, "protos": s.protos.iter().filter(|p| p.is_some()).count(),
         "lastSaid": s.last_said.as_ref().map(|l| json!({"tokens": l.tokens, "vec": l.vec, "sector": l.sector})), "heard": heard,
         "echoes": s.echoes, "spoken": s.spoken, "understood": s.understood, "heardN": s.heard_n, "order": s.order(), "vocab": vocab,
         "selfRecog": s.self_recog, "fe": r3(s.fe), "mirrorT": s.mirror_t, "isBoss": w.species.iter().any(|q| q.boss_id == s.id), "bossSince": sp_boss_since, "t": w.t,

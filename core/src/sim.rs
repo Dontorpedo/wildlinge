@@ -498,6 +498,8 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
             c.asleep = false;
             c.consolidate();
         }
+        c.actv = 1;
+        c.actc[1] += 1;
         metabolize(w, c, bwater, 0.5, drown);
         return;
     }
@@ -1026,6 +1028,7 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
                     c.energy -= 0.05 * size;
                     c.energy = (c.energy + gain).min(c.max_e());
                     c.last_ate = t as i64;
+                    c.last_atk = t as i64;
                     if killed {
                         let mut oc = std::mem::take(&mut w.creatures[oi]);
                         w.die(&mut oc, "eaten");
@@ -1037,6 +1040,30 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
         }
     }
 
+    // current activity for display and statistics
+    {
+        let ti = t as i64;
+        c.actv = if c.fear > 0.35 || c.focus_f == 0 {
+            2
+        } else if ti - c.last_atk < 10 {
+            3
+        } else if ti - c.last_ate < 10 {
+            4
+        } else if ti - c.last_birth < 40 {
+            5
+        } else if c.speak_cool + 8 > SPEAK_COOL {
+            7
+        } else if c.focus_f == 1 {
+            6
+        } else if c.focus_f == 3 {
+            8
+        } else if c.focus_f == 2 {
+            3
+        } else {
+            0
+        };
+        c.actc[c.actv as usize] += 1;
+    }
     if metabolize(w, c, bwater, 1.0, drown) {
         return;
     }
@@ -1057,6 +1084,7 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
         c.energy -= give + c.energy * 0.1;
         child.energy = give.min(child.max_e());
         c.cool = (150.0 + c.g.tr[T_SIZE] * 20.0).round() as u32;
+        c.last_birth = t as i64;
         c.children += 1;
         c.d[4] = 0.0;
         if let Some(mi) = mate {

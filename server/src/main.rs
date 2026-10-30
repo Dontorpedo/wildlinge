@@ -547,12 +547,13 @@ fn client_thread(stream: TcpStream, cid: u64, to_sim: mpsc::Sender<ToSim>, origi
     let _ = stream.set_write_timeout(Some(Duration::from_secs(5)));
     let cfg = WebSocketConfig::default().max_message_size(Some(64 * 1024)).max_frame_size(Some(64 * 1024));
     let cb = |req: &tungstenite::handshake::server::Request, resp: tungstenite::handshake::server::Response| {
-        if let Some(o) = &origin {
-            let got = req.headers().get("origin").and_then(|h| h.to_str().ok()).unwrap_or("");
-            if got != o {
-                let r = tungstenite::http::Response::builder().status(403).body(Some("origin".to_string())).unwrap();
-                return Err(r);
-            }
+        let got = req.headers().get("origin").and_then(|h| h.to_str().ok()).unwrap_or("");
+        let host = |u: &str| u.split("://").last().unwrap_or("").split('/').next().unwrap_or("").rsplit_once(':').filter(|(_, p)| p.chars().all(|c| c.is_ascii_digit())).map(|(h, _)| h).unwrap_or_else(|| u.split("://").last().unwrap_or("").split('/').next().unwrap_or("")).to_ascii_lowercase();
+        let hh = req.headers().get("host").and_then(|h| h.to_str().ok()).unwrap_or("");
+        let ok = got.is_empty() || origin.as_deref() == Some(got) || host(got) == host(hh);
+        if !ok {
+            let r = tungstenite::http::Response::builder().status(403).body(Some("origin".to_string())).unwrap();
+            return Err(r);
         }
         Ok(resp)
     };
