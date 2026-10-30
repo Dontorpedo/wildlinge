@@ -30,7 +30,7 @@ const parts = {
   WORKER: worker,
   LIBS: libs,
   I18N: txt('web/i18n.js'),
-  GFX: txt('web/gfx.js'),
+  GFX: 'const TILE_STAMPS=' + txt('web/assets/tiles/stamps.json') + ';\n' + txt('web/gfx.js'),
   CRITTER: 'const CR_ATLAS=' + JSON.stringify(Object.fromEntries(['heads', 'bodies', 'ears', 'tails', 'legs', 'wings', 'crests', 'horns'].map(n => [n, 'data:image/png;base64,' + rd('web/assets/parts/' + n + '.png').toString('base64')]))) + ';\n' + txt('web/critter.js'),
   TERRA: txt('web/terrarium.js'),
   APP: txt('web/app.js')

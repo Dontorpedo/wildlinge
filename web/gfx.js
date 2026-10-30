@@ -38,9 +38,9 @@ function vnoise(x, y, s) {
 }
 const PAL = {
   summer: [
-    ['#3f86c8', '#468fd0', '#4e98d8', '#57a1e0'], ['#86d0ea', '#92d8f0', '#9edff4', '#abe6f8'],
-    ['#8fd07a', '#99d783', '#a3de8d', '#aee596'], ['#5eae6c', '#67b875', '#71c27f', '#7bcc89'],
-    ['#f0d9a0', '#f4dfaa', '#f7e5b5', '#faebc0'], ['#b3b9c6', '#bec4d0', '#c9ced9', '#d4d8e1']
+    ['#17589d', '#1d65a7', '#2974b3', '#3281bd'], ['#46c9c5', '#51d2cc', '#66d3cb', '#7ad9ce'],
+    ['#41a239', '#4bad3b', '#5db240', '#69b944'], ['#1c5827', '#1c711e', '#287e29', '#2e7930'],
+    ['#dca467', '#e7ac67', '#ebba6f', '#f2cb7c'], ['#98b6c4', '#a5c0cb', '#acc7d1', '#bcdbe4']
   ],
   winter: [
     ['#3a78b4', '#4082bc', '#488cc4', '#5096cc'], ['#cfe6f2', '#d9ecf6', '#e3f2f9', '#edf7fc'],
@@ -49,6 +49,31 @@ const PAL = {
   ]
 };
 const hexRgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+
+/* decoration stamps cut from the tile sheets (raw RGBA) */
+const stampCache = {};
+function stampOf(group, rnd) {
+  if (typeof TILE_STAMPS === 'undefined') return null;
+  const lst = TILE_STAMPS[group];
+  if (!lst || !lst.length) return null;
+  const i = (rnd * lst.length) | 0, key = group + i;
+  let c = stampCache[key];
+  if (!c) {
+    const s = lst[i], bin = atob(s.d), cv = document.createElement('canvas');
+    cv.width = s.w; cv.height = s.h;
+    const cx = cv.getContext('2d'), im = cx.createImageData(s.w, s.h);
+    for (let k = 0; k < bin.length; k++) im.data[k] = bin.charCodeAt(k);
+    cx.putImageData(im, 0, 0);
+    c = stampCache[key] = cv;
+  }
+  return c;
+}
+function drawStamp(x2, group, x, y, rnd) {
+  const c = stampOf(group, rnd);
+  if (!c) return false;
+  x2.drawImage(c, x - (c.width >> 1), y - c.height + 1);
+  return true;
+}
 
 function drawTree(x2, x, y, winter, big) {
   const o = winter ? ['#5d6f76', '#9fb4ba', '#e3eef2', '#ffffff'] : ['#2b6a3c', '#3f9a56', '#62c070', '#a8ea90'];
@@ -97,9 +122,11 @@ function buildTerrain(map, winter, seed) {
     const x = (rng() * (tw - 8) + 4) | 0, y = (rng() * (th - 8) + 4) | 0, bi = cls[y * tw + x], r = rng();
     if (bi === 3) {
       if (r < 0.5) drawTree(x2, x, y, winter, r < 0.06);
+      else if (r < 0.8 && drawStamp(x2, winter ? 'snow' : 'grass', x, y, rng())) { /* stamp */ }
       else { x2.fillStyle = winter ? '#e9f0f3' : '#3f7a33'; x2.fillRect(x, y - 1, 1, 2); x2.fillRect(x + 1, y, 1, 1); }
     } else if (bi === 2) {
-      if (r < 0.5) {
+      if (r < 0.7 && drawStamp(x2, winter ? 'snow' : 'grass', x, y, rng())) { /* stamp */ }
+      else if (r < 0.5) {
         x2.fillStyle = winter ? '#ffffff' : '#78a84c'; x2.fillRect(x, y - 1, 1, 2);
         x2.fillStyle = winter ? '#b8c6cf' : '#2f4d27'; x2.fillRect(x - 1, y, 1, 1); x2.fillRect(x + 1, y, 1, 1);
       } else if (!winter && r < 0.62) {
@@ -111,7 +138,8 @@ function buildTerrain(map, winter, seed) {
         x2.fillStyle = winter ? '#ffffff' : '#9c9e92'; x2.fillRect(x, y, 2, 1);
       }
     } else if (bi === 4) {
-      if (r < 0.2) {
+      if (r > 0.45 && r < 0.7 && drawStamp(x2, 'sand', x, y, rng())) { /* stamp */ }
+      else if (r < 0.2) {
         x2.fillStyle = winter ? '#6d7f5a' : '#3f6a2a'; x2.fillRect(x, y - 3, 2, 5); x2.fillRect(x - 2, y - 2, 2, 1); x2.fillRect(x + 2, y - 1, 2, 1);
         x2.fillStyle = winter ? '#dfe8d8' : '#7fb04a'; x2.fillRect(x, y - 3, 1, 3);
       } else if (r < 0.4) {
@@ -119,7 +147,8 @@ function buildTerrain(map, winter, seed) {
         x2.fillStyle = '#e0cd92'; x2.fillRect(x, y - 1, 2, 1);
       }
     } else if (bi === 5) {
-      if (r < 0.45) {
+      if (r > 0.55 && r < 0.75 && drawStamp(x2, r > 0.7 ? 'rock' : 'snow', x, y, rng())) { /* stamp */ }
+      else if (r < 0.1) {
         x2.fillStyle = '#2f302b'; x2.fillRect(x, y + 1, 4, 1); x2.fillRect(x + 1, y - 1, 3, 2);
         x2.fillStyle = winter ? '#d8e0e4' : '#8a8c80'; x2.fillRect(x + 1, y, 3, 1);
         x2.fillStyle = '#ffffff'; x2.fillRect(x + 1, y - 1, 2, 1);
