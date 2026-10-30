@@ -1762,10 +1762,13 @@ function drawCreature(cs, o, sel, wpp, ox, oy, st) {
   if (fly) b.fillRect(px - sw + 3, pyBase + sy + 3, 2 * sw, 1);
   else { b.fillRect(px - sw + 1, pyBase + sy, 2 * sw, 1); b.fillRect(px - sw + 2, pyBase + sy + 1, 2 * sw - 2, 1); }
   const np = cs[o + 19] | 0, detail = np > 0;
-  if (detail) for (let i = 0; i < np; i++) { drawPart(cs, o, i, 1, px, py, g, false, st); if (cs[o + 26 + i * 7 + 1]) drawPart(cs, o, i, -1, px, py, g, false, st); }
-  b.drawImage(ent.cnv, px - R, py - R);
-  if (detail) for (let i = 0; i < np; i++) { drawPart(cs, o, i, 1, px, py, g, true, st); if (cs[o + 26 + i * 7 + 1]) drawPart(cs, o, i, -1, px, py, g, true, st); }
-  drawFace(cs, o, px, py, ent, look, carn, st);
+  if (r >= 5 && typeof crDrawWild === 'function' && crDrawWild(cs, o, px, py, r, baby, moving, st, hp)) { /* hand drawn parts */ }
+  else {
+    if (detail) for (let i = 0; i < np; i++) { drawPart(cs, o, i, 1, px, py, g, false, st); if (cs[o + 26 + i * 7 + 1]) drawPart(cs, o, i, -1, px, py, g, false, st); }
+    b.drawImage(ent.cnv, px - R, py - R);
+    if (detail) for (let i = 0; i < np; i++) { drawPart(cs, o, i, 1, px, py, g, true, st); if (cs[o + 26 + i * 7 + 1]) drawPart(cs, o, i, -1, px, py, g, true, st); }
+    drawFace(cs, o, px, py, ent, look, carn, st);
+  }
   if (look[5] === 1 && r >= 3 && (((st.animT + (cs[o] | 0) * 7) % 48) < 4)) {
     const k = ((cs[o] | 0) * 31 + (st.animT / 48 | 0) * 17) % 7, sx = px + (k % 3 - 1) * R * 0.7, sy2 = py + ((k / 3 | 0) - 1) * R * 0.7;
     b.fillStyle = '#fff6b0';
@@ -2373,6 +2376,28 @@ function crScaleSprite(e, opt) {
   const A2 = Object.assign({}, A, { hu: A.hu * m, hv: A.hv * m, hr: Math.max(3, f(A.hr)), top: A.top * m, legL: f(A.legL), a: f(A.a), b: f(A.b), bcv: A.bcv * m });
   if (A.face) { const g = k => [A.face[k][0] * m, A.face[k][1] * m]; A2.face = { eye: g('eye'), nose: g('nose'), mouth: g('mouth'), cheek: g('cheek'), hat: g('hat') }; }
   return { cnv: c, W: w, H: h, ox: f(e.ox), gy: f(e.gy), A: A2, hAbove: e.hAbove * m, wHalf: e.wHalf * m };
+}
+
+/* wild view: the same hand drawn sprite, scaled to the creature size, mirrored by heading */
+function crDrawWild(cs, o, px, py, r, baby, moving, st, hp) {
+  if (!crReady) return false;
+  const rec = cs.subarray(o, o + CS_STRIDE), sl = cs[o + 12], dir = cs[o + 3];
+  const ph = moving ? 1 + ((st.animT >> 2) % 4) : 0;
+  const sp = crSprite(rec, { r: 22, baby: false, ph, lie: false });
+  const k = Math.max(0.2, (r * 2.7) / Math.max(1, sp.hAbove)), w = Math.max(1, Math.round(sp.W * k)), h = Math.max(1, Math.round(sp.H * k));
+  const flip = Math.cos(dir) < 0 ? -1 : 1, gy = Math.round(py + (sp.hAbove * k) / 2), ox = Math.round(sp.ox * k), goy = Math.round(sp.gy * k);
+  b.imageSmoothingEnabled = false;
+  if (flip > 0) b.drawImage(sp.cnv, px - ox, gy - goy, w, h);
+  else { b.save(); b.translate(px + ox, 0); b.scale(-1, 1); b.drawImage(sp.cnv, 0, gy - goy, w, h); b.restore(); }
+  const F = sp.A.face;
+  if (F && r >= 7) {
+    const ew = Math.max(1, Math.round(sp.A.ew * k)), eh = Math.max(2, Math.round(sp.A.eh * k)), ex = px + flip * Math.round(F.eye[0] * k) - (flip > 0 ? 0 : ew - 1), ey = gy + Math.round(F.eye[1] * k) - (eh >> 1);
+    b.fillStyle = '#fffaf2'; b.fillRect(ex - 1, ey - 1, ew + 2, eh + 2);
+    b.fillStyle = sl ? '#3a2f58' : '#2a2450';
+    if (sl) b.fillRect(ex, ey + (eh >> 1), ew, 1); else b.fillRect(ex, ey, ew, eh);
+    if (!sl && ew >= 2) { b.fillStyle = '#ffffff'; b.fillRect(ex, ey, 1, 1); }
+  }
+  return true;
 }
 </script>
 <script>'use strict';

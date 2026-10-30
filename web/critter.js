@@ -556,3 +556,25 @@ function crScaleSprite(e, opt) {
   if (A.face) { const g = k => [A.face[k][0] * m, A.face[k][1] * m]; A2.face = { eye: g('eye'), nose: g('nose'), mouth: g('mouth'), cheek: g('cheek'), hat: g('hat') }; }
   return { cnv: c, W: w, H: h, ox: f(e.ox), gy: f(e.gy), A: A2, hAbove: e.hAbove * m, wHalf: e.wHalf * m };
 }
+
+/* wild view: the same hand drawn sprite, scaled to the creature size, mirrored by heading */
+function crDrawWild(cs, o, px, py, r, baby, moving, st, hp) {
+  if (!crReady) return false;
+  const rec = cs.subarray(o, o + CS_STRIDE), sl = cs[o + 12], dir = cs[o + 3];
+  const ph = moving ? 1 + ((st.animT >> 2) % 4) : 0;
+  const sp = crSprite(rec, { r: 22, baby: false, ph, lie: false });
+  const k = Math.max(0.2, (r * 2.7) / Math.max(1, sp.hAbove)), w = Math.max(1, Math.round(sp.W * k)), h = Math.max(1, Math.round(sp.H * k));
+  const flip = Math.cos(dir) < 0 ? -1 : 1, gy = Math.round(py + (sp.hAbove * k) / 2), ox = Math.round(sp.ox * k), goy = Math.round(sp.gy * k);
+  b.imageSmoothingEnabled = false;
+  if (flip > 0) b.drawImage(sp.cnv, px - ox, gy - goy, w, h);
+  else { b.save(); b.translate(px + ox, 0); b.scale(-1, 1); b.drawImage(sp.cnv, 0, gy - goy, w, h); b.restore(); }
+  const F = sp.A.face;
+  if (F && r >= 7) {
+    const ew = Math.max(1, Math.round(sp.A.ew * k)), eh = Math.max(2, Math.round(sp.A.eh * k)), ex = px + flip * Math.round(F.eye[0] * k) - (flip > 0 ? 0 : ew - 1), ey = gy + Math.round(F.eye[1] * k) - (eh >> 1);
+    b.fillStyle = '#fffaf2'; b.fillRect(ex - 1, ey - 1, ew + 2, eh + 2);
+    b.fillStyle = sl ? '#3a2f58' : '#2a2450';
+    if (sl) b.fillRect(ex, ey + (eh >> 1), ew, 1); else b.fillRect(ex, ey, ew, eh);
+    if (!sl && ew >= 2) { b.fillStyle = '#ffffff'; b.fillRect(ex, ey, 1, 1); }
+  }
+  return true;
+}

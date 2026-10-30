@@ -426,10 +426,13 @@ function drawCreature(cs, o, sel, wpp, ox, oy, st) {
   if (fly) b.fillRect(px - sw + 3, pyBase + sy + 3, 2 * sw, 1);
   else { b.fillRect(px - sw + 1, pyBase + sy, 2 * sw, 1); b.fillRect(px - sw + 2, pyBase + sy + 1, 2 * sw - 2, 1); }
   const np = cs[o + 19] | 0, detail = np > 0;
-  if (detail) for (let i = 0; i < np; i++) { drawPart(cs, o, i, 1, px, py, g, false, st); if (cs[o + 26 + i * 7 + 1]) drawPart(cs, o, i, -1, px, py, g, false, st); }
-  b.drawImage(ent.cnv, px - R, py - R);
-  if (detail) for (let i = 0; i < np; i++) { drawPart(cs, o, i, 1, px, py, g, true, st); if (cs[o + 26 + i * 7 + 1]) drawPart(cs, o, i, -1, px, py, g, true, st); }
-  drawFace(cs, o, px, py, ent, look, carn, st);
+  if (r >= 5 && typeof crDrawWild === 'function' && crDrawWild(cs, o, px, py, r, baby, moving, st, hp)) { /* hand drawn parts */ }
+  else {
+    if (detail) for (let i = 0; i < np; i++) { drawPart(cs, o, i, 1, px, py, g, false, st); if (cs[o + 26 + i * 7 + 1]) drawPart(cs, o, i, -1, px, py, g, false, st); }
+    b.drawImage(ent.cnv, px - R, py - R);
+    if (detail) for (let i = 0; i < np; i++) { drawPart(cs, o, i, 1, px, py, g, true, st); if (cs[o + 26 + i * 7 + 1]) drawPart(cs, o, i, -1, px, py, g, true, st); }
+    drawFace(cs, o, px, py, ent, look, carn, st);
+  }
   if (look[5] === 1 && r >= 3 && (((st.animT + (cs[o] | 0) * 7) % 48) < 4)) {
     const k = ((cs[o] | 0) * 31 + (st.animT / 48 | 0) * 17) % 7, sx = px + (k % 3 - 1) * R * 0.7, sy2 = py + ((k / 3 | 0) - 1) * R * 0.7;
     b.fillStyle = '#fff6b0';
