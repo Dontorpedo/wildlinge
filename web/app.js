@@ -152,6 +152,14 @@ function render() {
   const big = wpp < 3.6, fd = fr.foods;
   for (let i = 0; i + 6 <= fd.length; i += 6) {
     const px = ((fd[i] - ox) / wpp) | 0, py = ((fd[i + 1] - oy) / wpp) | 0, e = fd[i + 2];
+    if (fd[i + 3] === 3) {
+      const w2 = e > 18 ? 3 : e > 8 ? 2 : 1;
+      b.fillStyle = OUTLINE; b.fillRect(px - w2 - 1, py - 1, 2 * w2 + 3, 4);
+      b.fillStyle = '#8a6a3c'; b.fillRect(px - w2, py - 1, 2 * w2 + 1, 2);
+      b.fillStyle = '#b8914f'; b.fillRect(px - w2, py - 1, 2 * w2 + 1, 1);
+      b.fillStyle = '#5a4026'; b.fillRect(px - w2, py + 1, 2 * w2 + 1, 1);
+      continue;
+    }
     if (fd[i + 3] === 2) {
       b.fillStyle = '#4a3326'; b.fillRect(px, py, big ? 2 : 1, 1);
       b.fillStyle = '#7a5a3c'; b.fillRect(px, py, 1, 1);
@@ -245,6 +253,7 @@ function renderWorld(p) {
     row(t('st.herbCarn'), `${st.herb} / ${st.carn}`) +
     row(t('st.plants'), `${st.plants} / ${st.asleep}`) +
     row(t('st.cycle'), `${st.dets} / ${st.fert}`) +
+    (st.cache ? row(t('st.cache'), `${st.cache[0]} | ${st.cache[3]}`) + row(t('st.cache2'), `${st.cache[1]} / ${st.cache[2]}`) : '') +
     (st.acts ? tr('acts').map((n, k) => (st.acts[k] ? row(t('st.acts') + ': ' + n, `${st.acts[k]} (${Math.round(100 * st.acts[k] / Math.max(1, st.acts.reduce((p, q) => p + q, 0)))}%)`) : '')).join('') : '') +
     row(t('st.gen'), st.gen) +
     row(t('st.wb'), pct(st.wb)) +

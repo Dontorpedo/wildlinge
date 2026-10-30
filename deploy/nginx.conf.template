@@ -17,9 +17,13 @@ server {
         try_files /index.html =404;
         add_header Cache-Control "no-cache";
     }
-    location ~ ^/(impressum\.html|datenschutz\.html|og\.png|robots\.txt|sitemap\.xml)$ {
+    location ~ ^/(impressum\.html|datenschutz\.html|og\.png|hero\.jpg|robots\.txt|sitemap\.xml)$ {
         try_files $uri =404;
         add_header Cache-Control "public, max-age=3600";
+    }
+    location = /world.html {
+        try_files /world.html =404;
+        add_header Cache-Control "no-cache";
     }
     location /ws {
         limit_conn wl_conn 8;

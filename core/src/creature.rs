@@ -119,6 +119,10 @@ pub struct Creature {
     pub last_ate: i64,
     #[serde(skip)]
     pub last_atk: i64,
+    #[serde(default)]
+    pub cdep: u32,
+    #[serde(default)]
+    pub cret: u32,
     #[serde(skip)]
     pub last_birth: i64,
     #[serde(skip)]
@@ -221,6 +225,8 @@ impl Creature {
             sp: -1,
             last_ate: -1_000_000_000,
             last_atk: -1_000_000_000,
+            cdep: 0,
+            cret: 0,
             last_birth: -1_000_000_000,
             actv: 0,
             actc: [0; 9],

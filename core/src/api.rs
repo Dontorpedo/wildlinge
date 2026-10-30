@@ -53,6 +53,11 @@ pub fn frame(w: &mut World, x0: f32, y0: f32, x1: f32, y1: f32, wpp: f32, sel: u
             fd.extend_from_slice(&[f.x, f.y, f.e, if f.det { 2.0 } else if f.meat { 1.0 } else { 0.0 }, f.k as f32, (w.t - f.born) as f32]);
         }
     }
+    for k in &w.caches {
+        if k.x > x0 - 10.0 && k.x < x1 + 10.0 && k.y > y0 - 10.0 && k.y < y1 + 10.0 {
+            fd.extend_from_slice(&[k.x, k.y, k.e, 3.0, 0.0, 0.0]);
+        }
+    }
     let bub: Vec<Value> = w
         .bubbles
         .iter()
@@ -270,6 +275,7 @@ pub fn panel(w: &World, sel: u32) -> String {
             "neurons": avg(&|c| c.net.hidden as f32), "conns": avg(&|c| c.net.w.len() as f32), "cert": avg(&|c| c.certainty()),
             "parts": avg(&|c| c.pp.len() as f32), "rate": w.rate, "sentences": w.sentences, "births": w.births, "deaths": w.deaths,
             "macro": w.macro_n, "neuronsN": w.neurons_n, "bossChanges": w.boss_changes, "asleep": cs.iter().filter(|c| c.asleep).count(), "words": words,
+            "cache": [w.caches.len(), w.cache_dep, w.cache_ret, cs.iter().filter(|c| c.cdep > 0).count()],
             "acts": (0..9usize).map(|k| cs.iter().filter(|c| c.actv as usize == k).count()).collect::<Vec<_>>()},
         "hist": &w.hist[w.hist.len().saturating_sub(170)..],
         "lang": {"what": what, "where": whr},

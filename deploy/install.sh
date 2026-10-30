@@ -28,7 +28,7 @@ install -d -m 755 /opt/wildlinge /var/www/wildlinge /var/backups/wildlinge
 
 systemctl stop wildlinge 2>/dev/null || true
 install -m 755 "$HERE/wildlinge-server" /opt/wildlinge/wildlinge-server
-install -m 644 "$HERE/wildlinge.html" /var/www/wildlinge/index.html
+install -m 644 "$HERE/wildlinge.html" /var/www/wildlinge/world.html
 [ -d "$HERE/static" ] && install -m 644 "$HERE"/static/* /var/www/wildlinge/
 install -m 644 "$HERE/wildlinge.service" /etc/systemd/system/wildlinge.service
 

@@ -21,6 +21,13 @@ pub struct Food {
     pub det: bool,
 }
 
+#[derive(Clone, Serialize, Deserialize, Default)]
+pub struct Cache {
+    pub x: f32,
+    pub y: f32,
+    pub e: f32,
+}
+
 #[derive(Clone, Default)]
 pub struct Grid {
     pub cols: usize,
@@ -243,6 +250,12 @@ pub struct World {
     pub next_id: u32,
     pub creatures: Vec<Creature>,
     pub foods: Vec<Food>,
+    #[serde(default)]
+    pub caches: Vec<Cache>,
+    #[serde(default)]
+    pub cache_dep: u32,
+    #[serde(default)]
+    pub cache_ret: u32,
     pub births: u32,
     pub deaths: BTreeMap<String, u32>,
     pub hof: Vec<Hof>,
@@ -318,7 +331,7 @@ pub struct World {
     pub bubbles: Vec<Bubble>,
 }
 
-pub const SAVE_VERSION: u32 = 7;
+pub const SAVE_VERSION: u32 = 8;
 
 fn fresh_culture(c: &Creature) -> Culture {
     Culture {
@@ -1086,6 +1099,9 @@ impl World {
     /* ---------------- the step ---------------- */
 
     pub fn step(&mut self) {
+        for k in self.caches.iter_mut() {
+            k.e *= 1.0 - CACHE_ROT;
+        }
         self.t += 1;
         self.update_season();
         self.speech = std::mem::take(&mut self.speech_next);
@@ -1155,6 +1171,7 @@ impl World {
                 }
             }
             self.foods.retain(|f| f.e > 0.5);
+            self.caches.retain(|k| k.e > 1.0);
             self.plants = self.foods.iter().filter(|f| !f.meat && !f.det).count();
             self.dets = self.foods.iter().filter(|f| f.det).count();
             for (x, y, e) in rot {

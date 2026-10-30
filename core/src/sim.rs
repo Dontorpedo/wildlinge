@@ -115,8 +115,8 @@ fn metabolize(w: &mut World, c: &mut Creature, water: u8, sleep: f32, drown: f32
     if !knock_meta {
         let basal = 0.012 * size.powf(0.75) * thermal * (1.0 + 0.25 * a.mass) * sleep + 0.0006 * c.net.hidden as f32 + 0.00004 * c.net.w.len() as f32;
         let swim = if water == 2 && !c.fly { 1.6 - a.ab[A_FIN].min(1.0) } else { 1.0 };
-        let mv = 0.0035 * size * c.v * c.v * (1.0 + 0.5 * a.mass_mot) * if c.fly { 1.6 } else { 1.0 } * swim * (1.0 + 0.5 * c.horm[0]);
-        c.energy -= basal + mv + 0.00025 * c.sense_r * sleep + 0.004;
+        let mv = 0.0035 * size * c.v * c.v * (1.0 + 0.5 * a.mass_mot) * if c.fly { FLY_MV } else { 1.0 } * swim * (1.0 + 0.5 * c.horm[0]);
+        c.energy -= basal + mv + 0.00025 * c.sense_r * sleep + 0.004 + WING_UPKEEP * a.ab[A_WING].min(1.5) * sleep;
     } else {
         c.energy = c.energy.max(c.max_e() * 0.6);
     }
@@ -735,6 +735,25 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
         inp[66] = c.horm[1];
         inp[67] = c.horm[2];
         inp[68] = w.night;
+        {
+            let mut best: Option<(usize, f32)> = None;
+            let mut bd = sense_r * sense_r;
+            for (i, k) in w.caches.iter().enumerate() {
+                let d2 = (k.x - c.x) * (k.x - c.x) + (k.y - c.y) * (k.y - c.y);
+                if d2 < bd {
+                    bd = d2;
+                    best = Some((i, d2.sqrt()));
+                }
+            }
+            if let Some((i, d)) = best {
+                let k = &w.caches[i];
+                let a = (k.y - c.y).atan2(k.x - c.x) - c.dir;
+                inp[69] = a.sin();
+                inp[70] = a.cos();
+                inp[71] = 1.0 - d / sense_r.max(1.0);
+                inp[72] = (k.e / 30.0).min(1.0);
+            }
+        }
         c.net.run(&inp);
         c.inp = inp;
         let sig = 0.05 + 0.25 * c.g.tr[T_CUR] * (1.0 - 0.5 * c.certainty());
@@ -1007,7 +1026,7 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
             if let Some(oi) = oth.idx {
                 if oth.d < size + oth.size + 2.0 && !w.creatures[oi].dead {
                     let dmg = o[2] * 3.0 * meat_eff * (size / oth.size.max(0.5)) * (1.0 + 1.5 * c.ab.ab[A_WEAPON]) * (1.0 - (oth.armor * 1.2).min(0.75));
-                    let gain = dmg * oth.size * 0.25 * meat_eff;
+                    let gain = dmg * oth.size * MEAT_GAIN * meat_eff;
                     let killed;
                     {
                         let oc = &mut w.creatures[oi];
@@ -1042,6 +1061,47 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
                         w.creatures[oi] = oc;
                         c.kills += 1;
                     }
+                }
+            }
+        }
+    }
+
+    // caches: the net may store surplus energy at a spot (o[9] > 0) or take it back when hungry (o[9] < 0)
+    if !c.asleep && (o[9] > 0.55 || o[9] < -0.4) {
+        let mut near: Option<usize> = None;
+        let mut bd = CACHE_REACH * CACHE_REACH;
+        for (i, k) in w.caches.iter().enumerate() {
+            let d2 = (k.x - c.x) * (k.x - c.x) + (k.y - c.y) * (k.y - c.y);
+            if d2 < bd {
+                bd = d2;
+                near = Some(i);
+            }
+        }
+        if o[9] > 0.55 && c.energy > c.max_e() * 0.8 {
+            let amt = (c.energy - c.max_e() * 0.5).min(CACHE_STEP);
+            let gain = amt * (1.0 - CACHE_LOSS);
+            let ok = if let Some(i) = near {
+                w.caches[i].e += gain;
+                true
+            } else if w.caches.len() < MAX_CACHE {
+                w.caches.push(Cache { x: c.x, y: c.y, e: gain });
+                true
+            } else {
+                false
+            };
+            if ok {
+                c.energy -= amt;
+                c.cdep += 1;
+                w.cache_dep += 1;
+            }
+        } else if o[9] < -0.4 && c.energy < c.max_e() * 0.5 {
+            if let Some(i) = near {
+                let take = w.caches[i].e.min(CACHE_STEP).min(c.max_e() - c.energy);
+                if take > 0.0 {
+                    w.caches[i].e -= take;
+                    c.energy += take;
+                    c.cret += 1;
+                    w.cache_ret += 1;
                 }
             }
         }

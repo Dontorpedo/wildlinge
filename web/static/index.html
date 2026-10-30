@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plimploms: a shared world of evolving artificial creatures</title>
+<meta name="description" content="Plimploms is a free artificial life game in your browser. Creatures evolve bodies, brains and language in one persistent shared world. Adopt one, teach it words, raise it in your own terrarium.">
+<link rel="canonical" href="https://plimploms.com/">
+<link rel="alternate" hreflang="en" href="https://plimploms.com/">
+<link rel="alternate" hreflang="de" href="https://plimploms.com/?lang=de">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Plimploms">
+<meta property="og:title" content="Plimploms: a shared world of evolving creatures">
+<meta property="og:description" content="Watch artificial creatures evolve bodies, brains and language in one persistent world. Free, in your browser.">
+<meta property="og:url" content="https://plimploms.com/">
+<meta property="og:image" content="https://plimploms.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://plimploms.com/og.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Plimploms","url":"https://plimploms.com/","applicationCategory":"GameApplication","operatingSystem":"Any (modern browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"description":"A free artificial life game: creatures evolve bodies, brains and language in one persistent shared world."}</script>
+<style>
+:root{--bg:#10140f;--fg:#dfe8d4;--mut:#9fb09a;--acc:#9fd8ff;--btn:#6fcf6a;--card:#182017;--line:#2c3a2a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.6 system-ui,-apple-system,Segoe UI,sans-serif}
+a{color:var(--acc)}main,header,footer{max-width:980px;margin:0 auto;padding:0 18px}
+header{display:flex;justify-content:space-between;align-items:center;padding-top:16px;padding-bottom:16px}
+.logo{font-weight:800;font-size:22px;letter-spacing:.5px}
+.lang button{background:none;border:1px solid var(--line);color:var(--fg);padding:4px 10px;border-radius:6px;cursor:pointer;font:inherit;font-size:14px}
+.lang button.on{background:var(--card);border-color:var(--acc)}
+.hero{display:grid;gap:22px;padding:18px 0 40px}
+.hero img{width:100%;height:auto;border-radius:12px;border:1px solid var(--line);display:block}
+h1{font-size:clamp(30px,6vw,52px);line-height:1.1;margin:.2em 0}
+.sub{font-size:clamp(18px,2.6vw,22px);color:var(--mut);max-width:640px}
+.cta{display:inline-block;background:var(--btn);color:#0b1a0a;font-weight:700;padding:14px 26px;border-radius:10px;text-decoration:none;font-size:19px}
+.cta:hover{filter:brightness(1.08)}
+.note{color:var(--mut);font-size:14px;margin-top:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;padding:10px 0 30px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.card h3{margin:.1em 0 .3em;font-size:18px}.card p{margin:0;color:var(--mut);font-size:16px}
+h2{font-size:26px;margin:1.4em 0 .4em}
+details{border-top:1px solid var(--line);padding:10px 0}summary{cursor:pointer;font-weight:600}details p{color:var(--mut);margin:.5em 0 0}
+footer{border-top:1px solid var(--line);margin-top:40px;padding-top:18px;padding-bottom:40px;color:var(--mut);font-size:14px}
+[lang=de]:not(html){display:none}html[lang=de] [lang=en]:not(html){display:none}html[lang=de] [lang=de]:not(html){display:revert}
+</style>
+</head>
+<body>
+<header><div class="logo">Plimploms</div><div class="lang"><button id="bEn" class="on">EN</button> <button id="bDe">DE</button></div></header>
+<main>
+<section class="hero">
+  <div>
+    <div lang="en"><h1>A shared world of evolving creatures</h1>
+    <p class="sub">Plimploms are artificial creatures. Nobody gave them body parts, behaviour or language. They evolve, learn and talk in one world that never stops, and everyone who visits sees the same one.</p>
+    <p><a class="cta" href="/world.html">Enter the world</a></p>
+    <p class="note">Free, no sign-up, no ads. Works in any modern browser.</p></div>
+    <div lang="de"><h1>Eine gemeinsame Welt entstehender Lebewesen</h1>
+    <p class="sub">Plimploms sind künstliche Lebewesen. Niemand hat ihnen Körperteile, Verhalten oder Sprache vorgegeben. Sie entwickeln sich, lernen und sprechen in einer Welt, die nie stehen bleibt, und alle Besucher sehen dieselbe.</p>
+    <p><a class="cta" href="/world.html?lang=de">Zur Welt</a></p>
+    <p class="note">Kostenlos, ohne Anmeldung, ohne Werbung. Läuft in jedem modernen Browser.</p></div>
+  </div>
+  <img src="/hero.jpg" width="1244" height="623" alt="Pixel-art world with many small creatures, forests, deserts, snow and a coast" fetchpriority="high">
+</section>
+
+<div lang="en">
+<div class="grid">
+  <div class="card"><h3>Evolution you can watch</h3><p>Bodies, brains and behaviour are inherited and mutated. Whoever finds enough food reproduces. Legs, fins, wings and weapons appear because they pay off.</p></div>
+  <div class="card"><h3>Brains that learn</h3><p>Every Plimplom decides with its own neural network and keeps learning during its life. Stroking rewards, scolding punishes.</p></div>
+  <div class="card"><h3>A language of their own</h3><p>Words start as random syllables. Meaning arises from what they experience together. Teach them new words by pointing at things.</p></div>
+  <div class="card"><h3>Your own terrarium</h3><p>Adopt a Plimplom, name it, raise it and release it into the shared world. It keeps living when you are away.</p></div>
+  <div class="card"><h3>One world for everyone</h3><p>The world runs on a server, day and night. Seasons, days and years are the same for all visitors.</p></div>
+  <div class="card"><h3>Open and honest</h3><p>The simulation core is written in Rust, runs as WebAssembly and is open source. Evolution is real, but happens inside rules we wrote, and we say so.</p></div>
+</div>
+<h2>Questions</h2>
+<details><summary>Do I need an account?</summary><p>No. Your browser keeps an anonymous token that connects you to your own terrarium. No name, email or tracking.</p></details>
+<details><summary>Is it free?</summary><p>Yes. If you like it, you can support the server with a coffee.</p></details>
+<details><summary>Is this real evolution?</summary><p>Genes, mutation and selection are real and nothing is scripted per behaviour. But the creatures live inside a fixed set of rules and senses that we designed, so entirely new abilities cannot appear. It is a bounded, observable experiment.</p></details>
+<details><summary>Can I watch on my phone?</summary><p>Yes, but the world is designed for larger screens. A desktop browser gives the best view.</p></details>
+</div>
+
+<div lang="de">
+<div class="grid">
+  <div class="card"><h3>Evolution zum Zuschauen</h3><p>Körper, Gehirn und Verhalten werden vererbt und verändern sich. Wer genug Nahrung findet, pflanzt sich fort. Beine, Flossen, Flügel und Waffen entstehen, weil sie sich lohnen.</p></div>
+  <div class="card"><h3>Gehirne, die lernen</h3><p>Jeder Plimplom entscheidet mit einem eigenen neuronalen Netz und lernt sein Leben lang weiter. Streicheln belohnt, Tadeln bestraft.</p></div>
+  <div class="card"><h3>Eine eigene Sprache</h3><p>Wörter beginnen als zufällige Silben. Die Bedeutung entsteht aus gemeinsamen Erlebnissen. Sie können neue Wörter beibringen, indem Sie auf Dinge zeigen.</p></div>
+  <div class="card"><h3>Ihr eigenes Terrarium</h3><p>Adoptieren, benennen, großziehen und in die gemeinsame Welt entlassen. Es lebt weiter, während Sie weg sind.</p></div>
+  <div class="card"><h3>Eine Welt für alle</h3><p>Die Welt läuft auf einem Server, Tag und Nacht. Jahreszeiten, Tage und Jahre sind für alle Besucher gleich.</p></div>
+  <div class="card"><h3>Offen und ehrlich</h3><p>Der Simulationskern ist in Rust geschrieben, läuft als WebAssembly und ist Open Source. Die Evolution ist echt, passiert aber innerhalb von Regeln, die wir geschrieben haben, und das sagen wir offen.</p></div>
+</div>
+<h2>Fragen</h2>
+<details><summary>Brauche ich ein Konto?</summary><p>Nein. Ihr Browser merkt sich ein anonymes Token, das Sie Ihrem Terrarium zuordnet. Kein Name, keine E-Mail, kein Tracking.</p></details>
+<details><summary>Ist es kostenlos?</summary><p>Ja. Wenn es Ihnen gefällt, können Sie den Server mit einem Kaffee unterstützen.</p></details>
+<details><summary>Ist das echte Evolution?</summary><p>Gene, Mutation und Auslese sind echt, und für kein Verhalten gibt es ein Skript. Die Wesen leben aber in einem festen Satz von Regeln und Sinnen, den wir entworfen haben. Völlig neue Fähigkeiten können deshalb nicht entstehen. Es ist ein begrenztes, beobachtbares Experiment.</p></details>
+<details><summary>Geht das auch am Handy?</summary><p>Ja, die Welt ist aber für größere Bildschirme gemacht. Am besten funktioniert ein Desktop-Browser.</p></details>
+</div>
+</main>
+<footer>
+  <a href="/world.html">Plimploms</a> |
+  <a href="https://github.com/Dontorpedo/wildlinge" rel="noopener">GitHub</a> |
+  <a href="https://buymeacoffee.com/denisthedev" rel="noopener">Buy me a coffee</a> |
+  <a href="/impressum.html">Impressum / Legal</a> |
+  <a href="/datenschutz.html">Datenschutz / Privacy</a>
+</footer>
+<script>
+(function(){
+  var q=/[?&]lang=(en|de)/.exec(location.search),s=null;
+  try{s=localStorage.getItem('wildlinge-lang')}catch(e){}
+  var l=q?q[1]:(s==='de'?'de':'en');
+  function set(v){document.documentElement.lang=v;document.getElementById('bEn').className=v==='en'?'on':'';document.getElementById('bDe').className=v==='de'?'on':'';try{localStorage.setItem('wildlinge-lang',v)}catch(e){}
+    var a=document.querySelectorAll('a.cta');for(var i=0;i<a.length;i++){a[i].href='/world.html'+(v==='de'?'?lang=de':'')}}
+  document.getElementById('bEn').onclick=function(){set('en')};
+  document.getElementById('bDe').onclick=function(){set('de')};
+  set(l);
+})();
+</script>
+</body>
+</html>
