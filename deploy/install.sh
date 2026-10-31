@@ -31,6 +31,12 @@ install -m 755 "$HERE/wildlinge-server" /opt/wildlinge/wildlinge-server
 install -m 644 "$HERE/wildlinge.html" /var/www/wildlinge/world.html
 [ -d "$HERE/static" ] && install -m 644 "$HERE"/static/* /var/www/wildlinge/
 install -m 644 "$HERE/wildlinge.service" /etc/systemd/system/wildlinge.service
+if [ -f "$HERE/poster.py" ]; then
+  install -m 755 "$HERE/poster.py" /opt/wildlinge/poster.py
+  install -m 644 "$HERE/wildlinge-poster.service" /etc/systemd/system/wildlinge-poster.service
+  install -m 644 "$HERE/wildlinge-poster.timer" /etc/systemd/system/wildlinge-poster.timer
+  [ -f /etc/wildlinge-poster.env ] || install -m 600 "$HERE/poster.env.example" /etc/wildlinge-poster.env
+fi
 
 if [ ! -f /etc/wildlinge.env ]; then
   if [ "$DOMAIN" != "_" ] && [ -n "$EMAIL" ]; then
@@ -56,6 +62,7 @@ chmod 755 /etc/cron.daily/wildlinge-backup
 
 systemctl daemon-reload
 systemctl enable --now wildlinge
+[ -f /etc/systemd/system/wildlinge-poster.timer ] && systemctl enable --now wildlinge-poster.timer
 systemctl reload nginx
 
 if [ "$DOMAIN" != "_" ] && [ -n "$EMAIL" ]; then

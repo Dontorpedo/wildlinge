@@ -1,0 +1,16 @@
+[Unit]
+Description=Plimploms auto poster (X)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=wildlinge
+Group=wildlinge
+Environment=WL_DATA=/var/lib/wildlinge
+EnvironmentFile=-/etc/wildlinge-poster.env
+ExecStart=/usr/bin/python3 /opt/wildlinge/poster.py
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/wildlinge

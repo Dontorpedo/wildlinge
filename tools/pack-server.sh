@@ -8,6 +8,6 @@ rm -rf "$out" && mkdir -p "$out"
 cp server/target/release/wildlinge-server "$out/"
 cp dist/wildlinge.html "$out/"
 mkdir -p "$out/static" && cp web/static/* "$out/static/"
-cp deploy/install.sh deploy/wildlinge.service deploy/nginx.conf.template "$out/"
+cp deploy/install.sh deploy/wildlinge.service deploy/nginx.conf.template deploy/poster.py deploy/wildlinge-poster.service deploy/wildlinge-poster.timer deploy/poster.env.example "$out/"
 tar -C dist -czf dist/wildlinge-server.tar.gz wildlinge-deploy
 ls -la dist/wildlinge-server.tar.gz
