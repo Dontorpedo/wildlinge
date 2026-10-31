@@ -159,7 +159,7 @@ fn metabolize(w: &mut World, c: &mut Creature, water: u8, sleep: f32, drown: f32
     }
     if c.sick > 0 {
         c.sick -= 1;
-        c.health -= 0.07;
+        c.health -= 0.05;
         if c.sick == 0 {
             c.imm = w.wev_end.max(w.t);
         }

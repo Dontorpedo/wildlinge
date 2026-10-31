@@ -625,7 +625,7 @@ impl World {
                 continue;
             }
             for &(x, y) in &pos {
-                if (cx - x).powi(2) + (cy - y).powi(2) < 45.0 * 45.0 && self.rng.chance(0.3) {
+                if (cx - x).powi(2) + (cy - y).powi(2) < 45.0 * 45.0 && self.rng.chance(0.15) {
                     self.creatures[i].sick = 600;
                     break;
                 }
@@ -1438,7 +1438,7 @@ impl World {
             self.spread_disease();
         }
         for _ in 0..PLANT_TRIES {
-            if self.plants < PLANT_MAX && (self.wev != 1 || self.rng.chance(0.2)) {
+            if self.plants < PLANT_MAX && (self.wev != 1 || self.rng.chance(0.4)) {
                 self.grow_plant(false);
             }
         }

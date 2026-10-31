@@ -7,7 +7,7 @@ use crate::world::*;
 use serde_json::{json, Value};
 use std::cell::RefCell;
 
-pub const CS_STRIDE: usize = 91;
+pub const CS_STRIDE: usize = 92;
 pub const FOOD_STRIDE: usize = 6;
 
 #[derive(Default)]
@@ -47,6 +47,8 @@ pub fn frame(w: &mut World, x0: f32, y0: f32, x1: f32, y1: f32, wpp: f32, sel: u
         let start = cs.len();
         cs.resize(start + CS_STRIDE, 0.0);
         fill_rec(c, &bosses, detail, &mut cs[start..start + CS_STRIDE]);
+        let wat = if c.fly { 0.0 } else { BIOMES[w.bio_at(c.x, c.y)].water as f32 };
+        cs[start + 91] = wat + if c.sick > 0 { 4.0 } else { 0.0 };
     }
     for f in &w.foods {
         if f.e > 0.0 && f.x > x0 - 10.0 && f.x < x1 + 10.0 && f.y > y0 - 10.0 && f.y < y1 + 10.0 {
@@ -106,7 +108,8 @@ pub fn fill_rec(c: &crate::creature::Creature, bosses: &[u32], detail: bool, r: 
     for (i, v) in crate::genome::look_pheno(&c.g).iter().enumerate() {
         r[82 + i] = *v as f32;
     }
-    if detail {
+    let _ = detail;
+    {
         let n = c.pp.len().min(MAX_PARTS);
         r[19] = n as f32;
         for (i, q) in c.pp.iter().take(n).enumerate() {

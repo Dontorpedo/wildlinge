@@ -1,6 +1,6 @@
 'use strict';
 /* Plimploms graphics: pixel terrain and creatures with mutable shapes (elongation, boxiness, segments, head, taper). */
-const WORLD_W = 4000, WORLD_H = 2400, TAU = Math.PI * 2, VIEW_W = 1600, VIEW_H = 800, YEAR_LEN = 36000, DAY_LEN = 2400, CS_STRIDE = 91, MEAT_DECAY = 1500;
+const WORLD_W = 4000, WORLD_H = 2400, TAU = Math.PI * 2, VIEW_W = 1600, VIEW_H = 800, YEAR_LEN = 36000, DAY_LEN = 2400, CS_STRIDE = 92, MEAT_DECAY = 1500;
 const S = 2, BW = Math.ceil(VIEW_W / S), BH = Math.ceil(VIEW_H / S), TPX = 3;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const rp = Math.round;
@@ -541,7 +541,7 @@ function drawCreature(cs, o, sel, wpp, ox, oy, st) {
     top -= 2;
   }
   const act = cs[o + 90] | 0;
-  if (act > 0 && r >= 7 && st.showAct !== false) {
+  if (act > 0 && act !== 6 && r >= (st.sprFor === o ? 4 : 7) && st.showAct !== false) {
     const ic = ACT_ICONS[act], yy = top - 7, xx = px - 3;
     b.fillStyle = 'rgba(30,30,50,.72)'; b.fillRect(xx - 1, yy - 1, 7, 7);
     b.fillStyle = ic[0];

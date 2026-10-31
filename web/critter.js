@@ -331,7 +331,7 @@ function crAnimHas(idx) { return crAnimData !== null && CR_ANIM_META.sp[idx] != 
 function crAnimFrame(sp, hue, acc, act, f) {
   const am = CR_ANIM_META, a = am.sp[sp.idx], ai = am.acts.indexOf(act);
   if (!a || ai < 0) return null;
-  const key = sp.idx + '|' + hue + '|' + acc + '|' + ai + '|' + f;
+  const pat = sp.pat | 0, key = sp.idx + '|' + hue + '|' + acc + '|' + ai + '|' + f + '|' + pat;
   let e = crAnimCache.get(key);
   if (e) return e;
   const m = sp.m, cx = (ai * am.nf + f) * a.aw, cy = a.y, A = crAnimData, ah = crAccHue(acc);
@@ -345,8 +345,13 @@ function crAnimFrame(sp, hue, acc, act, f) {
     if (!(sat < 0.28 && v > 0.7)) {
       const dh = Math.abs(((h - m.dom + 540) % 360) - 180);
       let nh = -1;
-      if (dh >= 135) nh = (hue + (h - m.dom) + 720) % 360; else if (sat > 0.3) nh = ah;
-      if (nh >= 0) { const c = crHsv2rgb(nh, sat, v); r = c[0]; g = c[1]; b = c[2]; }
+      let ns = sat, nv = v;
+      if (dh >= 135) {
+        nh = (hue + (h - m.dom) + 720) % 360;
+        const q = pat ? crPattern(pat, xx, y - a.mt, a.aw, a.ah - a.mt - a.mb, sat, v, ah) : null;
+        if (q) { if (q[0] >= 0) nh = q[0]; ns = q[1]; nv = q[2]; }
+      } else if (sat > 0.3) nh = ah;
+      if (nh >= 0) { const c = crHsv2rgb(nh, ns, nv); r = c[0]; g = c[1]; b = c[2]; }
     }
     d[o] = r; d[o + 1] = g; d[o + 2] = b; d[o + 3] = 255;
   }
@@ -356,9 +361,43 @@ function crAnimFrame(sp, hue, acc, act, f) {
   crAnimCache.set(key, e);
   return e;
 }
+/* genetic body pattern on the main body colour: 1 speckles, 2 stripes, 3 blotches, 4 light belly, 5 dark saddle */
+function crPatHash(x, y, k) { let h = Math.imul(x * 374761393 + y * 668265263 + k * 1442695041, 1274126177); h ^= h >>> 13; return ((h >>> 0) % 1000) / 1000; }
+function crPattern(pat, x, y, w, h, sat, v, ah) {
+  switch (pat) {
+    case 1: return crPatHash(x >> 1, y >> 1, 3) > 0.82 ? [ah, Math.min(1, sat + 0.15), v * 0.9] : null;
+    case 2: return ((x >> 1) % 3) === 0 && y > h * 0.15 ? [ah, Math.min(1, sat + 0.1), v * 0.82] : null;
+    case 3: return crPatHash(x >> 2, y >> 2, 7) > 0.68 ? [ah, sat, v * 0.88] : null;
+    case 4: return y > h * 0.62 ? [-1, sat * 0.45, Math.min(1, v * 1.18)] : null;
+    case 5: return y < h * 0.4 && y > h * 0.08 ? [-1, Math.min(1, sat * 1.1), v * 0.7] : null;
+  }
+  return null;
+}
+function crPartImg(name, i, hue, accIdx) {
+  const key = name + '|' + i + '|' + hue + '|' + accIdx;
+  let e = crWingCache.get(key);
+  if (e) return e;
+  const p = crTint(name, i, hue, crAccHue(accIdx)), bb = crBBox(p), w = Math.max(1, bb[2] - bb[0]), h = Math.max(1, bb[3] - bb[1]);
+  const cnv = document.createElement('canvas'); cnv.width = w; cnv.height = h;
+  const x = cnv.getContext('2d'), img = x.createImageData(w, h);
+  for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) { const s = ((bb[1] + yy) * p.w + bb[0] + xx) * 4, o = (yy * w + xx) * 4; for (let k = 0; k < 4; k++) img.data[o + k] = p.d[s + k]; }
+  x.putImageData(img, 0, 0);
+  e = { cnv, w, h };
+  crWingCache.set(key, e);
+  return e;
+}
+/* top contour of a whole sprite: first opaque row per column */
+function crContour(sp) {
+  if (sp.cont) return sp.cont;
+  const d = sp.cnv.getContext('2d').getImageData(0, 0, sp.w, sp.h).data, c = new Int16Array(sp.w).fill(-1);
+  for (let x = 0; x < sp.w; x++) for (let y = 0; y < sp.h; y++) if (d[(y * sp.w + x) * 4 + 3] > 128) { c[x] = y; break; }
+  sp.cont = c;
+  return c;
+}
 function crAccHue(i) { const c = crHex(CR_ACC[i % CR_ACC.length]); return crRgb2hsv(c[0], c[1], c[2])[0]; }
-function crWholeSprite(idx, hue, accIdx) {
-  const key = idx + '|' + hue + '|' + accIdx;
+function crWholeSprite(idx, hue, accIdx, pat) {
+  pat = pat | 0;
+  const key = idx + '|' + hue + '|' + accIdx + '|' + pat;
   let e = crWholeCache.get(key);
   if (e) return e;
   const m = CR_WHOLE_META[idx], cx = (idx % 10) * 96, cy = ((idx / 10) | 0) * 64, A = crWholeData, ah = crAccHue(accIdx);
@@ -372,14 +411,19 @@ function crWholeSprite(idx, hue, accIdx) {
     if (!(sat < 0.28 && v > 0.7)) {
       const dh = Math.abs(((h - m.dom + 540) % 360) - 180);
       let nh = -1;
-      if (dh >= 135) nh = (hue + (h - m.dom) + 720) % 360; else if (sat > 0.3) nh = ah;
-      if (nh >= 0) { const c = crHsv2rgb(nh, sat, v); r = c[0]; g = c[1]; b = c[2]; }
+      let ns = sat, nv = v;
+      if (dh >= 135) {
+        nh = (hue + (h - m.dom) + 720) % 360;
+        const q = pat ? crPattern(pat, xx, y, m.w, m.h, sat, v, ah) : null;
+        if (q) { if (q[0] >= 0) nh = q[0]; ns = q[1]; nv = q[2]; }
+      } else if (sat > 0.3) nh = ah;
+      if (nh >= 0) { const c = crHsv2rgb(nh, ns, nv); r = c[0]; g = c[1]; b = c[2]; }
     }
     d[o] = r; d[o + 1] = g; d[o + 2] = b; d[o + 3] = al;
   }
   x.putImageData(img, 0, 0);
   const tg = CR_TAGS[idx] || '';
-  e = { cnv, w: m.w, h: m.h, m, idx, cl: undefined, def: new Map(), tail: tg.includes('t'), ear: tg.includes('e') };
+  e = { cnv, w: m.w, h: m.h, m, idx, pat, cl: undefined, def: new Map(), tail: tg.includes('t'), ear: tg.includes('e') };
   if (crWholeCache.size > 700) crWholeCache.delete(crWholeCache.keys().next().value);
   crWholeCache.set(key, e);
   return e;
@@ -691,13 +735,13 @@ const CR_PZ = { act: '', fr: 0, hue: 0, acc: 0, sx: 1, sy: 1, dy: 0, lean: 0, dx
 const crPoseState = new Map();
 function crPose(kind0, t, id, spd, H, W) {
   let S = crPoseState.get(id);
-  if (!S) { if (crPoseState.size > 3000) crPoseState.clear(); S = { kind: kind0, pend: kind0, cnt: 0, t, w: id * 7, sp: spd || 0 }; crPoseState.set(id, S); }
+  if (!S) { if (crPoseState.size > 3000) { let n = 0; for (const k of crPoseState.keys()) { crPoseState.delete(k); if (++n >= 600) break; } } S = { kind: kind0, pend: kind0, cnt: 0, t, w: id * 7, sp: spd || 0 }; crPoseState.set(id, S); }
   if (kind0 === S.kind) S.cnt = 0;
   else if (kind0 === S.pend) { if (++S.cnt >= (kind0 === 'sleep' || kind0 === 'attack' ? 4 : 12)) { S.kind = kind0; S.cnt = 0; } }
   else { S.pend = kind0; S.cnt = 1; }
   const kind = S.kind, dt = Math.max(0, Math.min(4, t - S.t));
   S.t = t; S.sp += ((spd || 0) - S.sp) * Math.min(1, dt * 0.08);
-  const z = CR_PZ; z.sx = 1; z.sy = 1; z.dy = 0; z.lean = 0; z.dx = 0; z.closed = false;
+  const z = CR_PZ; z.sx = 1; z.sy = 1; z.dy = 0; z.lean = 0; z.dx = 0; z.closed = false; z.bx = 1; z.by = 1;
   const sp = 0.5 + Math.min(1.5, S.sp) * 0.5, ab = Math.abs;
   S.w += dt * (kind === 'walk' ? sp : kind === 'run' ? sp * 1.5 : 1);
   const w = S.w;
@@ -788,7 +832,7 @@ function crWholeBlit(ctx, sp, px, gy, s, flip, z) {
   return crBlitSrc(ctx, src, pad, px, gy, s, flip, z);
 }
 function crBlitSrc(ctx, src, pad, px, gy, s, flip, z) {
-  const cw = src.width, ch = src.height, Wd = Math.max(1, Math.round(cw * s * z.sx)), Hd = Math.max(1, Math.round(ch * s * z.sy)), bottom = gy + z.dy + Math.round(pad * s * z.sy);
+  const bx = z.bx || 1, by = z.by || 1, cw = src.width, ch = src.height, Wd = Math.max(1, Math.round(cw * s * z.sx * bx)), Hd = Math.max(1, Math.round(ch * s * z.sy * by)), bottom = gy + z.dy + Math.round(pad * s * z.sy * by);
   const nb = Hd >= 24 && Math.abs(z.lean) >= 1 && s >= 1 ? 3 : 1;
   ctx.imageSmoothingEnabled = s < 0.75;
   let X = px;
@@ -808,20 +852,34 @@ function crBlitSrc(ctx, src, pad, px, gy, s, flip, z) {
 function crDrawWhole(cs, o, px, py, r, baby, moving, st, hp) {
   const rec = cs.subarray(o, o + CS_STRIDE), id = cs[o] | 0, dir = cs[o + 3], fly = cs[o + 9] > 0, act = cs[o + 90] | 0, sl = cs[o + 12] > 0.5;
   const hue = (Math.round(rec[5] / 12) * 12) % 360, acc = rec[82] | 0, idx = crPickIdx(rec);
-  const sp = crWholeSprite(idx, hue, acc);
+  const sp = crWholeSprite(idx, hue, acc, rec[83] | 0);
   let s = (r * 2.5 * (baby ? 0.75 : 1)) / sp.h;
   s = s < 0.75 ? s : s < 1.5 ? 1 : Math.round(s);
   const w = Math.max(1, Math.round(sp.w * s)), h = Math.max(1, Math.round(sp.h * s));
   let PS = crPoseState.get(id);
   if (!PS) { crPose('idle', st.animT, id, cs[o + 18], 1, 1); PS = crPoseState.get(id); PS.flip = Math.cos(dir) < 0 ? -1 : 1; }
-  const cd = Math.cos(dir);
-  if (PS.flip === undefined) PS.flip = cd < 0 ? -1 : 1; else if (PS.flip > 0 && cd < -0.3) PS.flip = -1; else if (PS.flip < 0 && cd > 0.3) PS.flip = 1;
+  /* facing follows the smoothed real movement, not the heading: heading can swing every tick at walls and shores */
+  const wx = cs[o + 1];
+  if (PS.flip === undefined) PS.flip = Math.cos(dir) < 0 ? -1 : 1;
+  if (PS.lx === undefined) { PS.lx = wx; PS.vx = 0; PS.hold = 0; }
+  PS.vx += ((wx - PS.lx) - PS.vx) * 0.2; PS.lx = wx; PS.hold++;
+  if (PS.hold > 14 && moving && Math.abs(PS.vx) > 0.04) {
+    const want = PS.vx < 0 ? -1 : 1;
+    if (want !== PS.flip) { PS.flip = want; PS.hold = 0; }
+  }
   const flip = PS.flip;
   const kind = sl ? 'sleep' : fly ? 'fly' : act === 3 ? 'attack' : act === 4 && !moving ? 'eat' : act === 2 ? 'run' : act === 8 || act === 7 || act === 5 ? 'hop' : moving ? 'walk' : 'idle';
   const z = crPose(kind, st.animT, id, cs[o + 18], h, w);
   z.hue = hue; z.acc = acc;
-  const lift = fly ? Math.round(h * 0.45 + 2 + Math.sin(st.animT * 0.12 + id) * 1.3) : 0;
-  const gy = Math.round(py + h / 2) - lift;
+  z.bx = 0.88 + 0.24 * clamp(rec[20], 0, 1); z.by = 0.94 + 0.12 * clamp(rec[21], 0, 1);
+  const env = cs[o + 91] || 0, water = env & 3, sick = env >= 4;
+  const lift = fly ? Math.round(h * 0.75 + 4 + Math.sin(st.animT * 0.12 + id) * 1.6) : 0;
+  const swim = water === 2 && !fly, sink = swim ? Math.round(h * 0.38) : 0;
+  const gy = Math.round(py + h / 2) - lift + sink + (swim ? Math.round(Math.sin(st.animT * 0.09 + id) * 0.8) : 0);
+  if (fly) {
+    const sw = Math.max(2, Math.round(w * 0.55)), sy = gy + lift + 1;
+    b.fillStyle = 'rgba(15,25,35,.32)'; b.fillRect(px - (sw >> 1), sy, sw, 1); b.fillRect(px - (sw >> 1) + 1, sy + 1, Math.max(1, sw - 2), 1);
+  }
   const hasW = CR_TAGS[idx].includes('w');
   if (fly && !hasW && crReady) {
     const wi = crWingImg(crHash(rec, 6) % 16, hue, acc), ph = ((st.animT >> 1) + id) % 4, f = [1, 0.62, 0.22, 0.62][ph];
@@ -831,9 +889,76 @@ function crDrawWhole(cs, o, px, py, r, baby, moving, st, hp) {
     b.drawImage(wi.cnv, -Math.round(w * 0.5), top, ww, wh);
     b.restore();
   }
-  st.sprTop = crWholeBlit(b, sp, px, gy, s, flip, z);
-  if (fly) { b.fillStyle = 'rgba(20,30,40,.28)'; b.fillRect(px - (w >> 2), gy + lift + 1, w >> 1, 1); }
+  if (swim) {
+    const wl = gy - sink;
+    b.save(); b.beginPath(); b.rect(px - w - 4, wl - h * 3 - 20, 2 * w + 8, h * 3 + 20); b.clip();
+    st.sprTop = crWholeBlit(b, sp, px, gy, s, flip, z);
+    b.restore();
+    const rw = Math.max(3, Math.round(w * 0.9)), ph = (st.animT >> 3) + id;
+    b.fillStyle = 'rgba(210,240,255,.75)'; b.fillRect(px - (rw >> 1), wl, rw, 1);
+    b.fillStyle = 'rgba(210,240,255,.45)';
+    const o2 = ph % 3;
+    b.fillRect(px - (rw >> 1) - 2 - o2, wl + 1, 2, 1); b.fillRect(px + (rw >> 1) + o2, wl + 1, 2, 1);
+    if (moving) { b.fillRect(px - flip * ((rw >> 1) + 3 + o2), wl, 2, 1); }
+  } else {
+    st.sprTop = crWholeBlit(b, sp, px, gy, s, flip, z);
+    if (water === 1 && !fly && moving && ((st.animT >> 2) + id) % 3 === 0) {
+      b.fillStyle = 'rgba(210,240,255,.55)'; b.fillRect(px - (w >> 2) - 1, gy, 2, 1); b.fillRect(px + (w >> 2), gy, 2, 1);
+    }
+  }
+  if (s >= 0.75 && st.sprTop !== undefined) crOverlays(rec, sp, px, gy, s, flip, z, st, hue, acc, swim);
+  if (sick && ((st.animT >> 4) + id) % 2 === 0) {
+    const t0 = st.sprTop !== undefined ? st.sprTop : gy - h;
+    b.fillStyle = '#8fdc4a'; b.fillRect(px - 3, t0 - 2, 1, 1); b.fillRect(px + 2, t0 - 4, 1, 1); b.fillRect(px, t0 - 6, 1, 1);
+  }
   return true;
+}
+/* visible mutations on top of the whole sprite: horns, crest, feelers, plates, fur, dorsal fin */
+function crOverlays(rec, sp, px, gy, s, flip, z, st, hue, acc, swim) {
+  const np = rec[19] | 0, k = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  for (let i = 0; i < np; i++) k[rec[26 + i * 7 + 5] | 0]++;
+  if (!(k[1] || k[3] || k[4] || k[5] || k[7] || k[8])) return;
+  const m = sp.m, top = st.sprTop, W = sp.w * s * z.sx * (z.bx || 1), H = gy - top, kx = W / sp.w, ky = H / sp.h;
+  const X = sx => Math.round(px + flip * ((sx - sp.w / 2) * kx) + z.dx + z.lean * 0.5);
+  const cont = crContour(sp), hx = m.hx !== undefined ? m.hx : Math.round(sp.w * 0.75);
+  const Y = sx => { const c = cont[Math.max(0, Math.min(sp.w - 1, sx | 0))]; return Math.round(top + (c < 0 ? sp.h * 0.4 : c) * ky); };
+  const ht = Y(hx);
+  b.imageSmoothingEnabled = false;
+  const tags = CR_TAGS[sp.idx] || '';
+  if (k[8] && !tags.includes('c')) {
+    const im = crPartImg('crests', crHash(rec, 7) % 16, hue, acc), cw = Math.max(3, Math.round(W * 0.28)), chh0 = Math.max(2, Math.round(cw * im.h / im.w)), chh = Math.min(chh0, Math.max(2, Math.round(H * 0.25)));
+    const cx = X(hx - sp.w * 0.08);
+    b.save(); b.translate(cx, 0); b.scale(flip, 1); b.drawImage(im.cnv, -(Math.round(cw * chh / chh0) >> 1), ht - chh + 2, Math.max(2, Math.round(cw * chh / chh0)), chh); b.restore();
+  }
+  if (k[3] && !tags.includes('h')) {
+    const im = crPartImg('horns', crHash(rec, 8) % 16, hue, acc), hw = Math.max(3, Math.round(W * (0.22 + 0.06 * Math.min(3, k[3])))), hh0 = Math.max(2, Math.round(hw * im.h / im.w)), hh = Math.min(hh0, Math.max(2, Math.round(H * 0.3)));
+    const cx = X(hx);
+    b.save(); b.translate(cx, 0); b.scale(flip, 1); b.drawImage(im.cnv, -(Math.round(hw * hh / hh0) >> 1), ht - hh + 2, Math.max(2, Math.round(hw * hh / hh0)), hh); b.restore();
+  }
+  if (k[5] && !tags.includes('n')) {
+    const len = Math.max(3, Math.round(H * 0.28)), ax = X(hx + sp.w * 0.04), sway = Math.round(Math.sin(st.animT * 0.08 + rec[0]) * 1.2);
+    b.fillStyle = '#3a3150';
+    for (const d of [-1, 2]) for (let j = 0; j < len; j++) b.fillRect(ax + d + Math.round(sway * j / len) + (j > len * 0.6 ? flip : 0), ht - j, 1, 1);
+    b.fillStyle = `hsl(${crAccHue(acc)},80%,60%)`;
+    b.fillRect(ax - 1 + sway + flip, ht - len, 2, 2); b.fillRect(ax + 2 + sway + flip, ht - len, 2, 2);
+  }
+  if (k[4] && !tags.includes('a')) {
+    const n = Math.min(4, 2 + k[4]);
+    for (let i = 0; i < n; i++) {
+      const sx = Math.round(sp.w * (0.2 + 0.45 * i / Math.max(1, n - 1))), x = X(sx), y = Y(sx), pw = Math.max(2, Math.round(W * 0.09));
+      b.fillStyle = 'rgba(40,46,70,.85)'; b.fillRect(x - (pw >> 1), y - 1, pw, 3);
+      b.fillStyle = 'rgba(190,200,225,.9)'; b.fillRect(x - (pw >> 1), y - 1, pw, 1);
+    }
+  }
+  if (k[7]) {
+    b.fillStyle = 'rgba(255,250,235,.8)';
+    for (let i = 0; i < 6; i++) { const sx = Math.round(sp.w * (0.15 + 0.11 * i)), x = X(sx), y = Y(sx); b.fillRect(x, y - 1 - (i & 1), 1, 1 + (i & 1)); }
+  }
+  if (k[1] && !swim && !tags.includes('f')) {
+    const sx = Math.round(sp.w * 0.42), x = X(sx), y = Y(sx), fh = Math.max(2, Math.round(H * 0.22));
+    b.fillStyle = `hsl(${hue},55%,45%)`;
+    for (let j = 0; j < fh; j++) b.fillRect(x - flip * Math.round(j * 0.6), y - j, Math.max(1, Math.round((fh - j) * 0.7)), 1);
+  }
 }
 function crDrawWild(cs, o, px, py, r, baby, moving, st, hp) {
   if (crWholeOn()) return crDrawWhole(cs, o, px, py, r, baby, moving, st, hp);

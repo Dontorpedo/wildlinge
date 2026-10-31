@@ -25,6 +25,7 @@ fn main() {
             w.teach(&["kalu".to_string()], x, y);
             w.stroke(0, 1.0);
         }
+        if std::env::var("POPLOG").is_ok() && i % 600 == 0 { println!("poplog t {} day {} pop {} wev {}", i, i / 2400, w.creatures.len(), w.wev); }
         if i % 3000 == 0 {
             let mut now = [0usize; 9];
             let mut life = [0u64; 9];

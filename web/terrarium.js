@@ -124,7 +124,7 @@ function tzSoc(c) {
 function tzGrowth(c) { return Math.min(1, c.age / TZ.GROW); }
 function tzWholeGeom(c) {
   const g = tzGrowth(c), r = Math.max(2, Math.round(c.rT * (0.5 + 0.5 * g))), idx = crPickIdx(c.rec);
-  const sp = crWholeSprite(idx, (Math.round(c.rec[5] / 12) * 12) % 360, c.rec[82] | 0);
+  const sp = crWholeSprite(idx, (Math.round(c.rec[5] / 12) * 12) % 360, c.rec[82] | 0, c.rec[83] | 0);
   const s = Math.max(1, Math.round(r * 2.4 / sp.h));
   c.r = r; c.ws = s; c.wsp = sp;
   c.half = Math.max(8, sp.h * s / 2); c.halfW = Math.max(8, sp.w * s * 0.45); c.bodyH = sp.h * s * 0.6; c.legL = 3 * s;
