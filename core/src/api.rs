@@ -309,7 +309,7 @@ pub fn panel(w: &World, sel: u32) -> String {
         Some(i) => sel_json(w, i),
     };
     json!({
-        "t": w.t, "day": [year, day], "season": w.season_key(), "frozen": w.frozen, "night": w.night > 0.5, "seed": w.seed,
+        "t": w.t, "day": [year, day], "season": w.season_key(), "frozen": w.frozen, "night": w.night > 0.5, "seed": w.seed, "wev": [w.wev, w.wev_end.saturating_sub(w.t), cs.iter().filter(|c| c.sick > 0).count()],
         "pop": cs.len(), "spCount": w.species.iter().filter(|s| s.n >= 5).count(),
         "goals": goals,
         "stats": {"herb": cs.len() - carn, "carn": carn, "plants": w.plants, "dets": w.dets, "fert": w.fert, "gen": w.max_gen, "wb": avg(&|c| c.wellbeing),

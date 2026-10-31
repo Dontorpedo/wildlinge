@@ -157,6 +157,13 @@ fn metabolize(w: &mut World, c: &mut Creature, water: u8, sleep: f32, drown: f32
     if c.cold > 0.8 || c.hot > 0.8 {
         c.health -= 0.1;
     }
+    if c.sick > 0 {
+        c.sick -= 1;
+        c.health -= 0.07;
+        if c.sick == 0 {
+            c.imm = w.wev_end.max(w.t);
+        }
+    }
     let life = c.g.tr[T_LIFE];
     if c.age as f32 > life {
         c.health -= 0.3;
@@ -177,6 +184,8 @@ fn metabolize(w: &mut World, c: &mut Creature, water: u8, sleep: f32, drown: f32
             "frozen"
         } else if c.hot > 0.8 {
             "heat"
+        } else if c.sick > 0 {
+            "disease"
         } else if c.age as f32 > life {
             "age"
         } else {
@@ -488,7 +497,7 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
 
     // temperature, body shape matters: long thin bodies lose heat, compact ones keep it
     let shp = c.g.shape;
-    let temp = btemp + (w.sf - 0.5) * 24.0 - if frozen { 2.0 } else { 0.0 } - w.night * 3.0;
+    let temp = btemp + (w.sf - 0.5) * 24.0 - if frozen { 2.0 } else { 0.0 } - w.night * 3.0 - if w.wev == 2 { 12.0 } else { 0.0 };
     let felt = temp + c.ab.ab[A_INSUL] * 14.0 + c.ab.ab[A_STORAGE] * 4.0 + size * 0.3 - shp[S_ELONG] * 3.0 - (shp[S_SEG].floor() - 1.0) * 1.0;
     c.cold = clamp((10.0 - felt) / 20.0, 0.0, 1.0);
     c.hot = clamp((felt - 27.0) / 18.0, 0.0, 1.0);

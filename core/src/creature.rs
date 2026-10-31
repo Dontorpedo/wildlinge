@@ -126,6 +126,10 @@ pub struct Creature {
     #[serde(default)]
     pub cret: u32,
     #[serde(default)]
+    pub sick: u32,
+    #[serde(default)]
+    pub imm: u32,
+    #[serde(default)]
     pub rx_t: u32,
     #[serde(default)]
     pub rc_t: u32,
@@ -234,6 +238,8 @@ impl Creature {
             last_atk: -1_000_000_000,
             cdep: 0,
             cret: 0,
+            sick: 0,
+            imm: 0,
             rx_t: 0,
             rc_t: 0,
             last_birth: -1_000_000_000,

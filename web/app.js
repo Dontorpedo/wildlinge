@@ -232,7 +232,8 @@ function drawBubbles(ox, oy, wpp) {
 /* ---------- panels ---------- */
 function renderPanel(p) {
   const stepMs = frame ? frame.stepMs || 0 : 0;
-  $('clock').textContent = t('app.clock', tDay(p.day), tSeason(p.season), p.pop, p.spCount, stepMs.toFixed(1)) + (mode === 'main' ? ' | ' + t('app.mainThread') : '');
+  $('clock').textContent = t('app.clock', tDay(p.day), tSeason(p.season), p.pop, p.spCount, stepMs.toFixed(1)) + (mode === 'main' ? ' | ' + t('app.mainThread') : '')
+    + (p.wev && p.wev[0] ? ' | ' + t('app.wevBanner', tr('wev')[['', 'drought', 'frost', 'disease'][p.wev[0]]], p.wev[1], p.wev[0] === 3 ? t('app.wevSick', p.wev[2]) : '') : '');
   if (activeTab === 'world') renderWorld(p);
   if (activeTab === 'creature') renderSel(p.sel);
   if (activeTab === 'research') renderResearch(p);

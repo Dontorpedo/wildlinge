@@ -210,7 +210,8 @@ const I18N = {
     phases: { child: 'child', adult: 'adult', elder: 'elder' },
     kinds: { leg: 'leg', fin: 'fin', wing: 'wing', weapon: 'spike', armor: 'plate', sense: 'feeler', storage: 'pouch', insul: 'fur', display: 'crest', bud: 'bud' },
     abil: { leg: 'walking', fin: 'swimming', wing: 'flying', weapon: 'weapon', armor: 'armour', sense: 'feeling', storage: 'storage', insul: 'insulation', display: 'signal' },
-    causes: { hunger: 'hunger', drowned: 'drowned', frozen: 'frozen', heat: 'heat', age: 'old age', injury: 'injury', eaten: 'eaten', thirst: 'thirst', cold: 'cold', stress: 'stress', terrarium: 'terrarium', lonely: 'loneliness' },
+    wev: { drought: 'drought', frost: 'cold wave', disease: 'disease outbreak' },
+    causes: { disease: 'disease', hunger: 'hunger', drowned: 'drowned', frozen: 'frozen', heat: 'heat', age: 'old age', injury: 'injury', eaten: 'eaten', thirst: 'thirst', cold: 'cold', stress: 'stress', terrarium: 'terrarium', lonely: 'loneliness' },
     stress: { injuries: 'injuries', cold: 'cold', water: 'water', hunger: 'hunger', stress: 'stress', '': 'by chance' },
     shapes: ['elongation', 'boxiness', 'segments', 'head', 'taper'],
     shapeWords: { round: 'round', long: 'long', boxy: 'boxy', seg: '{0} segments', bigHead: 'big head', tail: 'tapered', pear: 'pear-shaped' },
@@ -255,6 +256,10 @@ const I18N = {
     'ev.extinct': 'The species {0} has died out',
     'ev.pop': 'The population reached {0} creatures',
     'ev.gen': 'The first creature of generation {0} was born',
+    'ev.wev': 'World event: {0} begins (about {1} day(s))',
+    'ev.wevEnd': 'World event over: {0}. Deaths during it: {1}',
+    'app.wevBanner': '{0} - {1} ticks left{2}',
+    'app.wevSick': ', {0} sick',
     'ev.word': 'The word "{0}" is now used by {1} creatures',
     'ev.spread': '{1} spreads in the species {0} ({2} %)',
     'ev.boss': '{1} is the new boss of the {0} ({3} of {4} votes)',
@@ -481,7 +486,8 @@ const I18N = {
     phases: { child: 'Kind', adult: 'erwachsen', elder: 'alt' },
     kinds: { leg: 'Bein', fin: 'Flosse', wing: 'Flügel', weapon: 'Stachel', armor: 'Platte', sense: 'Fühler', storage: 'Beutel', insul: 'Fell', display: 'Kamm', bud: 'Knospe' },
     abil: { leg: 'Laufen', fin: 'Schwimmen', wing: 'Fliegen', weapon: 'Waffe', armor: 'Panzer', sense: 'Fühlen', storage: 'Speicher', insul: 'Isolierung', display: 'Signal' },
-    causes: { hunger: 'Hunger', drowned: 'ertrunken', frozen: 'erfroren', heat: 'Hitze', age: 'Alter', injury: 'Verletzung', eaten: 'gefressen', thirst: 'Durst', cold: 'Kälte', stress: 'Stress', terrarium: 'Terrarium', lonely: 'Einsamkeit' },
+    wev: { drought: 'Dürre', frost: 'Kältewelle', disease: 'Seuche' },
+    causes: { disease: 'Seuche', hunger: 'Hunger', drowned: 'ertrunken', frozen: 'erfroren', heat: 'Hitze', age: 'Alter', injury: 'Verletzung', eaten: 'gefressen', thirst: 'Durst', cold: 'Kälte', stress: 'Stress', terrarium: 'Terrarium', lonely: 'Einsamkeit' },
     stress: { injuries: 'Verletzungen', cold: 'Kälte', water: 'Wasser', hunger: 'Hunger', stress: 'Stress', '': 'zufällig' },
     shapes: ['Streckung', 'Eckigkeit', 'Segmente', 'Kopf', 'Verjüngung'],
     shapeWords: { round: 'rund', long: 'lang', boxy: 'eckig', seg: '{0} Segmente', bigHead: 'großer Kopf', tail: 'verjüngt', pear: 'birnenförmig' },
@@ -526,6 +532,10 @@ const I18N = {
     'ev.extinct': 'Die Art {0} ist ausgestorben',
     'ev.pop': 'Die Bevölkerung hat {0} Kreaturen erreicht',
     'ev.gen': 'Die erste Kreatur der Generation {0} wurde geboren',
+    'ev.wev': 'Weltereignis: {0} beginnt (ca. {1} Tag(e))',
+    'ev.wevEnd': 'Weltereignis vorbei: {0}. Tode währenddessen: {1}',
+    'app.wevBanner': '{0} - noch {1} Ticks{2}',
+    'app.wevSick': ', {0} krank',
     'ev.word': 'Das Wort "{0}" wird jetzt von {1} Kreaturen benutzt',
     'ev.spread': '{1} verbreitet sich in der Art {0} ({2} %)',
     'ev.boss': '{1} ist neuer Boss der {0} ({3} von {4} Stimmen)',
@@ -603,6 +613,8 @@ function tEvent(k, p) {
     case 'ev.spread': return t(k, p[0], tKind(p[1]), p[2]);
     case 'ev.bossDied': return t(k, p[0], p[1], tCause(p[2]));
     case 'ev.knock': return t(k, tr('knocks')[p[0]] || p[0], p[1] === '1' ? t('ev.knockOn') : t('ev.knockOff'));
+    case 'ev.wev': return t(k, tr('wev')[p[0]] || p[0], p[1]);
+    case 'ev.wevEnd': return t(k, tr('wev')[p[0]] || p[0], p[1]);
     case 'ev.adoptedDied': return t(k, p[0], tCause(p[1]));
     default: return t(k, ...p);
   }

@@ -321,6 +321,16 @@ pub struct World {
     #[serde(default)]
     pub words_seen: Vec<String>,
     #[serde(default)]
+    pub wev: u8,
+    #[serde(default)]
+    pub wev_end: u32,
+    #[serde(default)]
+    pub wev_next: u32,
+    #[serde(default)]
+    pub wev_d0: u32,
+    #[serde(default)]
+    pub wev_n: u32,
+    #[serde(default)]
     pub wod_cnt: Vec<(String, u32)>,
     #[serde(default)]
     pub wod: Option<WordDay>,
@@ -546,7 +556,70 @@ impl World {
         self.wod = Some(WordDay { word, day: self.t / DAY_LEN, n, speakers: vs.len() as u32, spread, vec: avg });
     }
 
+    fn world_events(&mut self) {
+        let dead: u32 = self.deaths.values().sum();
+        if self.wev != 0 && self.t >= self.wev_end {
+            let kind = ["", "drought", "frost", "disease"][self.wev as usize];
+            self.event("ev.wevEnd", vec![kind.to_string(), (dead.saturating_sub(self.wev_d0)).to_string()]);
+            self.wev = 0;
+            self.wev_next = self.t + DAY_LEN * 5;
+            for c in self.creatures.iter_mut() {
+                c.sick = 0;
+            }
+            return;
+        }
+        if self.wev != 0 {
+            return;
+        }
+        if self.wev_next == 0 {
+            self.wev_next = DAY_LEN * 4;
+        }
+        if self.t < self.wev_next || self.creatures.len() < 30 || !self.rng.chance(0.4) {
+            return;
+        }
+        let kind = 1 + self.rng.below(3) as u8;
+        let days = 1 + self.rng.below(2) as u32;
+        self.wev = kind;
+        self.wev_end = self.t + DAY_LEN * days;
+        self.wev_d0 = dead;
+        self.wev_n += 1;
+        if kind == 3 {
+            let n = self.creatures.len();
+            for _ in 0..(n / 25).max(3) {
+                let i = self.rng.below(n);
+                self.creatures[i].sick = 600;
+            }
+        }
+        let name = ["", "drought", "frost", "disease"][kind as usize];
+        self.event("ev.wev", vec![name.to_string(), days.to_string()]);
+    }
+
+    /// Every 60 ticks while a disease is active: neighbours of sick creatures may catch it.
+    fn spread_disease(&mut self) {
+        let pos: Vec<(f32, f32)> = self.creatures.iter().filter(|c| c.sick > 0).map(|c| (c.x, c.y)).collect();
+        if pos.is_empty() {
+            return;
+        }
+        let t = self.t;
+        for i in 0..self.creatures.len() {
+            let (cx, cy, ok) = {
+                let c = &self.creatures[i];
+                (c.x, c.y, c.sick == 0 && c.imm <= t)
+            };
+            if !ok {
+                continue;
+            }
+            for &(x, y) in &pos {
+                if (cx - x).powi(2) + (cy - y).powi(2) < 45.0 * 45.0 && self.rng.chance(0.3) {
+                    self.creatures[i].sick = 600;
+                    break;
+                }
+            }
+        }
+    }
+
     fn chronicle(&mut self) {
+        self.world_events();
         self.word_of_day();
         let n = self.creatures.len();
         for (i, m) in [100usize, 250, 400, 500].iter().enumerate() {
@@ -1217,8 +1290,11 @@ impl World {
         }
         self.update_season();
         self.speech = std::mem::take(&mut self.speech_next);
+        if self.wev == 3 && self.t % 60 == 0 {
+            self.spread_disease();
+        }
         for _ in 0..PLANT_TRIES {
-            if self.plants < PLANT_MAX {
+            if self.plants < PLANT_MAX && (self.wev != 1 || self.rng.chance(0.2)) {
                 self.grow_plant(false);
             }
         }
