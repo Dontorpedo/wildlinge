@@ -291,6 +291,10 @@ pub struct World {
     pub lang_buf: Vec<UttRec>,
     #[serde(default)]
     pub terra: Vec<Creature>,
+    #[serde(default)]
+    pub pop_marks: u32,
+    #[serde(default)]
+    pub words_seen: Vec<String>,
     #[serde(skip)]
     pub newborn: Vec<Creature>,
     #[serde(skip)]
@@ -478,9 +482,37 @@ impl World {
         self.night = clamp((0.45 - light) / 0.45, 0.0, 1.0);
     }
 
+    /// Once per day: records population records and newly widespread words in the event log.
+    fn chronicle(&mut self) {
+        let n = self.creatures.len();
+        for (i, m) in [100usize, 250, 400, 500].iter().enumerate() {
+            if n >= *m && self.pop_marks & (1 << i) == 0 {
+                self.pop_marks |= 1 << i;
+                self.event("ev.pop", vec![m.to_string()]);
+            }
+        }
+        let mut cnt: std::collections::HashMap<&str, u32> = std::collections::HashMap::new();
+        for c in &self.creatures {
+            for (w, a) in &c.lex.m {
+                if a.iter().any(|&v| v >= 0.3) {
+                    *cnt.entry(w.as_str()).or_insert(0) += 1;
+                }
+            }
+        }
+        let mut fresh: Vec<(String, u32)> = cnt.into_iter().filter(|(w, c)| *c >= 8 && !self.words_seen.iter().any(|x| x == w)).map(|(w, c)| (w.to_string(), c)).collect();
+        fresh.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+        for (w, c) in fresh.into_iter().take(2) {
+            self.words_seen.push(w.clone());
+            if self.words_seen.len() > 300 {
+                self.words_seen.remove(0);
+            }
+            self.event("ev.word", vec![w, c.to_string()]);
+        }
+    }
+
     pub fn event(&mut self, k: &str, p: Vec<String>) {
         self.events.push(Event { t: self.t, k: k.to_string(), p });
-        if self.events.len() > 60 {
+        if self.events.len() > 400 {
             self.events.remove(0);
         }
     }
@@ -552,6 +584,9 @@ impl World {
         c.born = self.t;
         if c.gen > self.max_gen {
             self.max_gen = c.gen;
+            if c.gen % 5 == 0 {
+                self.event("ev.gen", vec![c.gen.to_string()]);
+            }
         }
         self.lineage.push(Lin { id: c.id, n: c.name.clone(), p1: c.p1, p2: c.p2, b: self.t, d: -1, c: String::new(), g: c.gen });
         if self.lineage.len() > 6000 {
@@ -1103,6 +1138,9 @@ impl World {
             k.e *= 1.0 - CACHE_ROT;
         }
         self.t += 1;
+        if self.t % DAY_LEN == 0 {
+            self.chronicle();
+        }
         self.update_season();
         self.speech = std::mem::take(&mut self.speech_next);
         for _ in 0..PLANT_TRIES {

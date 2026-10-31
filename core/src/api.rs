@@ -243,7 +243,7 @@ pub fn panel(w: &World, sel: u32) -> String {
             .collect()
     };
     let phylo: Vec<Value> = w.phylo.iter().filter(|r| r.max_n >= 3).map(|r| json!({"id": r.id, "name": r.name, "parent": r.parent, "born": r.born, "died": r.died, "carn": r.carn, "hue": r.hue, "maxN": r.max_n})).collect();
-    let events: Vec<Value> = w.events.iter().rev().take(16).map(|e| json!([World::day_of(e.t), e.k, e.p])).collect();
+    let events: Vec<Value> = w.events.iter().rev().take(40).map(|e| json!([World::day_of(e.t), e.k, e.p, e.t])).collect();
     let log: Vec<Value> = w.log.iter().rev().take(16).map(|e| json!({"words": e.words, "id": e.id, "name": e.name, "carn": e.carn, "vec": e.vec, "sector": e.sector})).collect();
     let adopted: Vec<Value> = cs.iter().filter(|c| c.adopted).map(|c| json!({"id": c.id, "name": c.name, "phase": c.phase(), "wb": c.wellbeing, "goal": c.goal, "asleep": c.asleep})).collect();
     let released: Vec<Value> = cs.iter().filter(|c| c.released && !c.adopted && c.owner == w.viewer).map(|c| json!({"id": c.id, "name": c.name, "phase": c.phase(), "wb": c.wellbeing, "goal": c.goal, "asleep": c.asleep, "kids": c.children, "gen": c.gen})).collect();
@@ -818,7 +818,7 @@ pub extern "C" fn wl_away_report() {
         let mut st = s.borrow_mut();
         let rep = match (st.world.as_ref(), st.away) {
             (Some(w), Some((t0, b0, d0, _e0, m0))) => {
-                let evs: Vec<Value> = w.events.iter().filter(|e| e.t > t0).rev().take(12).map(|e| json!([World::day_of(e.t), e.k, e.p])).collect();
+                let evs: Vec<Value> = w.events.iter().filter(|e| e.t > t0).rev().take(30).map(|e| json!([World::day_of(e.t), e.k, e.p, e.t])).collect();
                 let lost: Vec<Value> = w.memorial.iter().skip(m0.min(w.memorial.len())).map(|m| json!({"name": m.name, "cause": m.cause})).collect();
                 let adopted: Vec<Value> = w.creatures.iter().filter(|c| c.adopted).map(|c| json!({"id": c.id, "name": c.name})).collect();
                 json!({"days": (w.t - t0) / DAY_LEN, "births": w.births - b0, "deaths": deaths_total(w).saturating_sub(d0), "events": evs, "lost": lost, "adopted": adopted}).to_string()

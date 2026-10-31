@@ -590,7 +590,7 @@ function receive(m) {
       if (!centered && m.cs.length >= CS_STRIDE) { centered = true; cam.x = m.cs[1]; cam.y = m.cs[2]; }
       break;
     }
-    case 'panel': panel = JSON.parse(m.json); if (panel.sel) selId = panel.sel.id; else if (selId && !panel.sel) selId = 0; renderPanel(panel); break;
+    case 'panel': panel = JSON.parse(m.json); if (serverMode) srvSeen(panel); if (panel.sel) selId = panel.sel.id; else if (selId && !panel.sel) selId = 0; renderPanel(panel); break;
     case 'sel':
       selId = m.id;
       if (carryWait) { carryWait = false; if (m.id) { carryId = m.id; toast(t('t.carryPick')); } else toast(t('t.miss')); break; }
@@ -606,6 +606,25 @@ function receive(m) {
     case 'series': seriesData = parseSeries(JSON.parse(m.json)); if (activeTab === 'research') drawSeries(); break;
     case 'download': saveFile(m.name, m.mime, m.text); break;
     case 'away': showAway(m.rep); break;
+  }
+}
+let srvSeenDone = false, srvSeenAt = 0;
+function srvSeen(p) {
+  const key = 'plimploms-seen';
+  if (!srvSeenDone) {
+    srvSeenDone = true;
+    try {
+      const o = JSON.parse(localStorage.getItem(key) || 'null');
+      if (o && o.seed === p.seed && p.t > o.t + DAY_LEN * 0.5) {
+        const evs = (p.events || []).filter(e => e[3] > o.t).slice(0, 30);
+        showAway({ days: Math.floor((p.t - o.t) / DAY_LEN), births: Math.max(0, p.stats.births - o.b), deaths: Math.max(0, p.stats.deaths - o.d), events: evs, lost: [], adopted: p.adopted || [] });
+      }
+    } catch (e) { /* storage blocked */ }
+  }
+  const now = Date.now();
+  if (now - srvSeenAt > 15000) {
+    srvSeenAt = now;
+    try { localStorage.setItem(key, JSON.stringify({ seed: p.seed, t: p.t, b: p.stats.births, d: p.stats.deaths })); } catch (e) { /* storage blocked */ }
   }
 }
 function showAway(rep) {

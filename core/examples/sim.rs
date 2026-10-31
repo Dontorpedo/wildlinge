@@ -64,7 +64,8 @@ fn main() {
     match w2 {
         Ok(mut w2) => {
             w2.step();
-            println!("save {:.2} MB, restore ok pop {}", json.len() as f64 / 1048576.0, w2.creatures.len());
+            for e in w.events.iter().filter(|e| e.k == "ev.pop" || e.k == "ev.gen" || e.k == "ev.word").take(12) { println!("  event day {:?} {} {:?}", World::day_of(e.t), e.k, e.p); }
+    println!("save {:.2} MB, restore ok pop {}", json.len() as f64 / 1048576.0, w2.creatures.len());
         }
         Err(e) => println!("RESTORE FAILED {}", e),
     }
