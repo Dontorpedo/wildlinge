@@ -762,13 +762,13 @@ function prepInterp(m) {
   for (let i = 0; i < n; i++) {
     const o = i * CS_STRIDE; m.ids[i] = m.cs[o]; m.tx[i] = m.cs[o + 1]; m.ty[i] = m.cs[o + 2];
     const j = prev.get(m.cs[o]);
-    if (j !== undefined && Math.abs(old.tx[j] - m.tx[i]) < 150 && Math.abs(old.ty[j] - m.ty[i]) < 150) { fx[i] = old.tx[j]; fy[i] = old.ty[j]; } else { fx[i] = m.tx[i]; fy[i] = m.ty[i]; }
+    if (j !== undefined && Math.abs(old.tx[j] - m.tx[i]) < 150 && Math.abs(old.ty[j] - m.ty[i]) < 150) { fx[i] = old.cs[j * CS_STRIDE + 1]; fy[i] = old.cs[j * CS_STRIDE + 2]; } else { fx[i] = m.tx[i]; fy[i] = m.ty[i]; }
   }
   m.fx = fx; m.fy = fy; m.at = now;
 }
 function lerpFrame(fr) {
   if (!fr.fx) return;
-  const k = clamp((performance.now() - fr.at) / srvMs, 0, 1), cs = fr.cs, n = fr.fx.length;
+  const k = clamp((performance.now() - fr.at) / (srvMs * 1.15), 0, 1), cs = fr.cs, n = fr.fx.length;
   for (let i = 0; i < n; i++) { const o = i * CS_STRIDE; cs[o + 1] = fr.fx[i] + (fr.tx[i] - fr.fx[i]) * k; cs[o + 2] = fr.fy[i] + (fr.ty[i] - fr.fy[i]) * k; }
 }
 

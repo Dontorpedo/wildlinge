@@ -261,6 +261,21 @@ function rhoAt(g, th) {
 }
 
 const spriteCache = new Map();
+const liteCache = new Map();
+/* geometry only (no pixels): enough for sprite-based drawing, avoids rebuilding body bitmaps */
+function bodyLite(r, look, dirQ, sh, baby) {
+  const qe = Math.round(sh[0] * 3) / 3, qb = Math.round(sh[1] * 2) / 2, qh = Math.round(sh[3] * 3) / 3, qt = Math.round(sh[4] * 2) / 2, seg = clamp(Math.floor(sh[2]), 1, 6);
+  const key = r + '|' + look[7] + '|' + qe + '|' + qb + '|' + seg + '|' + qh + '|' + qt + '|' + baby;
+  let ent = liteCache.get(key);
+  if (!ent) {
+    if (liteCache.size > 1500) liteCache.clear();
+    const g = geom(r, [qe, qb, seg, qh, qt], baby, look[7]);
+    ent = { cnv: null, g, ang: 0, R: g.R };
+    liteCache.set(key, ent);
+  }
+  ent.ang = dirQ * TAU / 16;
+  return ent;
+}
 function bodySprite(hue, r, carn, light, look, dirQ, sh, baby, side) {
   const qe = Math.round(sh[0] * 3) / 3, qb = Math.round(sh[1] * 2) / 2, qh = Math.round(sh[3] * 3) / 3, qt = Math.round(sh[4] * 2) / 2, seg = clamp(Math.floor(sh[2]), 1, 6);
   const key = `${hue}|${r}|${light}|${look[0]}|${look[1]}|${look[3]}|${look[7]}|${dirQ}|${qe}|${qb}|${seg}|${qh}|${qt}|${baby}|${side ? 1 : 0}`;
@@ -485,7 +500,8 @@ function drawCreature(cs, o, sel, wpp, ox, oy, st) {
   const light = hp > 66 ? 72 : hp > 33 ? 66 : 58;
   const dirQ = ((rp(dir / (TAU / 16)) % 16) + 16) % 16;
   const look = [cs[o + 82] | 0, cs[o + 83] | 0, cs[o + 84] | 0, cs[o + 85] | 0, cs[o + 86] | 0, cs[o + 87] | 0, cs[o + 88] | 0, cs[o + 89] | 0];
-  const ent = bodySprite(hue, r, carn ? 1 : 0, light, look, dirQ, sh, baby);
+  const lite = typeof crWholeOn === 'function' && crWholeOn();
+  let ent = lite ? bodyLite(r, look, dirQ, sh, baby) : bodySprite(hue, r, carn ? 1 : 0, light, look, dirQ, sh, baby);
   const g = ent.g, R = ent.R;
   if (!(typeof crWholeOn === 'function' && crWholeOn())) {
     b.fillStyle = 'rgba(30,40,70,.22)';
@@ -497,6 +513,7 @@ function drawCreature(cs, o, sel, wpp, ox, oy, st) {
   st.sprFor = -1;
   if (typeof crDrawWild === 'function' && crDrawWild(cs, o, px, py, r, baby, moving, st, hp)) { st.sprFor = o; }
   else {
+    if (!ent.cnv) ent = bodySprite(hue, r, carn ? 1 : 0, light, look, dirQ, sh, baby);
     if (detail) for (let i = 0; i < np; i++) { drawPart(cs, o, i, 1, px, py, g, false, st); if (cs[o + 26 + i * 7 + 1]) drawPart(cs, o, i, -1, px, py, g, false, st); }
     b.drawImage(ent.cnv, px - R, py - R);
     if (detail) for (let i = 0; i < np; i++) { drawPart(cs, o, i, 1, px, py, g, true, st); if (cs[o + 26 + i * 7 + 1]) drawPart(cs, o, i, -1, px, py, g, true, st); }
