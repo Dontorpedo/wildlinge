@@ -191,6 +191,47 @@ fn lang_stats(w: &World) -> (Vec<Value>, Vec<Value>, usize) {
     (wv, dv, total)
 }
 
+fn lang_map(w: &World) -> Value {
+    const GC: usize = 8;
+    const GR: usize = 5;
+    let mut cells: Vec<Vec<(String, u32)>> = vec![Vec::new(); GC * GR];
+    for c in &w.creatures {
+        let mut best: Option<(f32, String)> = None;
+        for (word, _) in &c.lex.m {
+            let (k, s) = c.lex.top(word);
+            if s < 0.3 || k < 0 {
+                continue;
+            }
+            if let Some(p) = &c.protos[k as usize] {
+                if p.v[0] > 0.4 && best.as_ref().map(|b| p.v[0] > b.0).unwrap_or(true) {
+                    best = Some((p.v[0], word.clone()));
+                }
+            }
+        }
+        if let Some((_, word)) = best {
+            let cx = ((c.x / WORLD_W * GC as f32) as usize).min(GC - 1);
+            let cy = ((c.y / WORLD_H * GR as f32) as usize).min(GR - 1);
+            let cell = &mut cells[cy * GC + cx];
+            match cell.iter_mut().find(|e| e.0 == word) {
+                Some(e) => e.1 += 1,
+                None => cell.push((word, 1)),
+            }
+        }
+    }
+    let out: Vec<Value> = cells
+        .iter()
+        .map(|cell| {
+            let n: u32 = cell.iter().map(|e| e.1).sum();
+            if n < 3 {
+                return Value::Null;
+            }
+            let top = cell.iter().max_by(|a, b| a.1.cmp(&b.1).then(b.0.cmp(&a.0))).unwrap();
+            json!([top.0, r3(top.1 as f32 / n as f32), n])
+        })
+        .collect();
+    json!({"cols": GC, "rows": GR, "cells": out})
+}
+
 fn brain_graph(c: &crate::creature::Creature) -> Value {
     let net = &c.net;
     let mut used = vec![false; net.n];
@@ -280,7 +321,8 @@ pub fn panel(w: &World, sel: u32) -> String {
             "tri": [w.tri_say, w.tri_n, w.tri_ok],
             "acts": (0..9usize).map(|k| cs.iter().filter(|c| c.actv as usize == k).count()).collect::<Vec<_>>()},
         "hist": &w.hist[w.hist.len().saturating_sub(170)..],
-        "lang": {"what": what, "where": whr},
+        "lang": {"what": what, "where": whr, "map": lang_map(w),
+            "wod": w.wod.as_ref().map(|d| json!({"word": d.word, "day": d.day, "n": d.n, "speakers": d.speakers, "cert": r3((1.0 - d.spread / 0.5).clamp(0.0, 1.0)), "vec": d.vec.iter().map(|x| r3(*x)).collect::<Vec<_>>()}))},
         "species": species, "phylo": phylo, "events": events, "log": log, "adopted": adopted, "released": released, "memorial": memorial,
         "research": research, "mini": mini, "sel": sel_v
     })

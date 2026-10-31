@@ -108,6 +108,16 @@ pub struct LogEntry {
 }
 
 #[derive(Clone, Serialize, Deserialize, Default)]
+pub struct WordDay {
+    pub word: String,
+    pub day: u32,
+    pub n: u32,
+    pub speakers: u32,
+    pub spread: f32,
+    pub vec: Vec<f32>,
+}
+
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Event {
     pub t: u32,
     pub k: String,
@@ -310,6 +320,10 @@ pub struct World {
     pub pop_marks: u32,
     #[serde(default)]
     pub words_seen: Vec<String>,
+    #[serde(default)]
+    pub wod_cnt: Vec<(String, u32)>,
+    #[serde(default)]
+    pub wod: Option<WordDay>,
     #[serde(skip)]
     pub newborn: Vec<Creature>,
     #[serde(skip)]
@@ -501,7 +515,39 @@ impl World {
     }
 
     /// Once per day: records population records and newly widespread words in the event log.
+    fn word_of_day(&mut self) {
+        let cnt = std::mem::take(&mut self.wod_cnt);
+        let best = cnt.iter().max_by(|a, b| a.1.cmp(&b.1).then(b.0.cmp(&a.0)));
+        let (word, n) = match best {
+            Some(b) if b.1 >= 5 => (b.0.clone(), b.1),
+            _ => return,
+        };
+        let mut vs: Vec<[f32; FD]> = Vec::new();
+        for c in &self.creatures {
+            let (k, s) = c.lex.top(&word);
+            if s >= 0.3 && k >= 0 {
+                if let Some(p) = &c.protos[k as usize] {
+                    vs.push(p.v);
+                }
+            }
+        }
+        if vs.len() < 3 {
+            return;
+        }
+        let mut avg = vec![0.0f32; FD];
+        for v in &vs {
+            for i in 0..FD {
+                avg[i] += v[i] / vs.len() as f32;
+            }
+        }
+        let mut a = [0.0f32; FD];
+        a.copy_from_slice(&avg);
+        let spread = vs.iter().map(|v| vdist(v, &a)).sum::<f32>() / vs.len() as f32;
+        self.wod = Some(WordDay { word, day: self.t / DAY_LEN, n, speakers: vs.len() as u32, spread, vec: avg });
+    }
+
     fn chronicle(&mut self) {
+        self.word_of_day();
         let n = self.creatures.len();
         for (i, m) in [100usize, 250, 400, 500].iter().enumerate() {
             if n >= *m && self.pop_marks & (1 << i) == 0 {
@@ -740,6 +786,16 @@ impl World {
                     if let Some(c) = speaker {
                         if c.adopted {
                             c.note(self.t, "d.answer", &u.tokens.join(" "));
+                        }
+                    }
+                }
+            }
+            if !u.what.is_empty() {
+                match self.wod_cnt.iter_mut().find(|e| e.0 == u.what) {
+                    Some(e) => e.1 += 1,
+                    None => {
+                        if self.wod_cnt.len() < 80 {
+                            self.wod_cnt.push((u.what.clone(), 1));
                         }
                     }
                 }

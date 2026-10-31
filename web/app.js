@@ -273,7 +273,19 @@ function renderWorld(p) {
   const lexRows = (list, where) => list.length
     ? list.map(([w, sh, x]) => `<tr><td><a class="w" data-w="${esc(w)}">${esc(w)}</a></td><td class="l">${showMeaning ? esc(where ? tSector(x) : describeVec(x)) : '?'}</td><td>${pct(sh)}</td></tr>`).join('')
     : `<tr><td class="muted">${esc(t('lang.none'))}</td></tr>`;
-  setHtml($('lexicon'), sub(esc(t('lang.what'))) + `<table>${lexRows(p.lang.what, false)}</table>` + sub(esc(t('lang.where'))) + `<table>${lexRows(p.lang.where, true)}</table>` +
+  const hue = w => { let h = 0; for (const ch of w) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
+  const lm = p.lang.map;
+  let mapHtml = '';
+  if (lm && lm.cells.some(c => c)) {
+    const doms = new Set(lm.cells.filter(c => c).map(c => c[0]));
+    mapHtml = sub(esc(t('lang.map'))) + `<div class="lmap" style="grid-template-columns:repeat(${lm.cols},1fr)">` +
+      lm.cells.map(c => c ? `<div style="background:hsla(${hue(c[0])},55%,38%,${(0.35 + 0.65 * c[1]).toFixed(2)})" title="${esc(c[0])} ${Math.round(c[1] * 100)}% (n=${c[2]})">${esc(c[0])}</div>` : '<div class="e"></div>').join('') +
+      `</div><div class="muted">${esc(t('lang.mapNote', doms.size))}</div>`;
+  }
+  const wd = p.lang.wod;
+  const wodHtml = wd ? sub(esc(t('lang.wod'))) + `<div><a class="w" data-w="${esc(wd.word)}">${esc(wd.word)}</a> <span class="muted">${esc(t('lang.wodInfo', wd.n, wd.speakers, wd.day))}</span></div>` +
+    `<div class="muted">${esc(t('lang.wodMean'))}: ${showMeaning ? esc(describeVec(wd.vec)) : '?'} (${esc(t('lang.wodCert'))} ${Math.round(wd.cert * 100)}%)</div>` : '';
+  setHtml($('lexicon'), wodHtml + mapHtml + sub(esc(t('lang.what'))) + `<table>${lexRows(p.lang.what, false)}</table>` + sub(esc(t('lang.where'))) + `<table>${lexRows(p.lang.where, true)}</table>` +
     `<div class="muted" style="margin-top:6px">${esc(t('lang.click'))}</div>`);
   const head = tr('sp.head');
   setHtml($('species'), `<tr><th>${esc(head[0])}</th><th>${esc(head[1])}</th><th style="text-align:right">${esc(head[2])}</th></tr>` + p.species.map(s => {
