@@ -325,6 +325,11 @@ function famLink(f) {
   if (!f) return '';
   return `<a class="w" data-id="${f.id}">${esc(f.name)}</a>${f.alive ? '' : ` <span class="muted">(${esc(t('sel.dead'))})</span>`}`;
 }
+function ancHtml(n) {
+  if (!n) return '';
+  const ps = (n.p || []).map(ancHtml).join('');
+  return `<li>${famLink(n)}${ps ? `<ul>${ps}</ul>` : ''}</li>`;
+}
 function renderSel(s) {
   const el = $('info');
   if (!s) { setHtml(el, `<div class="muted">${esc(t('sel.none'))}</div>`); return; }
@@ -385,7 +390,8 @@ function renderSel(s) {
     '</table>' + sub(esc(t('sel.family'))) + '<table>' +
     row(t('sel.parents'), s.parents.filter(Boolean).length ? s.parents.map(famLink).filter(Boolean).join(', ') : esc(t('sel.immigrant'))) +
     row(t('sel.children'), s.kids.length ? s.kids.map(famLink).join(', ') : '-') +
-    '</table>' + sub(esc(t('sel.role'))) + '<table>' +
+    row(t('sel.desc'), s.descN || 0) +
+    '</table>' + ((s.anc || []).some(Boolean) ? sub(esc(t('sel.anc'))) + `<ul class="tree">${(s.anc || []).map(ancHtml).join('')}</ul>` : '') + sub(esc(t('sel.role'))) + '<table>' +
     row(t('sel.role'), s.isBoss ? esc(t('sel.bossSince', Math.max(1, Math.round((s.t - s.bossSince) / DAY_LEN)))) : esc(t('sel.member'))) +
     s.boss.parts.map((v, i) => row(esc(t('sel.bossPts', tr('boss.aspects')[i])), Math.round(v * 100))).join('') +
     row(t('sel.bossTotal'), Math.round(s.boss.total * 100)) +

@@ -319,6 +319,36 @@ fn sel_json(w: &World, i: usize) -> Value {
             },
         }
     };
+    fn anc(w: &World, id: u32, d: u32) -> Value {
+        if id == 0 || d == 0 {
+            return Value::Null;
+        }
+        if let Some(j) = w.id_idx_get(id) {
+            let c = &w.creatures[j];
+            return json!({"id": id, "name": c.name, "alive": true, "p": [anc(w, c.p1, d - 1), anc(w, c.p2, d - 1)]});
+        }
+        match w.lineage_get(id) {
+            Some(r) => json!({"id": id, "name": r.n, "alive": false, "p": [anc(w, r.p1, d - 1), anc(w, r.p2, d - 1)]}),
+            None => Value::Null,
+        }
+    }
+    let desc_n = {
+        let mut seen: std::collections::HashSet<u32> = std::collections::HashSet::new();
+        let mut front = vec![s.id];
+        for _ in 0..8 {
+            let mut next = Vec::new();
+            for r in &w.lineage {
+                if (front.contains(&r.p1) || front.contains(&r.p2)) && seen.insert(r.id) {
+                    next.push(r.id);
+                }
+            }
+            if next.is_empty() {
+                break;
+            }
+            front = next;
+        }
+        seen.len()
+    };
     let kids: Vec<Value> = w.lineage.iter().filter(|r| r.p1 == s.id || r.p2 == s.id).take(14).map(|r| json!({"id": r.id, "name": r.n, "alive": w.id_idx_get(r.id).is_some()})).collect();
     let abil: Vec<Value> = (0..NABIL).filter(|&k| s.ab.ab[k] > 0.05).map(|k| json!([KIND_KEYS[k], s.ab.ab[k]])).collect();
     let heard = s.heard.as_ref().map(|h| json!({"words": h.words, "vec": h.vec, "where": h.wa.map(sector_of)}));
@@ -340,8 +370,8 @@ fn sel_json(w: &World, i: usize) -> Value {
         "echoes": s.echoes, "spoken": s.spoken, "understood": s.understood, "heardN": s.heard_n, "order": s.order(), "vocab": vocab,
         "selfRecog": s.self_recog, "fe": r3(s.fe), "mirrorT": s.mirror_t, "isBoss": w.species.iter().any(|q| q.boss_id == s.id), "bossSince": sp_boss_since, "t": w.t,
         "boss": {"total": btotal, "parts": bparts}, "lifeC": lc, "mindC": mc,
-        "parents": [fam(s.p1), fam(s.p2)], "kids": kids,
-        "diary": s.diary.iter().rev().take(15).map(|d| json!([World::day_of(d.t), d.k, d.p])).collect::<Vec<_>>()
+        "parents": [fam(s.p1), fam(s.p2)], "kids": kids, "anc": [anc(w, s.p1, 3), anc(w, s.p2, 3)], "descN": desc_n,
+        "diary": s.diary.iter().rev().take(30).map(|d| json!([World::day_of(d.t), d.k, d.p])).collect::<Vec<_>>()
     })
 }
 

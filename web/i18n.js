@@ -268,7 +268,7 @@ const I18N = {
     'mut.dup': 'duplicated {0}', 'mut.bud': 'new bud ({0})', 'mut.loss': 'lost {0}', 'mut.shape': 'body shape changed ({0})',
 
     'd.immigrant': 'Immigrated into the world', 'd.born': 'Born, child of {0}{1}', 'd.and': ' and {0}',
-    'd.child': 'Had a child: {0}', 'd.parentOf': 'Became a parent: {0}', 'd.firstWord': 'Said its first word: {0}',
+    'd.firstKill': 'Caught its first prey: {0}', 'd.firstCache': 'Stored food in a cache for the first time', 'sel.anc': 'Ancestors', 'sel.desc': 'Descendants (total)', 'd.child': 'Had a child: {0}', 'd.parentOf': 'Became a parent: {0}', 'd.firstWord': 'Said its first word: {0}',
     'd.biome': 'Discovered {0} for the first time', 'd.fly': 'Flew for the first time', 'd.hurt': 'Was badly hurt',
     'd.boss': 'Was elected boss', 'd.notBoss': 'Is no longer boss', 'd.mirror': 'Recognised itself in the mirror',
     'd.adopted': 'Was adopted by you', 'd.released': 'Was released by you', 'd.answer': 'Answered you: {0}', 'd.died': 'Died ({0})'
@@ -539,7 +539,7 @@ const I18N = {
     'mut.dup': '{0} verdoppelt', 'mut.bud': 'neue Knospe ({0})', 'mut.loss': '{0} verloren', 'mut.shape': 'Körperform verändert ({0})',
 
     'd.immigrant': 'In die Welt eingewandert', 'd.born': 'Geboren, Kind von {0}{1}', 'd.and': ' und {0}',
-    'd.child': 'Hat ein Kind bekommen: {0}', 'd.parentOf': 'Ist Elternteil geworden: {0}', 'd.firstWord': 'Hat das erste Wort gesagt: {0}',
+    'd.firstKill': 'Hat die erste Beute gefangen: {0}', 'd.firstCache': 'Hat zum ersten Mal Futter in einem Lager abgelegt', 'sel.anc': 'Vorfahren', 'sel.desc': 'Nachkommen (gesamt)', 'd.child': 'Hat ein Kind bekommen: {0}', 'd.parentOf': 'Ist Elternteil geworden: {0}', 'd.firstWord': 'Hat das erste Wort gesagt: {0}',
     'd.biome': 'Hat zum ersten Mal {0} entdeckt', 'd.fly': 'Ist zum ersten Mal geflogen', 'd.hurt': 'Wurde schwer verletzt',
     'd.boss': 'Wurde zum Boss gewählt', 'd.notBoss': 'Ist nicht mehr Boss', 'd.mirror': 'Hat sich im Spiegel erkannt',
     'd.adopted': 'Wurde von Ihnen adoptiert', 'd.released': 'Wurde von Ihnen freigegeben', 'd.answer': 'Hat Ihnen geantwortet: {0}', 'd.died': 'Gestorben ({0})'

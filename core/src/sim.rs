@@ -1057,8 +1057,12 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
                     c.last_atk = t as i64;
                     if killed {
                         let mut oc = std::mem::take(&mut w.creatures[oi]);
+                        let on = oc.name.clone();
                         w.die(&mut oc, "eaten");
                         w.creatures[oi] = oc;
+                        if c.kills == 0 {
+                            c.note(w.t, "d.firstKill", &on);
+                        }
                         c.kills += 1;
                     }
                 }
@@ -1091,6 +1095,9 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
             };
             if ok {
                 c.energy -= amt;
+                if c.cdep == 0 {
+                    c.note(w.t, "d.firstCache", "");
+                }
                 c.cdep += 1;
                 w.cache_dep += 1;
             }
