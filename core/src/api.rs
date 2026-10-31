@@ -277,6 +277,7 @@ pub fn panel(w: &World, sel: u32) -> String {
             "macro": w.macro_n, "neuronsN": w.neurons_n, "bossChanges": w.boss_changes, "asleep": cs.iter().filter(|c| c.asleep).count(), "words": words,
             "cache": [w.caches.len(), w.cache_dep, w.cache_ret, cs.iter().filter(|c| c.cdep > 0).count()],
             "react": [w.rx_n, w.rx_hit, w.rc_n, w.rc_hit],
+            "tri": [w.tri_say, w.tri_n, w.tri_ok],
             "acts": (0..9usize).map(|k| cs.iter().filter(|c| c.actv as usize == k).count()).collect::<Vec<_>>()},
         "hist": &w.hist[w.hist.len().saturating_sub(170)..],
         "lang": {"what": what, "where": whr},
@@ -407,7 +408,7 @@ pub fn command(w: &mut World, v: &Value) -> Value {
                     None => json!({"k": "t.miss", "p": []}),
                 },
                 "say" if !tokens.is_empty() => {
-                    let u = Utt { x, y, tokens: tokens.clone(), sector: -1, ..Default::default() };
+                    let u = Utt { x, y, tokens: tokens.clone(), sector: -1, mag: -1, ..Default::default() };
                     w.say(u, None);
                     json!({"k": "t.say", "p": [tokens.join(" ")]})
                 }

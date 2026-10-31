@@ -93,6 +93,7 @@ pub struct Utt {
     pub sector: i32,
     pub cgen: Vec<(String, u32)>,
     pub what: String,
+    pub mag: i32,
 }
 
 #[derive(Clone, Serialize, Deserialize, Default)]
@@ -257,6 +258,12 @@ pub struct World {
     #[serde(default)]
     pub cache_ret: u32,
     #[serde(default)]
+    pub tri_n: u32,
+    #[serde(default)]
+    pub tri_ok: u32,
+    #[serde(default)]
+    pub tri_say: u32,
+    #[serde(default)]
     pub rx_n: u32,
     #[serde(default)]
     pub rx_hit: u32,
@@ -350,6 +357,7 @@ fn fresh_culture(c: &Creature) -> Culture {
         protos: c.protos.iter().map(|p| p.map(|q| Proto { v: q.v, n: q.n.div_ceil(2) })).collect(),
         lex: c.lex.clone_scaled(0.7),
         dlex: c.dlex.clone_scaled(0.7),
+        mlex: c.mlex.clone_scaled(0.7),
         ord: [c.ord[0].div_ceil(2), c.ord[1].div_ceil(2)],
         cgen: c.cgen.clone(),
     }
@@ -395,6 +403,7 @@ impl World {
             sanitize(&mut c.g);
             c.lex.sanitize(MAX_PROTO);
             c.dlex.sanitize(8);
+            c.mlex.sanitize(3);
             c.name = clean_name(&c.name);
             if c.name.is_empty() {
                 c.name = "Wildling".into();
@@ -435,6 +444,7 @@ impl World {
         sanitize(&mut c.g);
         c.lex.sanitize(MAX_PROTO);
         c.dlex.sanitize(8);
+        c.mlex.sanitize(3);
         c.name = clean_name(&c.name);
         if c.name.is_empty() {
             c.name = "Wildling".into();
@@ -1083,7 +1093,7 @@ impl World {
             }
         }
         self.taught_n += 1;
-        let u = Utt { x: tx, y: ty, tokens: tokens.to_vec(), sector: -1, ..Default::default() };
+        let u = Utt { x: tx, y: ty, tokens: tokens.to_vec(), sector: -1, mag: -1, ..Default::default() };
         self.say(u, None);
         n
     }

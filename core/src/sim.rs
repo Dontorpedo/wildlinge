@@ -89,6 +89,21 @@ fn hear(w: &mut World, c: &mut Creature, u: &Utt, same_kind: bool, prestige: f32
             c.dlex.reinforce(wt, sector_of((fy - u.y).atan2(fx - u.x)), 0.06 * prestige);
         }
     }
+    if same_kind && toks.len() == 3 {
+        if c.sal > 0.3 {
+            let own = (((c.sal - 0.3) / 0.7 * 3.0).floor() as i32).clamp(0, 2);
+            c.mlex.reinforce(&toks[2], own, 0.06 * prestige);
+        }
+        if u.sid != 0 && u.mag >= 0 {
+            let (km, sm) = c.mlex.top(&toks[2]);
+            if sm > 0.15 {
+                w.tri_n += 1;
+                if km == u.mag {
+                    w.tri_ok += 1;
+                }
+            }
+        }
+    }
     if u.sid != 0 && same_kind {
         if c.rx_t == 0 && c.fear < 0.2 {
             if let Some(cv) = &u.cat_vec {
@@ -804,6 +819,17 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
                     }
                 }
             }
+            let mut mag = -1;
+            if tokens.len() == 2 && o[4] > 0.5 {
+                mag = (((sal - 0.3) / 0.7 * 3.0).floor() as i32).clamp(0, 2);
+                let mw = c.mlex.produce(mag as usize, &mut w.rng);
+                if !tokens.contains(&mw) {
+                    tokens.push(mw);
+                    w.tri_say += 1;
+                } else {
+                    mag = -1;
+                }
+            }
             match c.cgen.iter().find(|(x, _)| *x == word) {
                 None => {
                     if c.cgen.len() < 40 {
@@ -821,7 +847,7 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
             }
             let pv = c.protos[k as usize].unwrap().v;
             let cg: Vec<(String, u32)> = c.cgen.iter().filter(|(x, _)| tokens.contains(x)).cloned().collect();
-            let u = Utt { x: c.x, y: c.y, tokens: tokens.clone(), sid: c.id, diet, sp: c.sp, cat_vec: Some(pv), sector, cgen: cg, what: word.clone() };
+            let u = Utt { x: c.x, y: c.y, tokens: tokens.clone(), sid: c.id, diet, sp: c.sp, cat_vec: Some(pv), sector, cgen: cg, what: word.clone(), mag };
             if !c.first_word {
                 c.first_word = true;
                 c.note(t, "d.firstWord", &tokens.join(" "));

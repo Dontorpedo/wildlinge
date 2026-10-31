@@ -87,6 +87,8 @@ pub struct Creature {
     pub protos: Vec<Option<Proto>>,
     pub lex: WordLex,
     pub dlex: WordLex,
+    #[serde(default)]
+    pub mlex: WordLex,
     pub ord: [u32; 2],
     pub inherited: Vec<String>,
     pub cgen: Vec<(String, u32)>,
@@ -204,6 +206,7 @@ pub struct Culture {
     pub protos: Vec<Option<Proto>>,
     pub lex: WordLex,
     pub dlex: WordLex,
+    pub mlex: WordLex,
     pub ord: [u32; 2],
     pub cgen: Vec<(String, u32)>,
 }
@@ -249,6 +252,7 @@ impl Creature {
                 c.protos = cu.protos;
                 c.lex = cu.lex;
                 c.dlex = cu.dlex;
+                c.mlex = cu.mlex;
                 c.ord = cu.ord;
                 c.cgen = cu.cgen;
                 for (w, a) in &c.lex.m {
@@ -261,6 +265,7 @@ impl Creature {
                 c.protos = vec![None; MAX_PROTO];
                 c.lex = WordLex::new(MAX_PROTO);
                 c.dlex = WordLex::new(8);
+                c.mlex = WordLex::new(3);
                 c.ord = if rng.chance(0.5) { [1, 0] } else { [0, 1] };
             }
         }
@@ -454,6 +459,7 @@ impl Creature {
         }
         self.lex.forget(0.06);
         self.dlex.forget(0.06);
+        self.mlex.forget(0.06);
         self.dreams += 1;
     }
     pub fn stress_info(&self) -> Stress {

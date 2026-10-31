@@ -35,7 +35,8 @@ Ein Browser-Spiel mit künstlichem Leben ("artificial life"). Kreaturen ("Wildli
 **Gehirn:** Neuronales Netz mit evolvierter Topologie (NEAT-artig), bis zu 48 versteckte Neuronen, 73 Eingänge und 10 Ausgänge. Eingänge: Umwelt (Bedrohung, Futter, Beute, Verwandte, Fremde, Wasser, Neues), Körperzustand (Hunger, Schmerz, Kälte), Vorratslager (Richtung, Nähe, Füllstand) und weitere. Ausgänge: Bewegung, Drehung, Sprechen, Fressen, Paarung, Vorratsablage und -abruf. Zusätzlich Triebe/Hormone (Hunger, Sicherheit, Wärme, Gemeinschaft, Fortpflanzung, Neugier, Ansehen) und Lernen zu Lebzeiten.
 
 **Sprache:** Jede Kreatur hat ein Lexikon (maximal 28 Wörter). Wörter sind zufällig aus Silben gebildet und werden an Bedeutungsfelder (Kategorien und Richtungen) gebunden. Kreaturen rufen Wörter, andere in Hörreichweite hören sie und lernen Verknüpfungen. Daraus können Alarmrufe, Futterrufe und gruppenspezifische Dialekte entstehen.
-- Grenzen: nur Einzelwörter, keine Kombination oder Grammatik, feste Bedeutungsfelder, nur Bezug auf aktuell Wahrgenommenes, keine Eigennamen.
+- Rufe bestehen aus bis zu drei Token: Kategoriewort, Richtungswort (Reihenfolge je Tier/Gruppe unterschiedlich, lernbar) und Intensitätswort (drei Stufen). Das Intensitätswort ist neu und wird nur angehängt, wenn Kategorie und Richtung schon vorhanden sind.
+- Grenzen: keine Grammatik über diese Wortarten hinaus, feste Bedeutungsfelder, nur Bezug auf aktuell Wahrgenommenes, keine Eigennamen.
 
 **Wasser:** Landtiere ohne Flossen und Flügel dürfen Tiefwasser nicht betreten (Wasserbarriere im Kern). Flieger fliegen darüber, Tiere mit Flossen schwimmen.
 
@@ -80,7 +81,7 @@ Erst Einzelplatz-Version "Kreaturen" in JavaScript, dann kompletter Umbau auf Ru
 
 ## 8. Ideen und offene Punkte
 
-**Sprache (wissenschaftlicher Kern):** Zwei-Wort-Rufe, Eigennamen/Rufnamen, Orte als Bedeutung (Vorratslager, Wasserplatz), offene Bedeutungsfelder, Lernen durch Nachahmung (Kultur), Messgrößen im Forschungs-Tab (Wortzahl, Dialekt-Gruppen, Kombinationsanteil).
+**Sprache (wissenschaftlicher Kern):** Eigennamen/Rufnamen, Orte als Bedeutung (Vorratslager, Wasserplatz), offene Bedeutungsfelder, Lernen durch Nachahmung (Kultur), Messgrößen im Forschungs-Tab (Wortzahl, Dialekt-Gruppen, Kombinationsanteil).
 
 **Spielbarkeit:** Ziele und Aufträge im Eigenmodus mit Belohnungen, Chronik mit Meilensteinen, Weltereignisse (Dürre, Kälte, Seuche), tiefere Pflege im Terrarium (Krankheiten, Persönlichkeit, Freundschaft), Zusammenfassung "seit Ihrem letzten Besuch", Benachrichtigungen zu ausgewilderten Tieren.
 
@@ -96,7 +97,7 @@ Erst Einzelplatz-Version "Kreaturen" in JavaScript, dann kompletter Umbau auf Ru
 - **Mindestpopulationen:** Das Auffüllen bei Unterschreitung ist ein programmierter Eingriff und hält die Welt künstlich stabil. Ob die Welt ohne diese Hilfe langfristig trägt, ist nicht gemessen.
 - **Balance:** Wenige Seeds und kurze Läufe. Die Streuung zwischen Seeds ist hoch. In der Frühphase lag die Population im Browsertest teils bei 256 bis 340.
 - **Vorratslager:** Nutzung belegt, Überlebensvorteil nicht belegt.
-- **Sprache:** Siehe Abschnitt 3, nur Einzelwörter.
+- **Sprache:** Siehe Abschnitt 3, Rufe mit bis zu drei Token, keine freie Grammatik.
 - **Animation:** Die KI-Frames sind je Sprite einmal erzeugt, nicht von Hand geprüft. Einzelne Frames können leichte Abweichungen zeigen (beim Angriff verschiebt sich die Figur absichtlich nach vorn). Elf Sprites haben keine Augenerkennung (kein Blinzeln).
 - **Rechtliches:** Impressum und Datenschutz enthalten Platzhalter. Ein Namens-Markenrecht für "Plimploms" wurde nicht geprüft. Der frühere Name "Wildlinge" war besetzt.
 - **Server:** Ein einzelner Prozess auf kleinem VPS. Skalierung auf viele gleichzeitige Besucher ist nicht getestet.
