@@ -133,6 +133,10 @@ pub struct Species {
     pub carn: bool,
     pub boss_id: u32,
     pub boss_since: u32,
+    #[serde(default)]
+    pub boss_why: String,
+    #[serde(default)]
+    pub boss_trig: String,
     pub score: f32,
     pub votes: u32,
     pub voters: u32,
@@ -320,6 +324,16 @@ pub struct World {
     pub pop_marks: u32,
     #[serde(default)]
     pub words_seen: Vec<String>,
+    #[serde(default)]
+    pub wev_start: u32,
+    #[serde(default)]
+    pub spk_id: u32,
+    #[serde(default)]
+    pub spk_since: u32,
+    #[serde(default)]
+    pub spk_why: String,
+    #[serde(default)]
+    pub spk_log: Vec<(u32, String)>,
     #[serde(default)]
     pub wev: u8,
     #[serde(default)]
@@ -581,6 +595,7 @@ impl World {
         let days = 1 + self.rng.below(2) as u32;
         self.wev = kind;
         self.wev_end = self.t + DAY_LEN * days;
+        self.wev_start = self.t;
         self.wev_d0 = dead;
         self.wev_n += 1;
         if kind == 3 {
@@ -839,6 +854,12 @@ impl World {
             Some(c) => (c.name.clone(), c.carn(), c.id),
             None => (String::new(), false, 0),
         };
+        if u.sid != 0 && u.sid == self.spk_id {
+            self.spk_log.push((self.t, u.tokens.join(" ")));
+            if self.spk_log.len() > 40 {
+                self.spk_log.remove(0);
+            }
+        }
         if u.sid == 0 {
             for w in &u.tokens {
                 if !self.user_words.contains(w) {
@@ -1054,7 +1075,106 @@ impl World {
         }
     }
 
-    pub fn elect(&mut self, si: usize) {
+    /// Elections are called by reasons, not by a clock: no boss, boss old or sick, a new crisis, lost confidence, or a long term.
+    fn election_needed(&self, si: usize) -> Option<String> {
+        let s = &self.species[si];
+        if s.n < 2 {
+            return None;
+        }
+        let boss = self.id_idx_get(s.boss_id).map(|i| &self.creatures[i]);
+        let b = match boss {
+            None => return Some("vacant".into()),
+            Some(b) => b,
+        };
+        if self.t < s.boss_since + 1800 {
+            return None;
+        }
+        if b.age as f32 > b.g.tr[T_LIFE] * 0.85 {
+            return Some("old".into());
+        }
+        if b.health < 20.0 || b.sick > 0 {
+            return Some("ill".into());
+        }
+        if self.wev != 0 && s.boss_since < self.wev_start {
+            return Some(format!("crisis{}", self.wev));
+        }
+        let mem: Vec<f32> = self.creatures.iter().filter(|c| c.sp == s.id).map(|c| c.wb_avg).collect();
+        if !mem.is_empty() && self.t > s.boss_since + 3000 {
+            let avg = mem.iter().sum::<f32>() / mem.len() as f32;
+            if avg < 0.35 && avg < b.wb_avg - 0.1 {
+                return Some("distrust".into());
+            }
+        }
+        if self.t > s.boss_since + DAY_LEN * 6 {
+            return Some("term".into());
+        }
+        None
+    }
+
+    fn elect_speaker(&mut self) {
+        let cur = self.id_idx_get(self.spk_id).map(|i| &self.creatures[i]);
+        let need = match cur {
+            None => Some("vacant"),
+            Some(c) if c.age as f32 > c.g.tr[T_LIFE] * 0.85 => Some("old"),
+            Some(_) if self.t > self.spk_since + DAY_LEN * 8 => Some("term"),
+            _ => None,
+        };
+        let trig = match need {
+            Some(x) => x,
+            None => return,
+        };
+        let mut cand: Vec<(usize, f32)> = (0..self.creatures.len())
+            .filter(|&i| {
+                let c = &self.creatures[i];
+                !c.dead && c.mature() && (c.age as f32) < c.g.tr[T_LIFE] * 0.85 && c.spoken >= 10
+            })
+            .map(|i| (i, voice_score(&self.creatures[i])))
+            .collect();
+        cand.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        cand.truncate(5);
+        if cand.is_empty() {
+            return;
+        }
+        let mut votes = vec![0u32; cand.len()];
+        for m in &self.creatures {
+            let mut best = 0;
+            let mut bv = -1.0;
+            for (k, &(ci, sc)) in cand.iter().enumerate() {
+                let c = &self.creatures[ci];
+                let d = ((c.x - m.x).powi(2) + (c.y - m.y).powi(2)).sqrt();
+                let v = sc / (1.0 + d / 800.0);
+                if v > bv {
+                    bv = v;
+                    best = k;
+                }
+            }
+            votes[best] += 1;
+        }
+        let mut win = 0;
+        for k in 1..cand.len() {
+            if votes[k] > votes[win] {
+                win = k;
+            }
+        }
+        let wi = cand[win].0;
+        let c = &self.creatures[wi];
+        let words = c.lex.m.iter().filter(|(_, a)| a.iter().cloned().fold(0.0, f32::max) >= 0.3).count();
+        let echo = if c.spoken > 0 { (2.0 * c.echoes as f32 / c.spoken.max(5) as f32).min(1.0) } else { 0.0 };
+        let why = if words as f32 / 12.0 >= echo { "words" } else { "echo" };
+        let (id, name) = (c.id, c.name.clone());
+        if id != self.spk_id {
+            self.spk_id = id;
+            self.spk_since = self.t;
+            self.spk_why = why.to_string();
+            self.spk_log.clear();
+            self.event("ev.speaker", vec![name, id.to_string(), why.to_string(), trig.to_string(), votes[win].to_string()]);
+        } else {
+            self.spk_since = self.t;
+        }
+    }
+
+    pub fn elect(&mut self, si: usize, trig: &str) {
+        let bw = boss_weights(if trig.starts_with("crisis") { self.wev } else { 0 });
         let sid = self.species[si].id;
         let members: Vec<usize> = (0..self.creatures.len()).filter(|&i| self.creatures[i].sp == sid && !self.creatures[i].dead).collect();
         let mut cand: Vec<(usize, f32)> = members
@@ -1064,7 +1184,7 @@ impl World {
                 let c = &self.creatures[i];
                 c.mature() && (c.age as f32) < c.g.tr[T_LIFE]
             })
-            .map(|i| (i, boss_score(&self.creatures[i]).0))
+            .map(|i| (i, boss_score_w(&self.creatures[i], &bw).0))
             .collect();
         cand.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
         cand.truncate(5);
@@ -1100,14 +1220,38 @@ impl World {
             (c.id, c.name.clone(), c.morph.clone(), c.g.hue)
         };
         let n_members = members.len() as u32;
+        let why = {
+            let parts = boss_score_w(&self.creatures[wi], &bw).1;
+            let mut mean = [0.0f32; 6];
+            for &(ci, _) in &cand {
+                let pp = boss_score_w(&self.creatures[ci], &bw).1;
+                for i in 0..6 {
+                    mean[i] += pp[i] / cand.len() as f32;
+                }
+            }
+            let mut bi = 0;
+            let mut bd = f32::NEG_INFINITY;
+            for i in 0..6 {
+                let d = (parts[i] - mean[i]) * bw[i] + parts[i] * bw[i] * 0.2;
+                if d > bd {
+                    bd = d;
+                    bi = i;
+                }
+            }
+            ["age", "size", "kids", "echo", "words", "wb"][bi]
+        };
         if self.species[si].boss_id != wid {
             self.species[si].boss_since = self.t;
+            self.species[si].boss_why = why.to_string();
+            self.species[si].boss_trig = trig.to_string();
             self.boss_changes += 1;
             self.achieve("boss");
             if n_members >= 5 {
-                let p = vec![self.species[si].name.clone(), wname, wid.to_string(), votes[win].to_string(), n_members.to_string()];
+                let p = vec![self.species[si].name.clone(), wname, wid.to_string(), votes[win].to_string(), n_members.to_string(), why.to_string(), trig.to_string()];
                 self.event("ev.boss", p);
             }
+        } else if trig != "died" {
+            self.species[si].boss_since = self.t;
         }
         let s = &mut self.species[si];
         s.boss_id = wid;
@@ -1343,7 +1487,7 @@ impl World {
                 }
             }
             self.species[si].boss_id = 0;
-            self.elect(si);
+            self.elect(si, "died");
         }
         if self.t % 5 == 0 {
             let t = self.t;
@@ -1393,8 +1537,11 @@ impl World {
         if self.t % 300 == 0 {
             self.classify();
             for si in 0..self.species.len() {
-                self.elect(si);
+                if let Some(trig) = self.election_needed(si) {
+                    self.elect(si, &trig);
+                }
             }
+            self.elect_speaker();
             metrics::record_series(self);
         }
         if self.t % 600 == 0 {
@@ -1439,7 +1586,28 @@ impl World {
     }
 }
 
+pub const BOSS_W: [f32; 6] = [0.2, 0.2, 0.18, 0.17, 0.13, 0.12];
+
+pub fn boss_weights(wev: u8) -> [f32; 6] {
+    match wev {
+        1 => [0.15, 0.10, 0.15, 0.15, 0.10, 0.35],
+        2 => [0.25, 0.30, 0.10, 0.10, 0.05, 0.20],
+        3 => [0.15, 0.10, 0.20, 0.10, 0.05, 0.40],
+        _ => BOSS_W,
+    }
+}
+
 pub fn boss_score(c: &Creature) -> (f32, [f32; 6]) {
+    boss_score_w(c, &BOSS_W)
+}
+
+pub fn voice_score(c: &Creature) -> f32 {
+    let words = c.lex.m.iter().filter(|(_, a)| a.iter().cloned().fold(0.0, f32::max) >= 0.3).count();
+    let echo = if c.spoken > 0 { (2.0 * c.echoes as f32 / c.spoken.max(5) as f32).min(1.0) } else { 0.0 };
+    0.4 * (words as f32 / 12.0).min(1.0) + 0.4 * echo + 0.2 * (c.spoken as f32 / 60.0).min(1.0)
+}
+
+pub fn boss_score_w(c: &Creature, w: &[f32; 6]) -> (f32, [f32; 6]) {
     let g = &c.g;
     let named = (0..MAX_PROTO).filter(|&k| c.protos[k].is_some() && c.lex.best(k).is_some()).count();
     let parts = [
@@ -1450,7 +1618,6 @@ pub fn boss_score(c: &Creature) -> (f32, [f32; 6]) {
         named as f32 / MAX_PROTO as f32,
         c.wb_avg,
     ];
-    let w = [0.2, 0.2, 0.18, 0.17, 0.13, 0.12];
     (parts.iter().zip(w.iter()).map(|(a, b)| a * b).sum(), parts)
 }
 

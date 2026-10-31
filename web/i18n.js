@@ -210,6 +210,9 @@ const I18N = {
     phases: { child: 'child', adult: 'adult', elder: 'elder' },
     kinds: { leg: 'leg', fin: 'fin', wing: 'wing', weapon: 'spike', armor: 'plate', sense: 'feeler', storage: 'pouch', insul: 'fur', display: 'crest', bud: 'bud' },
     abil: { leg: 'walking', fin: 'swimming', wing: 'flying', weapon: 'weapon', armor: 'armour', sense: 'feeling', storage: 'storage', insul: 'insulation', display: 'signal' },
+    bossWhy: { age: 'experience', size: 'strength', kids: 'many children', echo: 'others repeat their calls', words: 'large vocabulary', wb: 'content, healthy life' },
+    spkWhy: { words: 'large vocabulary', echo: 'others repeat their calls' },
+    bossTrig: { vacant: 'no boss', died: 'boss died', old: 'boss too old', ill: 'boss ill', crisis1: 'drought', crisis2: 'cold wave', crisis3: 'disease outbreak', distrust: 'loss of confidence', term: 'end of term' },
     wev: { drought: 'drought', frost: 'cold wave', disease: 'disease outbreak' },
     causes: { disease: 'disease', hunger: 'hunger', drowned: 'drowned', frozen: 'frozen', heat: 'heat', age: 'old age', injury: 'injury', eaten: 'eaten', thirst: 'thirst', cold: 'cold', stress: 'stress', terrarium: 'terrarium', lonely: 'loneliness' },
     stress: { injuries: 'injuries', cold: 'cold', water: 'water', hunger: 'hunger', stress: 'stress', '': 'by chance' },
@@ -256,6 +259,9 @@ const I18N = {
     'ev.extinct': 'The species {0} has died out',
     'ev.pop': 'The population reached {0} creatures',
     'ev.gen': 'The first creature of generation {0} was born',
+    'ev.bossWhy': 'reason: {0}; occasion: {1}',
+    'ev.speaker': '{0} is the new speaker of the Plimploms ({1}; {2}; {3} votes)',
+    'st.speaker': 'Speaker (talks to the outside)', 'st.speakerLast': 'Speaker said last',
     'ev.wev': 'World event: {0} begins (about {1} day(s))',
     'ev.wevEnd': 'World event over: {0}. Deaths during it: {1}',
     'app.wevBanner': '{0} - {1} ticks left{2}',
@@ -486,6 +492,9 @@ const I18N = {
     phases: { child: 'Kind', adult: 'erwachsen', elder: 'alt' },
     kinds: { leg: 'Bein', fin: 'Flosse', wing: 'Flügel', weapon: 'Stachel', armor: 'Platte', sense: 'Fühler', storage: 'Beutel', insul: 'Fell', display: 'Kamm', bud: 'Knospe' },
     abil: { leg: 'Laufen', fin: 'Schwimmen', wing: 'Fliegen', weapon: 'Waffe', armor: 'Panzer', sense: 'Fühlen', storage: 'Speicher', insul: 'Isolierung', display: 'Signal' },
+    bossWhy: { age: 'Erfahrung', size: 'Stärke', kids: 'viele Kinder', echo: 'andere wiederholen seine Rufe', words: 'großer Wortschatz', wb: 'zufriedenes, gesundes Leben' },
+    spkWhy: { words: 'großer Wortschatz', echo: 'andere wiederholen seine Rufe' },
+    bossTrig: { vacant: 'kein Boss', died: 'Boss gestorben', old: 'Boss zu alt', ill: 'Boss krank', crisis1: 'Dürre', crisis2: 'Kältewelle', crisis3: 'Seuche', distrust: 'Vertrauensverlust', term: 'Amtszeit abgelaufen' },
     wev: { drought: 'Dürre', frost: 'Kältewelle', disease: 'Seuche' },
     causes: { disease: 'Seuche', hunger: 'Hunger', drowned: 'ertrunken', frozen: 'erfroren', heat: 'Hitze', age: 'Alter', injury: 'Verletzung', eaten: 'gefressen', thirst: 'Durst', cold: 'Kälte', stress: 'Stress', terrarium: 'Terrarium', lonely: 'Einsamkeit' },
     stress: { injuries: 'Verletzungen', cold: 'Kälte', water: 'Wasser', hunger: 'Hunger', stress: 'Stress', '': 'zufällig' },
@@ -532,6 +541,9 @@ const I18N = {
     'ev.extinct': 'Die Art {0} ist ausgestorben',
     'ev.pop': 'Die Bevölkerung hat {0} Kreaturen erreicht',
     'ev.gen': 'Die erste Kreatur der Generation {0} wurde geboren',
+    'ev.bossWhy': 'Grund: {0}; Anlass: {1}',
+    'ev.speaker': '{0} ist neuer Sprecher der Plimploms ({1}; {2}; {3} Stimmen)',
+    'st.speaker': 'Sprecher (spricht nach außen)', 'st.speakerLast': 'Sprecher sagte zuletzt',
     'ev.wev': 'Weltereignis: {0} beginnt (ca. {1} Tag(e))',
     'ev.wevEnd': 'Weltereignis vorbei: {0}. Tode währenddessen: {1}',
     'app.wevBanner': '{0} - noch {1} Ticks{2}',
@@ -613,6 +625,8 @@ function tEvent(k, p) {
     case 'ev.spread': return t(k, p[0], tKind(p[1]), p[2]);
     case 'ev.bossDied': return t(k, p[0], p[1], tCause(p[2]));
     case 'ev.knock': return t(k, tr('knocks')[p[0]] || p[0], p[1] === '1' ? t('ev.knockOn') : t('ev.knockOff'));
+    case 'ev.boss': return t(k, p[0], p[1], p[2], p[3], p[4]) + (p[5] ? ' - ' + t('ev.bossWhy', tr('bossWhy')[p[5]] || p[5], tr('bossTrig')[p[6]] || p[6] || '') : '');
+    case 'ev.speaker': return t(k, p[0], tr('spkWhy')[p[2]] || p[2], tr('bossTrig')[p[3]] || p[3], p[4]);
     case 'ev.wev': return t(k, tr('wev')[p[0]] || p[0], p[1]);
     case 'ev.wevEnd': return t(k, tr('wev')[p[0]] || p[0], p[1]);
     case 'ev.adoptedDied': return t(k, p[0], tCause(p[1]));

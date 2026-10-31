@@ -279,7 +279,7 @@ pub fn panel(w: &World, sel: u32) -> String {
             .map(|s| {
                 let boss = w.id_idx_get(s.boss_id).map(|i| json!({"id": cs[i].id, "name": cs[i].name}));
                 let kinds: Vec<Value> = s.kinds.iter().filter(|q| q.1 >= 0.2 && q.0 as usize != K_BUD).take(4).map(|q| json!([KIND_KEYS[q.0 as usize], q.1])).collect();
-                json!({"id": s.id, "name": s.name, "n": s.n, "hue": s.hue, "carn": s.carn, "boss": boss, "score": s.score, "votes": s.votes, "voters": s.voters, "kinds": kinds, "ord": s.ord_share})
+                json!({"id": s.id, "name": s.name, "n": s.n, "hue": s.hue, "carn": s.carn, "boss": boss, "why": s.boss_why, "trig": s.boss_trig, "score": s.score, "votes": s.votes, "voters": s.voters, "kinds": kinds, "ord": s.ord_share})
             })
             .collect()
     };
@@ -318,6 +318,7 @@ pub fn panel(w: &World, sel: u32) -> String {
             "macro": w.macro_n, "neuronsN": w.neurons_n, "bossChanges": w.boss_changes, "asleep": cs.iter().filter(|c| c.asleep).count(), "words": words,
             "cache": [w.caches.len(), w.cache_dep, w.cache_ret, cs.iter().filter(|c| c.cdep > 0).count()],
             "react": [w.rx_n, w.rx_hit, w.rc_n, w.rc_hit],
+            "speaker": w.id_idx_get(w.spk_id).map(|i| json!({"id": cs[i].id, "name": cs[i].name, "why": w.spk_why, "since": World::day_of(w.spk_since), "last": w.spk_log.last().map(|x| x.1.clone())})),
             "tri": [w.tri_say, w.tri_n, w.tri_ok],
             "acts": (0..9usize).map(|k| cs.iter().filter(|c| c.actv as usize == k).count()).collect::<Vec<_>>()},
         "hist": &w.hist[w.hist.len().saturating_sub(170)..],

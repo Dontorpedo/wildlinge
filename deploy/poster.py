@@ -31,14 +31,18 @@ T = {
     "en": {"ev.pop": "The population reached {0} Plimploms.", "ev.gen": "The first Plimplom of generation {0} was born.",
            "ev.word": 'The word "{0}" is now used by {1} Plimploms. Nobody gave it to them.',
            "ev.wev": "World event: a {0} begins. It lasts about {1} day(s).", "ev.wevEnd": "The {0} is over. Deaths during it: {1}.",
+           "ev.speaker": "{0} is now the speaker of the Plimploms and talks to the outside world.",
+           "spk": '{0} says: {1}',
            "wod": 'Word of the day: "{0}". Said {1} times by {2} speakers.'},
     "de": {"ev.pop": "Die Population hat {0} Plimploms erreicht.", "ev.gen": "Das erste Plimplom der Generation {0} wurde geboren.",
            "ev.word": 'Das Wort "{0}" wird jetzt von {1} Plimploms benutzt. Niemand hat es ihnen beigebracht.',
            "ev.wev": "Weltereignis: {0} beginnt. Dauer etwa {1} Tag(e).", "ev.wevEnd": "{0} ist vorbei. Tode währenddessen: {1}.",
+           "ev.speaker": "{0} ist jetzt Sprecher der Plimploms und spricht nach außen.",
+           "spk": '{0} sagt: {1}',
            "wod": 'Wort des Tages: "{0}". {1}x gesagt, {2} Sprecher.'},
 }
-POSTED_KINDS = ("ev.pop", "ev.gen", "ev.word", "ev.goal", "ev.wev", "ev.wevEnd")
-PER_KIND_DAY = {"ev.word": 2, "ev.gen": 1, "ev.pop": 2, "ev.goal": 2, "ev.wev": 1, "ev.wevEnd": 1}
+POSTED_KINDS = ("ev.pop", "ev.gen", "ev.word", "ev.goal", "ev.wev", "ev.wevEnd", "ev.speaker")
+PER_KIND_DAY = {"ev.word": 2, "ev.gen": 1, "ev.pop": 2, "ev.goal": 2, "ev.wev": 1, "ev.wevEnd": 1, "ev.speaker": 1, "spk": 3}
 
 
 def load_world():
@@ -73,6 +77,8 @@ def compose(k, p, lang):
         return text + "."
     if k in ("ev.wev", "ev.wevEnd"):
         p[0] = WEV[lang].get(p[0], p[0])
+    if k == "ev.speaker":
+        return tt[k].format(p[0])
     if k not in tt:
         return None
     try:
@@ -96,7 +102,28 @@ def candidates(w, st, lang):
     wod = w.get("wod")
     if wod and wod["day"] > st["last_wod"] and wod["n"] >= 20:
         out.append((w["t"], "wod", T[lang]["wod"].format(wod["word"], wod["n"], wod["speakers"])))
+    spk = speaker_line(w, st, lang)
+    if spk:
+        out.append(spk)
     return out
+
+
+def speaker_line(w, st, lang):
+    sid = w.get("spk_id", 0)
+    log = [x for x in w.get("spk_log", []) if x[0] > st.get("last_spk", 0)]
+    if not sid or len(log) < 4:
+        return None
+    name = next((c["name"] for c in w.get("creatures", []) if c["id"] == sid), None)
+    if not name:
+        return None
+    seen, words = set(), []
+    for _, txt in reversed(log):
+        if txt not in seen:
+            seen.add(txt)
+            words.append('"' + txt + '"')
+        if len(words) >= 4:
+            break
+    return (log[-1][0], "spk", T[lang]["spk"].format(name, " ".join(reversed(words))))
 
 
 def oauth_header(method, url):
@@ -159,6 +186,8 @@ def main():
             return 1
     if k == "wod":
         st["last_wod"] = w["wod"]["day"]
+    elif k == "spk":
+        st["last_spk"] = t
     else:
         st["last_t"] = t
     st["posts"].append({"ts": now, "day": day, "k": k, "text": text, "dry": DRY})

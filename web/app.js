@@ -255,6 +255,7 @@ function renderWorld(p) {
     row(t('st.plants'), `${st.plants} / ${st.asleep}`) +
     row(t('st.cycle'), `${st.dets} / ${st.fert}`) +
     (st.react && st.react[0] >= 20 ? row(t('st.react'), `${Math.round(100 * st.react[1] / st.react[0])}% / ${st.react[2] ? Math.round(100 * st.react[3] / st.react[2]) : 0}%`) + row(t('st.react2'), st.react[0]) : '') +
+    (st.speaker ? row(t('st.speaker'), `<a class="w" data-id="${st.speaker.id}">${esc(st.speaker.name)}</a> (${esc(tr('spkWhy')[st.speaker.why] || '')})`) + (st.speaker.last ? row(t('st.speakerLast'), esc(st.speaker.last)) : '') : '') +
     (st.tri && st.tri[1] >= 20 ? row(t('st.tri'), `${st.tri[0]}`) + row(t('st.tri2'), `${Math.round(100 * st.tri[2] / st.tri[1])}%`) : '') +
     (st.cache ? row(t('st.cache'), `${st.cache[0]} | ${st.cache[3]}`) + row(t('st.cache2'), `${st.cache[1]} / ${st.cache[2]}`) : '') +
     (st.acts ? tr('acts').map((n, k) => (st.acts[k] ? row(t('st.acts') + ': ' + n, `${st.acts[k]} (${Math.round(100 * st.acts[k] / Math.max(1, st.acts.reduce((p, q) => p + q, 0)))}%)`) : '')).join('') : '') +
@@ -290,7 +291,7 @@ function renderWorld(p) {
     `<div class="muted" style="margin-top:6px">${esc(t('lang.click'))}</div>`);
   const head = tr('sp.head');
   setHtml($('species'), `<tr><th>${esc(head[0])}</th><th>${esc(head[1])}</th><th style="text-align:right">${esc(head[2])}</th></tr>` + p.species.map(s => {
-    const boss = s.boss ? `<a class="w" data-id="${s.boss.id}" style="color:#ffd84a">${esc(s.boss.name)}</a> ${esc(t('sp.votes', Math.round(s.score * 100), s.votes, s.voters))}` : '-';
+    const boss = s.boss ? `<a class="w" data-id="${s.boss.id}" style="color:#ffd84a">${esc(s.boss.name)}</a> ${esc(t('sp.votes', Math.round(s.score * 100), s.votes, s.voters))} <span class="muted">${s.why ? esc((tr('bossWhy')[s.why] || '') + '; ' + (tr('bossTrig')[s.trig] || '')) : ''}</span>` : '-';
     const kinds = s.kinds.map(([k, sh]) => `${esc(tKind(k))} ${Math.round(sh * 100)}%`).join(', ');
     const ord = s.ord !== undefined && s.ord !== null ? t('sp.order', s.ord >= 0.5 ? t('sp.ordWW') : t('sp.ordRW'), Math.round(Math.max(s.ord, 1 - s.ord) * 100)) : '';
     return `<tr><td class="l"><span style="display:inline-block;width:10px;height:10px;margin-right:6px;vertical-align:-1px;background:hsl(${+s.hue || 0},58%,52%);${s.carn ? 'outline:1px solid #e0645a' : ''}"></span>${esc(s.name)}</td><td class="l">${s.n}</td><td>${boss}</td></tr>` +
