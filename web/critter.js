@@ -314,8 +314,43 @@ function crWholeInit() {
   };
   im.src = CR_WHOLE_IMG;
 }
+/* AI-drawn add-on parts (horns, plates, feelers, fins, crests, fur) for visible mutations */
+let crPartxData = null;
+const crPartxCache = new Map();
+function crPartxInit() {
+  if (typeof CR_PARTX_IMG === 'undefined' || typeof Image === 'undefined') return;
+  const im = new Image();
+  im.onload = () => {
+    const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+    const x = c.getContext('2d'); x.drawImage(im, 0, 0);
+    crPartxData = x.getImageData(0, 0, im.width, im.height);
+  };
+  im.src = CR_PARTX_IMG;
+}
+/* recolour: tinted kinds take the given hue on saturated pixels, others keep their own colours */
+function crPartx(kind, i, tint) {
+  if (!crPartxData || !CR_PARTX_META[kind] || !CR_PARTX_META[kind].length) return null;
+  const L = CR_PARTX_META[kind], r = L[i % L.length], key = kind + '|' + (i % L.length) + '|' + tint;
+  let e = crPartxCache.get(key);
+  if (e) return e;
+  const [px, py, w, h] = r, A = crPartxData;
+  const cnv = document.createElement('canvas'); cnv.width = w; cnv.height = h;
+  const x = cnv.getContext('2d'), img = x.createImageData(w, h), d = img.data;
+  for (let y = 0; y < h; y++) for (let xx = 0; xx < w; xx++) {
+    const s = ((py + y) * A.width + px + xx) * 4, o = (y * w + xx) * 4, al = A.data[s + 3];
+    if (!al) continue;
+    let rr = A.data[s], g = A.data[s + 1], bb = A.data[s + 2];
+    if (tint >= 0) { const [hh, sat, v] = crRgb2hsv(rr, g, bb); if (sat > 0.25 && v > 0.2) { const c = crHsv2rgb(tint, sat, v); rr = c[0]; g = c[1]; bb = c[2]; } }
+    d[o] = rr; d[o + 1] = g; d[o + 2] = bb; d[o + 3] = al;
+  }
+  x.putImageData(img, 0, 0);
+  e = { cnv, w, h };
+  if (crPartxCache.size > 600) crPartxCache.delete(crPartxCache.keys().next().value);
+  crPartxCache.set(key, e);
+  return e;
+}
 /* optional AI animation frames (walk, sleep, eat, attack), recoloured like the base sprites */
-let crAnimData = null;
+let crAnimData = null, crAnimScratch = null;
 const crAnimCache = new Map();
 function crAnimInit() {
   if (typeof CR_ANIM_IMG === 'undefined' || typeof Image === 'undefined') return;
@@ -323,18 +358,26 @@ function crAnimInit() {
   im.onload = () => {
     const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
     const x = c.getContext('2d'); x.drawImage(im, 0, 0);
-    crAnimData = x.getImageData(0, 0, im.width, im.height);
+    crAnimData = im;
   };
   im.src = CR_ANIM_IMG;
 }
 function crAnimHas(idx) { return crAnimData !== null && CR_ANIM_META.sp[idx] != null; }
 function crAnimFrame(sp, hue, acc, act, f) {
   const am = CR_ANIM_META, a = am.sp[sp.idx], ai = am.acts.indexOf(act);
-  if (!a || ai < 0) return null;
+  if (!a || ai < 0 || (a.m !== undefined && !((a.m >> ai) & 1))) return null;
   const pat = sp.pat | 0, key = sp.idx + '|' + hue + '|' + acc + '|' + ai + '|' + f + '|' + pat;
   let e = crAnimCache.get(key);
   if (e) return e;
-  const m = sp.m, cx = (ai * am.nf + f) * a.aw, cy = a.y, A = crAnimData, ah = crAccHue(acc);
+  let slot = ai;
+  if (a.m !== undefined) { slot = 0; for (let j = 0; j < ai; j++) if ((a.m >> j) & 1) slot++; }
+  /* read only this cell from the decoded atlas: keeps memory low with many sprites */
+  const m = sp.m, ah = crAccHue(acc);
+  if (!crAnimScratch) { crAnimScratch = document.createElement('canvas'); }
+  crAnimScratch.width = a.aw; crAnimScratch.height = a.ah;
+  const sx = crAnimScratch.getContext('2d', { willReadFrequently: true });
+  sx.clearRect(0, 0, a.aw, a.ah); sx.drawImage(crAnimData, (a.x || 0) + (slot * am.nf + f) * a.aw, a.y, a.aw, a.ah, 0, 0, a.aw, a.ah);
+  const A = sx.getImageData(0, 0, a.aw, a.ah), cx = 0, cy = 0;
   const cnv = document.createElement('canvas'); cnv.width = a.aw; cnv.height = a.ah;
   const x = cnv.getContext('2d'), img = x.createImageData(a.aw, a.ah), d = img.data;
   for (let y = 0; y < a.ah; y++) for (let xx = 0; xx < a.aw; xx++) {
@@ -346,7 +389,7 @@ function crAnimFrame(sp, hue, acc, act, f) {
       const dh = Math.abs(((h - m.dom + 540) % 360) - 180);
       let nh = -1;
       let ns = sat, nv = v;
-      if (dh >= 135) {
+      if (dh <= 45) {
         nh = (hue + (h - m.dom) + 720) % 360;
         const q = pat ? crPattern(pat, xx, y - a.mt, a.aw, a.ah - a.mt - a.mb, sat, v, ah) : null;
         if (q) { if (q[0] >= 0) nh = q[0]; ns = q[1]; nv = q[2]; }
@@ -412,7 +455,7 @@ function crWholeSprite(idx, hue, accIdx, pat) {
       const dh = Math.abs(((h - m.dom + 540) % 360) - 180);
       let nh = -1;
       let ns = sat, nv = v;
-      if (dh >= 135) {
+      if (dh <= 45) {
         nh = (hue + (h - m.dom) + 720) % 360;
         const q = pat ? crPattern(pat, xx, y, m.w, m.h, sat, v, ah) : null;
         if (q) { if (q[0] >= 0) nh = q[0]; ns = q[1]; nv = q[2]; }
@@ -651,6 +694,7 @@ function crCompose(rec, opt) {
 crAtlasInit();
 crWholeInit();
 crAnimInit();
+crPartxInit();
 
 function crFinish(c, opt) {
   const { out, ox, gy, A } = c, cnv = document.createElement('canvas');
@@ -708,24 +752,27 @@ function crScaleSprite(e, opt) {
 const CR_TAGS = ['r', 'a', 'lt', 'g', 'ga', 't', 'lst', 'e', 'e', 'he', 'h', 'c', 'e', 'r', 'e', 'r', 'he', 'c', 'w', 'w', 'a', 'n', 's', 't', 'r', 'lft', 'a', 'n', 's', 'et', 'lt', 'rt',
   'l', 'lf', 'et', 'ge', 'ft', 'e', 'h', 'f', 'ft', 'cs', 'sr', 'r', 'r', 'a', 'l', 'rt', 'lt', 'lt', 'lt', 'lt', 'lt', 'lt', 'lt', 'lt', 're', 'wn', 'et', 'pt', 'wn', 'he', 'te', 'e',
   'n', 'et', 'tp', 'wt', 'r', 'e', 'n', 'et', 'tp', 'wt', 'e', 'n', 'wh', 'tr', 'we', 're', 'cs', 'nh', 'wn', 'f', 'et', 'pa', 't', 'w', 'et', 'f', 'h', 'ts'];
+if (typeof CR_EXTRA_TAGS !== 'undefined') CR_TAGS.push(...CR_EXTRA_TAGS);
 const crPickCache = new Map();
-function crPickIdx(rec) {
+function crPickIdx(rec, lim) {
   const sig = rec[5] * 31 + rec[19] * 977 + rec[20] * 131 + rec[22] * 17 + rec[23] * 7 + rec[9] * 3;
   const id = rec[0] | 0, c = crPickCache.get(id);
-  if (c && c.sig === sig) return c.idx;
+  if (!lim && c && c.sig === sig) return c.idx;
   const np = rec[19] | 0, k = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
   for (let i = 0; i < np; i++) k[rec[26 + i * 7 + 5] | 0]++;
   const wing = k[2] > 0 || rec[9] > 0, elong = rec[20] > 0.55, seg = Math.floor(rec[22]) >= 3, tail = (rec[89] | 0) > 0;
   const want = { w: wing, f: k[1] > 0, h: k[3] > 0, s: k[7] > 0 || k[3] > 1, a: k[4] > 0, n: k[5] > 0, c: k[8] > 0, p: k[8] > 0, r: k[6] > 0 || (!elong && !seg), l: elong, g: seg, t: tail, e: true };
   const wt = { w: 7, f: 5, h: 4, s: 4, a: 5, n: 4, c: 4, p: 2, r: 1.5, l: 4, g: 5, t: 2, e: 0.5 };
-  let best = -1e9; const sc = new Array(CR_TAGS.length);
-  for (let i = 0; i < CR_TAGS.length; i++) {
+  let best = -1e9; const sc = new Array(lim ? Math.min(lim, CR_TAGS.length) : CR_TAGS.length);
+  const NT = lim ? Math.min(lim, CR_TAGS.length) : CR_TAGS.length;
+  for (let i = 0; i < NT; i++) {
     const tg = CR_TAGS[i]; let v = 0;
     for (const q in wt) { const has = tg.includes(q); if (want[q]) { if (has) v += wt[q]; else if (q === 'w' || q === 'f' || q === 'a' || q === 'g' || q === 'l') v -= wt[q] * 0.6; } else if (has && q !== 'e' && q !== 't' && q !== 'r') v -= wt[q] * 0.8; }
     sc[i] = v; if (v > best) best = v;
   }
   const cand = []; for (let i = 0; i < sc.length; i++) if (sc[i] >= best - 1) cand.push(i);
   const idx = cand[crHash(rec, 11) % cand.length];
+  if (lim) return idx;
   if (crPickCache.size > 4000) crPickCache.clear();
   crPickCache.set(id, { sig, idx });
   return idx;
@@ -753,11 +800,12 @@ function crPose(kind0, t, id, spd, H, W) {
     case 'eat': { const n = Math.sin(w * 0.33), m = Math.max(0, n); z.lean = H * 0.16 * m; z.sy = 1 - 0.05 * m; break; }
     case 'attack': { const n = Math.max(0, Math.sin(w * 0.3)); z.dx = Math.round(0.2 * W * n); z.lean = H * 0.18 * n; z.sx = 1 + 0.1 * n; z.sy = 1 - 0.04 * n; tw = 0.35; break; }
     case 'hop': { const p = ab(Math.sin(w * 0.2)); z.dy = -Math.round(p * 0.2 * H); z.sy = 1 + 0.05 * p - 0.05 * (1 - p); tw = 0.3; ear = Math.sin(w * 0.2) * 1.5; break; }
+    case 'swim': { const p = Math.sin(w * 0.18); z.sy = 1 + 0.03 * p; z.lean = H * 0.04 * p; tw = 0.2; ear = p; break; }
     case 'fly': { const p = Math.sin(w * 0.5); z.sy = 1 + 0.05 * p; z.sx = 1 - 0.03 * p; z.lean = H * 0.06; ear = p * 1.3; break; }
     default: z.sy = 1 + 0.025 * Math.sin(w * 0.07); z.sx = 1 - 0.012 * Math.sin(w * 0.07);
   }
-  z.act = kind === 'walk' || kind === 'sleep' || kind === 'eat' || kind === 'attack' ? kind : kind === 'run' ? 'walk' : '';
-  z.fr = (Math.floor(w * (kind === 'sleep' ? 0.04 : kind === 'run' ? 0.27 : kind === 'attack' ? 0.22 : kind === 'eat' ? 0.15 : 0.11)) % 8 + 8) % 8;
+  z.act = kind === 'walk' || kind === 'sleep' || kind === 'eat' || kind === 'attack' || kind === 'swim' || kind === 'fly' ? kind : kind === 'run' ? 'walk' : '';
+  z.fr = (Math.floor(w * (kind === 'sleep' ? 0.04 : kind === 'run' ? 0.27 : kind === 'attack' ? 0.22 : kind === 'eat' ? 0.15 : kind === 'fly' ? 0.3 : kind === 'swim' ? 0.12 : 0.11)) % 8 + 8) % 8;
   z.tp = Math.max(0, Math.min(4, Math.round(2 + 2 * Math.sin(w * tw + id * 1.7) * (kind === 'sleep' ? 0.3 : 1))));
   const q = (t + id * 53) % 230;
   if (kind !== 'sleep' && q < 16) ear += (((q / 3) | 0) % 2 ? 2 : -2);
@@ -854,6 +902,7 @@ function crDrawWhole(cs, o, px, py, r, baby, moving, st, hp) {
   const hue = (Math.round(rec[5] / 12) * 12) % 360, acc = rec[82] | 0, idx = crPickIdx(rec);
   const sp = crWholeSprite(idx, hue, acc, rec[83] | 0);
   let s = (r * 2.5 * (baby ? 0.75 : 1)) / sp.h;
+  s = Math.min(s, (r * 5 * (baby ? 0.75 : 1)) / sp.w);
   s = s < 0.75 ? s : s < 1.5 ? 1 : Math.round(s);
   const w = Math.max(1, Math.round(sp.w * s)), h = Math.max(1, Math.round(sp.h * s));
   let PS = crPoseState.get(id);
@@ -868,7 +917,8 @@ function crDrawWhole(cs, o, px, py, r, baby, moving, st, hp) {
     if (want !== PS.flip) { PS.flip = want; PS.hold = 0; }
   }
   const flip = PS.flip;
-  const kind = sl ? 'sleep' : fly ? 'fly' : act === 3 ? 'attack' : act === 4 && !moving ? 'eat' : act === 2 ? 'run' : act === 8 || act === 7 || act === 5 ? 'hop' : moving ? 'walk' : 'idle';
+  const swim0 = (((cs[o + 91] || 0) | 0) & 3) === 2 && !fly;
+  const kind = sl ? 'sleep' : fly ? 'fly' : swim0 && act !== 3 ? 'swim' : act === 3 ? 'attack' : act === 4 && !moving ? 'eat' : act === 2 ? 'run' : act === 8 || act === 7 || act === 5 ? 'hop' : moving ? 'walk' : 'idle';
   const z = crPose(kind, st.animT, id, cs[o + 18], h, w);
   z.hue = hue; z.acc = acc;
   z.bx = 0.88 + 0.24 * clamp(rec[20], 0, 1); z.by = 0.94 + 0.12 * clamp(rec[21], 0, 1);
@@ -925,6 +975,7 @@ function crOverlays(rec, sp, px, gy, s, flip, z, st, hue, acc, swim) {
   const ht = Y(hx);
   b.imageSmoothingEnabled = false;
   const tags = CR_TAGS[sp.idx] || '';
+  if (crPartxData) { crOverlaysX(rec, sp, k, tags, X, Y, hx, ht, s, flip, st, hue, acc, swim, H); return; }
   if (k[8] && !tags.includes('c')) {
     const im = crPartImg('crests', crHash(rec, 7) % 16, hue, acc), cw = Math.max(3, Math.round(W * 0.28)), chh0 = Math.max(2, Math.round(cw * im.h / im.w)), chh = Math.min(chh0, Math.max(2, Math.round(H * 0.25)));
     const cx = X(hx - sp.w * 0.08);
@@ -959,6 +1010,19 @@ function crOverlays(rec, sp, px, gy, s, flip, z, st, hue, acc, swim) {
     b.fillStyle = `hsl(${hue},55%,45%)`;
     for (let j = 0; j < fh; j++) b.fillRect(x - flip * Math.round(j * 0.6), y - j, Math.max(1, Math.round((fh - j) * 0.7)), 1);
   }
+}
+function crPutPart(im, cx, by, s, flip, ax) {
+  const w = Math.max(1, Math.round(im.w * s)), h = Math.max(1, Math.round(im.h * s));
+  b.save(); b.translate(cx, 0); b.scale(flip, 1); b.drawImage(im.cnv, -Math.round(w * ax), by - h, w, h); b.restore();
+}
+function crOverlaysX(rec, sp, k, tags, X, Y, hx, ht, s, flip, st, hue, acc, swim, H) {
+  const ah = crAccHue(acc), sc = Math.max(0.5, s * 0.85);
+  if (k[7]) { const im = crPartx('fur', crHash(rec, 12), hue); if (im) for (const f of [0.3, 0.55]) { const sx = Math.round(sp.w * f); crPutPart(im, X(sx), Y(sx) + Math.round(im.h * sc * 0.45), sc * 0.8, flip, 0.5); } }
+  if (k[4] && !tags.includes('a')) { const im = crPartx('plate', crHash(rec, 13), -1); if (im) { const sx = Math.round(sp.w * 0.4); crPutPart(im, X(sx), Y(sx) + Math.round(im.h * sc * 0.5), sc, flip, 0.5); } }
+  if (k[1] && !swim && !tags.includes('f')) { const im = crPartx('fin', crHash(rec, 14), hue); if (im) { const sx = Math.round(sp.w * 0.45); crPutPart(im, X(sx), Y(sx) + Math.round(im.h * sc * 0.35), sc, flip, 0.5); } }
+  if (k[8] && !tags.includes('c')) { const im = crPartx('crest', crHash(rec, 7), ah); if (im) crPutPart(im, X(hx - sp.w * 0.06), ht + Math.round(im.h * sc * 0.3), sc, flip, 0.5); }
+  if (k[5] && !tags.includes('n')) { const im = crPartx('ant', crHash(rec, 15), ah); if (im) crPutPart(im, X(hx + sp.w * 0.03), ht + 1, sc, flip, 0.4); }
+  if (k[3] && !tags.includes('h')) { const im = crPartx('horn', crHash(rec, 8), -1); if (im) crPutPart(im, X(hx), ht + Math.round(im.h * sc * 0.25), sc * (0.8 + 0.1 * Math.min(3, k[3])), flip, 0.5); }
 }
 function crDrawWild(cs, o, px, py, r, baby, moving, st, hp) {
   if (crWholeOn()) return crDrawWhole(cs, o, px, py, r, baby, moving, st, hp);

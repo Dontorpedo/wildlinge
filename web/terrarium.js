@@ -112,6 +112,8 @@ function tzMake(r, st) {
   tzGeom(c);
   if (st && st.y !== undefined) { c.y = st.y; c.lvl = st.lvl || 0; if (c.lvl >= TZ.lv.length) { c.lvl = 0; c.y = TZ_FLOOR; } }
   c.px = c.x; c.py = c.y;
+  /* pets from before the sprite extension keep their look: pick only among the first 92 sprites */
+  if (st) c.wi = st.wi !== undefined ? st.wi : crPickIdx(rec, 92);
   return c;
 }
 /* sociality 0..1: per individual trait derived from its genome record; predators and loners need little company */
@@ -123,7 +125,8 @@ function tzSoc(c) {
 }
 function tzGrowth(c) { return Math.min(1, c.age / TZ.GROW); }
 function tzWholeGeom(c) {
-  const g = tzGrowth(c), r = Math.max(2, Math.round(c.rT * (0.5 + 0.5 * g))), idx = crPickIdx(c.rec);
+  if (c.wi === undefined || c.wi >= CR_TAGS.length) c.wi = crPickIdx(c.rec);
+  const g = tzGrowth(c), r = Math.max(2, Math.round(c.rT * (0.5 + 0.5 * g))), idx = c.wi;
   const sp = crWholeSprite(idx, (Math.round(c.rec[5] / 12) * 12) % 360, c.rec[82] | 0, c.rec[83] | 0);
   const s = Math.max(1, Math.round(r * 2.4 / sp.h));
   c.r = r; c.ws = s; c.wsp = sp;
@@ -198,7 +201,7 @@ function tzSerialize() {
   return JSON.stringify({
     v: 2, savedAt: Date.now(), room: TZ.room, graves: TZ.graves, extra: TZ.extra,
     eggs: TZ.eggs.map(e => ({ id: e.id, x: e.x, left: e.left })),
-    list: TZ.list.map(c => ({ id: c.id, age: c.age, needs: c.needs, hp: c.hp, stress: c.stress, love: c.love, breedCool: c.breedCool, x: c.x, y: c.y, lvl: c.lvl, acc: c.acc, skill: c.skill, obey: c.obey, vocab: c.vocab }))
+    list: TZ.list.map(c => ({ id: c.id, age: c.age, needs: c.needs, hp: c.hp, stress: c.stress, love: c.love, breedCool: c.breedCool, x: c.x, y: c.y, lvl: c.lvl, acc: c.acc, skill: c.skill, obey: c.obey, vocab: c.vocab, wi: c.wi }))
   });
 }
 async function tzSave() {

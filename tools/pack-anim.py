@@ -5,7 +5,8 @@ import numpy as np
 from PIL import Image
 
 src = sys.argv[1]
-ACTS = ['walk', 'sleep', 'eat', 'attack']
+ACTS = ['walk', 'sleep', 'eat', 'attack', 'swim', 'fly']
+NEED = ['walk', 'sleep', 'eat', 'attack']
 NF, S, CW, CH = 8, 2, 160, 112
 MX, MT, MB = 8, 6, 3
 meta = json.load(open('web/assets/whole/whole.json'))
@@ -33,28 +34,41 @@ rows = []
 for i, m in enumerate(meta):
     w, h = m['w'], m['h']
     aw, ah = w + 2 * MX, h + MT + MB
-    ok = all(os.path.exists(f'{src}/{i}_{a}_{k}.png') for a in ACTS for k in range(1, NF + 1))
+    have = [all(os.path.exists(f'{src}/{i}_{a}_{k}.png') for k in range(1, NF + 1)) for a in ACTS]
+    ok = all(have[ACTS.index(a)] for a in NEED)
     if not ok:
         rows.append(None); continue
     x0, y0 = (CW - w * S) // 2 - MX * S, CH - 8 - h * S - MT * S
-    row = Image.new('RGBA', (aw * NF * len(ACTS), ah), (0, 0, 0, 0))
+    row = Image.new('RGBA', (aw * NF * sum(have), ah), (0, 0, 0, 0))
+    slot = -1
     for ai, a in enumerate(ACTS):
+        if not have[ai]:
+            continue
+        slot += 1
         for k in range(1, NF + 1):
             im = Image.open(f'{src}/{i}_{a}_{k}.png').convert('RGBA')
             big = Image.new('RGBA', (aw * S, ah * S), (0, 0, 0, 0))
             big.paste(im.crop((x0, y0, x0 + aw * S, y0 + ah * S)), (0, 0))
-            row.paste(Image.fromarray(down(np.array(big))), ((ai * NF + k - 1) * aw, 0))
-    rows.append(row)
-W = max(r.width for r in rows if r is not None)
-H = sum(r.height for r in rows if r is not None)
+            row.paste(Image.fromarray(down(np.array(big))), ((slot * NF + k - 1) * aw, 0))
+    rows.append((row, sum(1 << j for j in range(len(ACTS)) if have[j])))
+W = 4096
+place, x, y, rh = [], 0, 0, 0
+for r in rows:
+    if r is None:
+        place.append(None); continue
+    if x + r[0].width > W:
+        x = 0; y += rh; rh = 0
+    place.append((x, y)); x += r[0].width; rh = max(rh, r[0].height)
+H = y + rh
 atlas = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-am, y = [], 0
+am = []
 for i, r in enumerate(rows):
     if r is None:
         am.append(None); continue
-    atlas.paste(r, (0, y))
-    am.append({'y': y, 'aw': r.width // (NF * len(ACTS)), 'ah': r.height, 'mx': MX, 'mt': MT, 'mb': MB})
-    y += r.height
+    r, mask = r
+    x, y = place[i]
+    atlas.paste(r, (x, y))
+    am.append({'x': x, 'y': y, 'aw': r.width // (NF * bin(mask).count('1')), 'ah': r.height, 'mx': MX, 'mt': MT, 'mb': MB, 'm': mask})
 q = atlas.quantize(colors=160, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE)
 q.save('web/assets/whole/anim.png', optimize=True)
 json.dump({'acts': ACTS, 'nf': NF, 'sp': am}, open('web/assets/whole/anim.json', 'w'))

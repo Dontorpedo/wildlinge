@@ -10,6 +10,8 @@ ACTIONS = {
     'sleep': 'lying down and sleeping, eyes closed, gentle slow breathing',
     'eat': 'head dipping down to eat and coming back up',
     'attack': 'lunging forward to bite and then recoiling back',
+    'swim': 'swimming forward, paddling with its legs, body gently rising and sinking',
+    'fly': 'flying in place, wings flapping up and down, body hovering',
 }
 S, CW, CH = 2, 160, 112
 
@@ -56,7 +58,7 @@ def run(idx, action, out, frames=8):
 if __name__ == '__main__':
     from concurrent.futures import ThreadPoolExecutor
     out = sys.argv[1]; os.makedirs(out, exist_ok=True)
-    idxs = [int(x) for x in sys.argv[2].split(',')] if sys.argv[2] != 'all' else range(92)
+    idxs = [int(x) for x in sys.argv[2].split(',')] if sys.argv[2] != 'all' else range(len(json.load(open('web/assets/whole/whole.json'))))
     acts = sys.argv[3].split(',') if len(sys.argv) > 3 else list(ACTIONS)
     jobs = [(i, a) for i in idxs for a in acts if not os.path.exists(f'{out}/{i}_{a}_8.png')]
 
@@ -66,6 +68,6 @@ if __name__ == '__main__':
                 run(t[0], t[1], out); return
             except Exception as e:
                 print('ERR', t, e, flush=True); time.sleep(5)
-    with ThreadPoolExecutor(6) as ex:
+    with ThreadPoolExecutor(8) as ex:
         list(ex.map(go, jobs))
     print('done', len(jobs), flush=True)

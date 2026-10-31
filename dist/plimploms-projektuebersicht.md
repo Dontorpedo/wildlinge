@@ -56,14 +56,14 @@ Ein Browser-Spiel mit künstlichem Leben ("artificial life"). Kreaturen ("Wildli
 
 ## 5. Grafik (drei Stile, umschaltbar)
 
-1. **Pixel-Sprites (Standard):** 92 KI-gezeichnete Ganzkörper-Sprites (vier Bildbögen, mit `tools/make-whole.py` zu einem Atlas gepackt), per Genom umgefärbt (Farbton, Akzentfarbe).
+1. **Pixel-Sprites (Standard):** 148 KI-gezeichnete Ganzkörper-Sprites (92 aus vier Bildbögen, 56 zusätzlich per Pixellab `generate-with-style-v2` im gleichen Stil, `web/assets/whole/src/extra`), mit `tools/make-whole.py` zu einem Atlas gepackt, per Genom umgefärbt (Körper im Genom-Farbton, Nebenfarben in Akzentfarbe, Muster aus dem Erbgut, Körperform-Streckung). Sichtbare Anbauten (Hörner, Panzer, Fühler, Flossen, Kämme, Fell) als eigene Pixellab-Teile (`parts.png`).
 2. **Klassisch:** Code-gezeichnete Draufsicht-Körper mit Schattierung.
 3. **Gezeichnet:** Zusammensetzung aus handgezeichneten Teile-Atlanten (Köpfe, Körper, Ohren, Schwänze, Beine, Flügel, Kämme, Hörner).
 
-**Auswahl der Figur:** Jeder der 92 Sprites ist getaggt (Flügel, Hörner, Ohren, Schwanz, Flosse, Stacheln, Panzer, Fühler, Kamm, lang, gegliedert, rund). Aus den Körperteilen und Formgenen wird ein Punktwert berechnet, unter den besten Treffern entscheidet ein Hash. Ein Flieger bekommt eine Figur mit Flügeln, ein Tier mit Flosse eine Flossenfigur. Wildnis und Terrarium nutzen dieselbe Auswahl.
+**Auswahl der Figur:** Jeder der 148 Sprites ist getaggt (Flügel, Hörner, Ohren, Schwanz, Flosse, Stacheln, Panzer, Fühler, Kamm, lang, gegliedert, rund). Aus den Körperteilen und Formgenen wird ein Punktwert berechnet, unter den besten Treffern entscheidet ein Hash. Ein Flieger bekommt eine Figur mit Flügeln, ein Tier mit Flosse eine Flossenfigur. Wildnis und Terrarium nutzen dieselbe Auswahl.
 
 **Animation:**
-- Echte KI-Frames (Pixellab, Engine PixMiniMax) für alle 92 Sprites: Gehen, Schlafen, Fressen, Angriff, je 8 Frames. Atlas `anim.png` (ca. 530 KB), umgefärbt wie die Basis-Sprites.
+- Echte KI-Frames (Pixellab, Engine PixMiniMax) für alle 148 Sprites: Gehen, Schlafen, Fressen, Angriff, Schwimmen, bei Flügel-Sprites zusätzlich Fliegen, je 8 Frames. Atlas `anim.png` (ca. 1,1 MB), umgefärbt wie die Basis-Sprites.
 - Rechnerische Animation: Atmen, Blinzeln (Augenposition je Sprite erkannt, elf Sprites ohne Augenerkennung), Schwanzwedeln, Ohrenzucken, Hüpfen (Balz, Tanzen), Flügelschlag-Wippen, Rennen.
 - Gegen Zittern: Phasen-Akkumulator pro Tier, geglättete Geschwindigkeit, entprellte Zustandswechsel, Spiegelung mit Hysterese.
 - Wenn die Figur sehr klein dargestellt wird (weites Herauszoomen), werden nur einfache Standbilder genutzt.

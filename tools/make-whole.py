@@ -22,6 +22,13 @@ for n in ['s1', 's2', 's3', 's4']:
     items.sort(key=lambda t: (t[0], t[1]))
     sprites += [t[2] for t in items]
 
+# extra sprites (Pixellab, one file each, tags in the name: xNN_tags.png), appended so old indices stay stable
+import glob, os
+EXTRA = sorted(glob.glob('web/assets/whole/src/extra/x*.png'))
+for f in EXTRA:
+    sprites.append(np.array(Image.open(f).convert('RGBA')))
+json.dump([os.path.basename(f)[:-4].split('_', 1)[1] for f in EXTRA], open('web/assets/whole/extra-tags.json', 'w'))
+
 def eye(s):
     h, w = s.shape[:2]
     al = s[:, :, 3] > 0
