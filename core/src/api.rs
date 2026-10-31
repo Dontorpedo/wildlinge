@@ -276,6 +276,7 @@ pub fn panel(w: &World, sel: u32) -> String {
             "parts": avg(&|c| c.pp.len() as f32), "rate": w.rate, "sentences": w.sentences, "births": w.births, "deaths": w.deaths,
             "macro": w.macro_n, "neuronsN": w.neurons_n, "bossChanges": w.boss_changes, "asleep": cs.iter().filter(|c| c.asleep).count(), "words": words,
             "cache": [w.caches.len(), w.cache_dep, w.cache_ret, cs.iter().filter(|c| c.cdep > 0).count()],
+            "react": [w.rx_n, w.rx_hit, w.rc_n, w.rc_hit],
             "acts": (0..9usize).map(|k| cs.iter().filter(|c| c.actv as usize == k).count()).collect::<Vec<_>>()},
         "hist": &w.hist[w.hist.len().saturating_sub(170)..],
         "lang": {"what": what, "where": whr},

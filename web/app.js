@@ -253,6 +253,7 @@ function renderWorld(p) {
     row(t('st.herbCarn'), `${st.herb} / ${st.carn}`) +
     row(t('st.plants'), `${st.plants} / ${st.asleep}`) +
     row(t('st.cycle'), `${st.dets} / ${st.fert}`) +
+    (st.react && st.react[0] >= 20 ? row(t('st.react'), `${Math.round(100 * st.react[1] / st.react[0])}% / ${st.react[2] ? Math.round(100 * st.react[3] / st.react[2]) : 0}%`) + row(t('st.react2'), st.react[0]) : '') +
     (st.cache ? row(t('st.cache'), `${st.cache[0]} | ${st.cache[3]}`) + row(t('st.cache2'), `${st.cache[1]} / ${st.cache[2]}`) : '') +
     (st.acts ? tr('acts').map((n, k) => (st.acts[k] ? row(t('st.acts') + ': ' + n, `${st.acts[k]} (${Math.round(100 * st.acts[k] / Math.max(1, st.acts.reduce((p, q) => p + q, 0)))}%)`) : '')).join('') : '') +
     row(t('st.gen'), st.gen) +

@@ -90,6 +90,14 @@ fn hear(w: &mut World, c: &mut Creature, u: &Utt, same_kind: bool, prestige: f32
         }
     }
     if u.sid != 0 && same_kind {
+        if c.rx_t == 0 && c.fear < 0.2 {
+            if let Some(cv) = &u.cat_vec {
+                if cv[0] > 0.5 {
+                    c.rx_t = w.t + 10;
+                    c.rc_t = 0;
+                }
+            }
+        }
         c.heard_n += 1;
         w.hw += 1;
         if let (Some(e), Some(cv)) = (&evoked, &u.cat_vec) {
@@ -1117,6 +1125,22 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
     // current activity for display and statistics
     {
         let ti = t as i64;
+        if c.rx_t != 0 && w.t >= c.rx_t {
+            w.rx_n += 1;
+            if c.fear > 0.35 || c.focus_f == 0 {
+                w.rx_hit += 1;
+            }
+            c.rx_t = 0;
+        }
+        if c.rc_t != 0 && w.t >= c.rc_t {
+            w.rc_n += 1;
+            if c.fear > 0.35 || c.focus_f == 0 {
+                w.rc_hit += 1;
+            }
+            c.rc_t = 0;
+        } else if c.rc_t == 0 && c.rx_t == 0 && c.fear < 0.2 && (c.id as u64 + w.t as u64) % 53 == 0 {
+            c.rc_t = w.t + 10;
+        }
         c.actv = if c.fear > 0.35 || c.focus_f == 0 {
             2
         } else if ti - c.last_atk < 10 {

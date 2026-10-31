@@ -256,6 +256,14 @@ pub struct World {
     pub cache_dep: u32,
     #[serde(default)]
     pub cache_ret: u32,
+    #[serde(default)]
+    pub rx_n: u32,
+    #[serde(default)]
+    pub rx_hit: u32,
+    #[serde(default)]
+    pub rc_n: u32,
+    #[serde(default)]
+    pub rc_hit: u32,
     pub births: u32,
     pub deaths: BTreeMap<String, u32>,
     pub hof: Vec<Hof>,

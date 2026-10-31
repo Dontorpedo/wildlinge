@@ -65,6 +65,7 @@ fn main() {
         Ok(mut w2) => {
             w2.step();
             for e in w.events.iter().filter(|e| e.k == "ev.pop" || e.k == "ev.gen" || e.k == "ev.word").take(12) { println!("  event day {:?} {} {:?}", World::day_of(e.t), e.k, e.p); }
+    if w.rx_n > 0 && w.rc_n > 0 { println!("  react n {} hit {:.3} | control n {} hit {:.3}", w.rx_n, w.rx_hit as f32 / w.rx_n as f32, w.rc_n, w.rc_hit as f32 / w.rc_n as f32); }
     println!("save {:.2} MB, restore ok pop {}", json.len() as f64 / 1048576.0, w2.creatures.len());
         }
         Err(e) => println!("RESTORE FAILED {}", e),
