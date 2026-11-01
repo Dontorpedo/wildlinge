@@ -130,8 +130,8 @@ function tzUseR(c, g, dt) {
     }
     case 'lab': tzLabAct(c, g, dt); break;
     case 'flutter': n.fun = mx(n.fun + 4 * dt); if (Math.random() < dt * 0.5) tzBurst('heart', c.x, c.y - c.half * 2, 1); break;
-    case 'swim': c.swim = true; n.fun = mx(n.fun + 5 * dt); n.warmth = Math.max(0, n.warmth - 0.3 * dt); if (Math.random() < dt * 0.8) tzBurst('star', c.x + tzRnd(-10, 10), 318, 1); break;
-    case 'gaze': n.fun = mx(n.fun + 5 * dt); if (Math.random() < dt * 0.5) sndFx('chime', (c.x - 400) / 400); break;
+    case 'swim': c.swim = true; if (c.ground && c.hopT <= 0 && Math.random() < dt * 0.25) { c.vy = -4; c.ground = false; c.hopT = 0.4; tzBurst('drop', c.x, 318, 6); } if (Math.random() < dt * 1.2) tzBurst('ripple', c.x + tzRnd(-10, 10), 319, 1); n.fun = mx(n.fun + 5 * dt); n.warmth = Math.max(0, n.warmth - 0.3 * dt); if (Math.random() < dt * 0.8) tzBurst('star', c.x + tzRnd(-10, 10), 318, 1); break;
+    case 'gaze': n.fun = mx(n.fun + 5 * dt); if (Math.random() < dt * 0.3) tzBurst('note', c.x, c.y - c.half * 2, 1); if (Math.random() < dt * 0.5) sndFx('chime', (c.x - 400) / 400); break;
     case 'machine': {
       c.act += dt;
       if (c.act > 1.6) {

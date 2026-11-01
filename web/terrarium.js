@@ -255,8 +255,13 @@ function tzDay() {
 }
 
 /* ---------- particles ---------- */
+function tzWet(c) { return TZ.cur === 2 && c.room === 2 && c.lvl === 0 && c.ground && !c.fly && c.x > 238 && c.x < 512; }
 function tzBurst(type, x, y, n) {
   for (let i = 0; i < n; i++) {
+    if (type === 'drop') { TZ.parts.push({ type, x: x + tzRnd(-6, 6), y, vx: tzRnd(-1, 1), vy: -tzRnd(1.2, 2.6), life: 30, col: '#dff3ff' }); continue; }
+    if (type === 'ripple') { TZ.parts.push({ type, x, y, vx: 0, vy: 0, life: 36, col: '#ffffff', age: 0 }); continue; }
+    if (type === 'zz') { TZ.parts.push({ type, x, y, vx: 0.1, vy: -0.28, life: 80, col: '#ffffff', ph: Math.random() * 6 }); continue; }
+    if (type === 'note') { TZ.parts.push({ type, x: x + tzRnd(-8, 8), y, vx: tzRnd(-0.2, 0.2), vy: -0.45, life: 60, col: ['#ffd84a', '#ff8fae', '#9fd8ff'][(Math.random() * 3) | 0], ph: Math.random() * 6 }); continue; }
     if (type === 'conf') TZ.parts.push({ type, x: x + tzRnd(-30, 30), y: y + tzRnd(-10, 10), vx: tzRnd(-1.5, 1.5), vy: tzRnd(-3.5, -0.5), life: 140, col: `hsl(${(Math.random() * 360) | 0},80%,72%)` });
     else if (type === 'heart') TZ.parts.push({ type, x: x + tzRnd(-8, 8), y, vx: tzRnd(-0.2, 0.2), vy: -0.5 - Math.random() * 0.3, life: 50, col: '#ff6fa8' });
     else TZ.parts.push({ type: 'star', x: x + tzRnd(-12, 12), y: y + tzRnd(-12, 12), vx: tzRnd(-0.6, 0.6), vy: tzRnd(-0.8, 0.2), life: 26, col: '#fff2a0' });
@@ -266,6 +271,8 @@ function tzBurst(type, x, y, n) {
 function tzParts(k) {
   for (const p of TZ.parts) {
     p.x += p.vx * k; p.y += p.vy * k; p.life -= k;
+    if (p.type === 'drop') p.vy += 0.16 * k;
+    if (p.type === 'ripple') p.age += k;
     if (p.type === 'conf') { p.vy += 0.06 * k; p.vx *= 0.99; if (p.y > TZ_FLOOR + 10) { p.vy = 0; p.vx = 0; p.y = TZ_FLOOR + 10; p.life -= 2 * k; } }
   }
   TZ.parts = TZ.parts.filter(p => p.life > 0);
@@ -319,6 +326,7 @@ function tzStep(dt) {
     tzAI(c, dt, k);
     tzPhys(c, k);
     tzWatch(c, dt);
+    { const wet = tzWet(c); if (wet !== !!c.wasWet) { c.wasWet = wet; tzBurst('drop', c.x, 318, 7); sndFx('pop', (c.x - 400) / 400); } if (wet && c.moving && Math.random() < dt * 1.6) tzBurst('ripple', c.x + tzRnd(-8, 8), 319, 1); if (c.sleeping && Math.random() < dt * 0.5) tzBurst('zz', c.x + c.half * 0.6, c.y - c.half * 2, 1); }
     { const gg = tzGrowth(c); if (gg >= TZ.ADULT && c.wasYoung) { c.wasYoung = false; tzNews('tz.n.adult', c.name); } else if (gg < TZ.ADULT) c.wasYoung = true; }
     if (c.age / TZ.GROW < 1 && ((c.age / TZ.GROW) * 20 | 0) !== (((c.age - dt) / TZ.GROW) * 20 | 0)) tzGeom(c);
   }
@@ -461,7 +469,8 @@ function tzAI(c, dt, k) {
   if (g.bf) g.x = g.bf.x;
   if (g.with) { const w = g.with; if (!TZ.list.includes(w) || w.room !== c.room || w.sleeping) { c.goalT = 0; } else { g.x = tzClamp(w.x + Math.sin(TZ.clock * 2.2 + c.id) * 46, 30, 770); g.lvl = w.lvl; } }
   c.swim = false;
-  const arrived = tzGo(c, g.x, g.lvl, k);
+  const arrived = tzGo(c, g.x, g.lvl, k * (tzWet(c) ? 0.62 : 1));
+  if (tzWet(c)) c.swim = true;
   c.arrived = arrived || g.type === 'wander' && false;
   c.moving = !arrived || c.fly;
   if (c.nextBubble < TZ.clock) {
@@ -476,10 +485,12 @@ function tzAI(c, dt, k) {
     case 'water': if (TZ.room.water > 0 && n.water < 98) { n.water += 26 * dt; TZ.room.water = Math.max(0, TZ.room.water - 6 * dt); } else c.goalT = 0; break;
     case 'warm': if (TZ.room.lamp && n.warmth < 96) n.warmth += 1.8 * dt; else c.goalT = 0; break;
     case 'sleep': c.sleeping = true; c.goal = null; break;
-    case 'music': if (TZ.room.music > 0) n.fun += 4 * dt; else TZ.room.music = 20; break;
+    case 'music': if (TZ.room.music > 0) { n.fun += 4 * dt; if (Math.random() < dt * 0.8) tzBurst('note', c.x, c.y - c.half * 2, 1); } else TZ.room.music = 20; break;
     case 'play': { const w = g.with; if (w && w.goal && w.goal.type !== 'play' && !w.sleeping && !w.held) { w.goal = { type: 'play', with: c, x: c.x, lvl: c.lvl, t: g.t }; w.goalT = g.t; }
       n.fun = Math.min(100, n.fun + 3 * dt); n.social = Math.min(100, n.social + 2 * dt);
       if (c.ground && c.hopT <= 0 && Math.random() < dt * 1.2) { c.vy = -3; c.ground = false; c.hopT = 0.35; }
+      if (!(c.spinUntil > Date.now()) && !tzWet(c) && Math.random() < dt * 0.3) { c.spinUntil = Date.now() + 650; tzBurst('star', c.x, c.y - c.half, 3); }
+      if (Math.random() < dt * 0.4) tzBurst('note', c.x, c.y - c.half * 2, 1);
       if (Math.random() < dt * 0.6) { tzBurst(Math.random() < 0.5 ? 'heart' : 'star', c.x, c.y - c.half * 2, 1); if (Math.random() < 0.25) sndFx('joy', (c.x - 400) / 400); }
       break; }
     case 'social': n.social = Math.min(100, n.social + 0.8 * dt); break;
@@ -869,7 +880,15 @@ function tzRender() {
     } else { tzDisc(i.x, i.y, 5, OUTLINE); tzDisc(i.x, i.y, 4, '#e0a868'); B.fillStyle = '#8a5a30'; B.fillRect(Math.round(i.x) - 2, Math.round(i.y) - 1, 1, 1); B.fillRect(Math.round(i.x) + 1, Math.round(i.y), 1, 1); B.fillRect(Math.round(i.x) - 1, Math.round(i.y) + 2, 1, 1); }
   }
   const order = TZ.list.filter(c => c.room === TZ.cur).sort((p, q) => p.y - q.y);
-  for (const c of order) { const oy = c.y; if (c.swim) c.y += 7 + Math.sin(now / 300 + c.id) * 1.5; tzSide(c, c.id === TZ.sel, now); c.y = oy; }
+  for (const c of order) {
+    const oy = c.y; if (c.swim) c.y += 7 + Math.sin(now / 300 + c.id) * 1.5;
+    let rot = c.swim ? Math.sin(now / 420 + c.id) * 0.07 : 0;
+    if (c.spinUntil > now) rot += (1 - (c.spinUntil - now) / 650) * 6.283 * (c.face >= 0 ? 1 : -1);
+    if (rot) { const cy = c.y - c.half; b.save(); b.translate(c.x, cy); b.rotate(rot); b.translate(-c.x, -cy); }
+    tzSide(c, c.id === TZ.sel, now);
+    if (rot) b.restore();
+    c.y = oy;
+  }
   tzGalleryShots(order);
   if (TZ.cur) tzRoomOver(TZ.cur, now);
   for (const c of order) {
@@ -893,6 +912,10 @@ function tzRender() {
   }
   for (const p of TZ.parts) {
     if (p.type === 'conf') { B.fillStyle = p.col; B.fillRect(Math.round(p.x), Math.round(p.y), 2, 2); }
+    else if (p.type === 'drop') { B.fillStyle = p.col; B.fillRect(Math.round(p.x), Math.round(p.y), 2, 2); }
+    else if (p.type === 'ripple') { B.globalAlpha = Math.max(0, p.life / 36) * 0.7; B.strokeStyle = '#ffffff'; B.lineWidth = 1; B.beginPath(); B.ellipse(Math.round(p.x), Math.round(p.y), 3 + p.age * 0.45, 1 + p.age * 0.12, 0, 0, 6.283); B.stroke(); B.globalAlpha = 1; }
+    else if (p.type === 'zz') { const x = Math.round(p.x + Math.sin(p.life * 0.1 + p.ph) * 3), y = Math.round(p.y), s = p.life > 40 ? 3 : 2; B.globalAlpha = Math.min(1, p.life / 30); B.fillStyle = p.col; B.fillRect(x, y, s, 1); B.fillRect(x + s - 1, y + 1, 1, 1); B.fillRect(x + s - 2, y + 2, 1, 1); B.fillRect(x, y + 3, s, 1); B.globalAlpha = 1; }
+    else if (p.type === 'note') { const x = Math.round(p.x + Math.sin(p.life * 0.12 + p.ph) * 4), y = Math.round(p.y); B.globalAlpha = Math.min(1, p.life / 25); B.fillStyle = p.col; B.fillRect(x, y, 3, 2); B.fillRect(x + 2, y - 5, 1, 6); B.fillRect(x + 2, y - 5, 3, 1); B.globalAlpha = 1; }
     else if (p.type === 'ghost') { const x = Math.round(p.x + Math.sin(p.life * 0.15) * 3), y = Math.round(p.y); B.globalAlpha = Math.min(1, p.life / 60); B.fillStyle = OUTLINE; B.fillRect(x - 6, y - 7, 12, 15); B.fillStyle = p.col; B.fillRect(x - 5, y - 6, 10, 12); B.fillRect(x - 5, y + 6, 3, 3); B.fillRect(x - 1, y + 6, 3, 3); B.fillRect(x + 3, y + 6, 3, 3); B.fillStyle = '#34405a'; B.fillRect(x - 3, y - 3, 2, 3); B.fillRect(x + 1, y - 3, 2, 3); B.globalAlpha = 1; }
     else if (p.type === 'heart') { B.fillStyle = p.col; const x = Math.round(p.x), y = Math.round(p.y); B.fillRect(x - 2, y, 2, 2); B.fillRect(x + 1, y, 2, 2); B.fillRect(x - 2, y + 1, 5, 2); B.fillRect(x - 1, y + 3, 3, 1); }
     else { B.fillStyle = p.col; const x = Math.round(p.x), y = Math.round(p.y); B.fillRect(x, y - 1, 1, 3); B.fillRect(x - 1, y, 3, 1); }
