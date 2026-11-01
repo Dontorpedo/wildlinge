@@ -122,7 +122,7 @@ const I18N = {
     'sp.ordWW': 'what-where', 'sp.ordRW': 'where-what', 'sp.votes': '{0} / {1} of {2}',
     'goal.open': 'open',
 
-    'hud.hint': 'Click a Plimplom to select it. Keys: N next, P previous, Esc deselect.', 'hud.brain': 'Brain (live)', 'hud.noThought': 'no thought yet', 'hud.ago': '{0} s ago', 'sel.thought': 'Last thought', 'hud.details': 'Details', 'hud.follow': 'Follow', 'hud.prev': 'Previous', 'hud.next': 'Next', 'hud.clear': 'Deselect',
+    'hud.adopt': 'To terrarium', 'hud.hint': 'Click a Plimplom to select it. Then "To terrarium" (key T) takes it home. Keys: N next, P previous, Esc deselect.', 'hud.brain': 'Brain (live)', 'hud.noThought': 'no thought yet', 'hud.ago': '{0} s ago', 'sel.thought': 'Last thought', 'hud.details': 'Details', 'hud.follow': 'Follow', 'hud.prev': 'Previous', 'hud.next': 'Next', 'hud.clear': 'Deselect',
     'sel.facts': 'Facts', 'sel.pos': 'Position', 'sel.sick': 'Illness', 'sel.sickYes': 'sick ({0} s left)', 'sel.chipBoss': 'Boss', 'sel.chipSpk': 'Speaker', 'sel.chipSick': 'sick', 'sel.chipSleep': 'asleep', 'sel.chipMine': 'adopted', 'sel.temp': 'Cold / heat',
     'sel.v': { health: 'Health', energy: 'Energy', wb: 'Wellbeing', fear: 'Fear', tired: 'Tiredness' },
     'sel.none': 'No selection. Use the "Select" tool and click a Plimplom.',
@@ -414,7 +414,7 @@ const I18N = {
     'sp.ordWW': 'Was-Wo', 'sp.ordRW': 'Wo-Was', 'sp.votes': '{0} / {1} von {2}',
     'goal.open': 'offen',
 
-    'hud.hint': 'Plimplom anklicken zum Auswählen. Tasten: N nächster, P vorheriger, Esc abwählen.', 'hud.brain': 'Gehirn (live)', 'hud.noThought': 'noch kein Gedanke', 'hud.ago': 'vor {0} s', 'sel.thought': 'Letzter Gedanke', 'hud.details': 'Details', 'hud.follow': 'Folgen', 'hud.prev': 'Zurück', 'hud.next': 'Weiter', 'hud.clear': 'Abwählen',
+    'hud.adopt': 'Ins Terrarium', 'hud.hint': 'Plimplom anklicken zum Auswählen. Mit "Ins Terrarium" (Taste T) holen Sie ihn nach Hause. Tasten: N nächster, P vorheriger, Esc abwählen.', 'hud.brain': 'Gehirn (live)', 'hud.noThought': 'noch kein Gedanke', 'hud.ago': 'vor {0} s', 'sel.thought': 'Letzter Gedanke', 'hud.details': 'Details', 'hud.follow': 'Folgen', 'hud.prev': 'Zurück', 'hud.next': 'Weiter', 'hud.clear': 'Abwählen',
     'sel.facts': 'Fakten', 'sel.pos': 'Position', 'sel.sick': 'Krankheit', 'sel.sickYes': 'krank (noch {0} s)', 'sel.chipBoss': 'Boss', 'sel.chipSpk': 'Sprecher', 'sel.chipSick': 'krank', 'sel.chipSleep': 'schläft', 'sel.chipMine': 'adoptiert', 'sel.temp': 'Kälte / Hitze',
     'sel.v': { health: 'Gesundheit', energy: 'Energie', wb: 'Wohlbefinden', fear: 'Angst', tired: 'Müdigkeit' },
     'sel.none': 'Keine Auswahl. Werkzeug "Auswählen" und auf einen Plimplom klicken.',

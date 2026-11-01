@@ -55,6 +55,9 @@ select{background:#10151a;color:var(--fg);border:1px solid #34404c;border-radius
 #tools button.on,#ttools button.on{background:linear-gradient(180deg,#46603a,#34482c);border-color:var(--c,var(--acc));box-shadow:0 0 0 1px var(--c,var(--acc)),0 4px 14px rgba(0,0,0,.35);color:#fff}
 #tools button.on .ic,#ttools button.on .ic{stroke-width:2.2;filter:drop-shadow(0 0 4px var(--c,#fff))}
 #tools button[data-k]::before,#ttools button[data-k]::before{content:attr(data-k);position:absolute;top:3px;left:5px;font:400 8px var(--pix);opacity:.45}
+#hudAdopt.cta{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(180deg,#4f7a3c,#3b5c2d);border-color:#6fcf6a;color:#fff;font-weight:600}
+#hudAdopt.cta:hover{background:linear-gradient(180deg,#5c8c46,#456b34)}
+#hudAdopt .ic{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 #tools .sep,#ttools .sep{width:1px;align-self:stretch;background:#2b3641;margin:2px 3px}
 #selHud{margin-top:10px;background:linear-gradient(180deg,#1a2129,#161c23);border:1px solid #232d37;border-radius:12px;padding:10px 12px}
 .hudgrid{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:14px;align-items:start}
@@ -223,6 +226,7 @@ ul.tree{margin:2px 0 6px 0;padding-left:14px;list-style:none;border-left:1px sol
           <div id="hudAct" class="muted"></div>
           <div id="hudThought" class="thought"></div>
           <div class="row">
+            <button id="hudAdopt" class="cta"><svg class="ic" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7 M5 10v10h14V10 M10 20v-5h4v5"/></svg><span data-i18n="hud.adopt"></span></button>
             <button id="hudDetails" data-i18n="hud.details"></button><button id="hudFollow" data-i18n="hud.follow"></button>
             <button id="hudPrev" data-i18n="hud.prev"></button><button id="hudNext" data-i18n="hud.next"></button><button id="hudClear" data-i18n="hud.clear"></button>
           </div>
@@ -907,7 +911,7 @@ const I18N = {
     'sp.ordWW': 'what-where', 'sp.ordRW': 'where-what', 'sp.votes': '{0} / {1} of {2}',
     'goal.open': 'open',
 
-    'hud.hint': 'Click a Plimplom to select it. Keys: N next, P previous, Esc deselect.', 'hud.brain': 'Brain (live)', 'hud.noThought': 'no thought yet', 'hud.ago': '{0} s ago', 'sel.thought': 'Last thought', 'hud.details': 'Details', 'hud.follow': 'Follow', 'hud.prev': 'Previous', 'hud.next': 'Next', 'hud.clear': 'Deselect',
+    'hud.adopt': 'To terrarium', 'hud.hint': 'Click a Plimplom to select it. Then "To terrarium" (key T) takes it home. Keys: N next, P previous, Esc deselect.', 'hud.brain': 'Brain (live)', 'hud.noThought': 'no thought yet', 'hud.ago': '{0} s ago', 'sel.thought': 'Last thought', 'hud.details': 'Details', 'hud.follow': 'Follow', 'hud.prev': 'Previous', 'hud.next': 'Next', 'hud.clear': 'Deselect',
     'sel.facts': 'Facts', 'sel.pos': 'Position', 'sel.sick': 'Illness', 'sel.sickYes': 'sick ({0} s left)', 'sel.chipBoss': 'Boss', 'sel.chipSpk': 'Speaker', 'sel.chipSick': 'sick', 'sel.chipSleep': 'asleep', 'sel.chipMine': 'adopted', 'sel.temp': 'Cold / heat',
     'sel.v': { health: 'Health', energy: 'Energy', wb: 'Wellbeing', fear: 'Fear', tired: 'Tiredness' },
     'sel.none': 'No selection. Use the "Select" tool and click a Plimplom.',
@@ -1199,7 +1203,7 @@ const I18N = {
     'sp.ordWW': 'Was-Wo', 'sp.ordRW': 'Wo-Was', 'sp.votes': '{0} / {1} von {2}',
     'goal.open': 'offen',
 
-    'hud.hint': 'Plimplom anklicken zum Auswählen. Tasten: N nächster, P vorheriger, Esc abwählen.', 'hud.brain': 'Gehirn (live)', 'hud.noThought': 'noch kein Gedanke', 'hud.ago': 'vor {0} s', 'sel.thought': 'Letzter Gedanke', 'hud.details': 'Details', 'hud.follow': 'Folgen', 'hud.prev': 'Zurück', 'hud.next': 'Weiter', 'hud.clear': 'Abwählen',
+    'hud.adopt': 'Ins Terrarium', 'hud.hint': 'Plimplom anklicken zum Auswählen. Mit "Ins Terrarium" (Taste T) holen Sie ihn nach Hause. Tasten: N nächster, P vorheriger, Esc abwählen.', 'hud.brain': 'Gehirn (live)', 'hud.noThought': 'noch kein Gedanke', 'hud.ago': 'vor {0} s', 'sel.thought': 'Letzter Gedanke', 'hud.details': 'Details', 'hud.follow': 'Folgen', 'hud.prev': 'Zurück', 'hud.next': 'Weiter', 'hud.clear': 'Abwählen',
     'sel.facts': 'Fakten', 'sel.pos': 'Position', 'sel.sick': 'Krankheit', 'sel.sickYes': 'krank (noch {0} s)', 'sel.chipBoss': 'Boss', 'sel.chipSpk': 'Sprecher', 'sel.chipSick': 'krank', 'sel.chipSleep': 'schläft', 'sel.chipMine': 'adoptiert', 'sel.temp': 'Kälte / Hitze',
     'sel.v': { health: 'Gesundheit', energy: 'Energie', wb: 'Wohlbefinden', fear: 'Angst', tired: 'Müdigkeit' },
     'sel.none': 'Keine Auswahl. Werkzeug "Auswählen" und auf einen Plimplom klicken.',
@@ -5839,6 +5843,7 @@ window.addEventListener('keydown', e => {
   if (e.key === 'n' || e.key === 'N') { selCycle(1); return; }
   if (e.key === 'p' || e.key === 'P') { selCycle(-1); return; }
   if (e.key === 'Escape') { setSel(0); return; }
+  if ((e.key === 't' || e.key === 'T') && selId && viewMode !== 'terra') { tzAdopt(selId); return; }
   const step = 60 * ZOOMS[cam.zi], tools = ['select', 'stroke', 'scold', 'teach', 'say', 'food', 'mirror', 'carry', 'fertilize', 'shelter'];
   if (e.key >= '1' && e.key <= '9') setTool(tools[+e.key - 1]);
   else if (e.key === '0') setTool('shelter');
@@ -5890,6 +5895,7 @@ document.addEventListener('change', e => {
   const k = e.target.dataset && e.target.dataset.knock;
   if (k) sendHost({ type: 'knock', key: k, v: e.target.checked });
 });
+$('hudAdopt').onclick = () => { if (selId) tzAdopt(selId); };
 $('hudDetails').onclick = () => setTab('creature');
 $('hudFollow').onclick = () => { follow = !follow; $('follow').checked = follow; $('hudFollow').classList.toggle('on', follow); };
 $('hudPrev').onclick = () => selCycle(-1);

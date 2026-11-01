@@ -1118,6 +1118,7 @@ window.addEventListener('keydown', e => {
   if (e.key === 'n' || e.key === 'N') { selCycle(1); return; }
   if (e.key === 'p' || e.key === 'P') { selCycle(-1); return; }
   if (e.key === 'Escape') { setSel(0); return; }
+  if ((e.key === 't' || e.key === 'T') && selId && viewMode !== 'terra') { tzAdopt(selId); return; }
   const step = 60 * ZOOMS[cam.zi], tools = ['select', 'stroke', 'scold', 'teach', 'say', 'food', 'mirror', 'carry', 'fertilize', 'shelter'];
   if (e.key >= '1' && e.key <= '9') setTool(tools[+e.key - 1]);
   else if (e.key === '0') setTool('shelter');
@@ -1169,6 +1170,7 @@ document.addEventListener('change', e => {
   const k = e.target.dataset && e.target.dataset.knock;
   if (k) sendHost({ type: 'knock', key: k, v: e.target.checked });
 });
+$('hudAdopt').onclick = () => { if (selId) tzAdopt(selId); };
 $('hudDetails').onclick = () => setTab('creature');
 $('hudFollow').onclick = () => { follow = !follow; $('follow').checked = follow; $('hudFollow').classList.toggle('on', follow); };
 $('hudPrev').onclick = () => selCycle(-1);
