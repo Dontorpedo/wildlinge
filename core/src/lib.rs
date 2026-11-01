@@ -6,6 +6,7 @@ pub mod api;
 pub mod brain;
 pub mod consts;
 pub mod creature;
+pub mod field;
 pub mod genome;
 pub mod lexicon;
 pub mod map;

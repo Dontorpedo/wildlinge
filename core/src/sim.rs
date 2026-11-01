@@ -290,6 +290,7 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
         weapon: o.ab.ab[A_WEAPON],
         armor: o.ab.ab[A_ARMOR],
         display: o.ab.ab[A_DISPLAY],
+        sig: o.sig,
         mature: o.mature(),
         md: 0.0,
         sp: o.sp,
@@ -365,6 +366,7 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
                 weapon: c.ab.ab[A_WEAPON],
                 armor: c.ab.ab[A_ARMOR],
                 display: c.ab.ab[A_DISPLAY],
+                sig: c.sig,
                 mature: c.mature(),
                 md: 0.0,
                 sp: c.sp,
@@ -651,7 +653,8 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
     c.d[0] = if w.knock[K_META] { 0.0 } else { (1.0 - ef) * (1.0 - 0.4 * h[0]) };
     c.d[1] = clamp(c.fear * 0.8 + (100.0 - c.health) / 200.0 * (1.0 - 0.6 * h[1]), 0.0, 1.0);
     c.d[2] = clamp(c.cold + c.hot, 0.0, 1.0);
-    c.d[3] = clamp(c.d[3] + 0.0012 - if kin_near && !(mirror && c.self_recog) { 0.02 } else { 0.0 } - social_gain, 0.0, 1.0);
+    let scent = w.pher.at(0, c.x, c.y) + 0.5 * w.pher.at(1, c.x, c.y);
+    c.d[3] = clamp(c.d[3] + 0.0012 - if kin_near && !(mirror && c.self_recog) { 0.02 } else { 0.0 } - social_gain - 0.01 * scent, 0.0, 1.0);
     c.d[4] = if c.mature() && !w.knock[K_REPRO] { clamp(c.d[4] + 0.0006 * ef, 0.0, 1.0) } else { 0.0 };
     c.d[5] = clamp(c.d[5] + 0.0008 - novelty - c.surprise * 0.005, 0.0, 1.0);
     c.d[6] = if is_boss { 0.0 } else { clamp(c.d[6] + 0.0004 - status_gain, 0.0, 1.0) };
@@ -710,6 +713,7 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
             inp[8] = 1.0 - md;
             inp[9] = o.weapon.min(1.0);
             inp[10] = o.display.min(1.0);
+            inp[86] = o.sig;
         }
         let ahead = &BIOMES[w.bio_at(c.x + c.dir.cos() * 40.0, c.y + c.dir.sin() * 40.0)];
         inp[11] = bwater as f32 / 2.0;
@@ -786,6 +790,16 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
                 inp[72] = (k.e / 30.0).min(1.0);
             }
         }
+        for ch in 0..crate::field::PH_CH {
+            let (ca, sa) = ((c.dir - 0.7).cos(), (c.dir - 0.7).sin());
+            let (cb, sb) = ((c.dir + 0.7).cos(), (c.dir + 0.7).sin());
+            inp[73 + ch * 3] = w.pher.at(ch, c.x, c.y);
+            inp[74 + ch * 3] = w.pher.at(ch, c.x + ca * 30.0, c.y + sa * 30.0);
+            inp[75 + ch * 3] = w.pher.at(ch, c.x + cb * 30.0, c.y + sb * 30.0);
+        }
+        let ph = 2.0 * PI * (t % YEAR_LEN) as f32 / YEAR_LEN as f32;
+        inp[87] = ph.sin();
+        inp[88] = ph.cos();
         c.net.run(&inp);
         c.inp = inp;
         let sig = 0.05 + 0.25 * c.g.tr[T_CUR] * (1.0 - 0.5 * c.certainty());
@@ -806,6 +820,25 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
         c.record_activity();
     }
     let o = c.outv;
+    c.sig = o[15];
+    for ch in 0..crate::field::PH_CH {
+        let v = o[10 + ch];
+        if v > 0.3 && c.energy > 2.0 {
+            let amt = (v - 0.3) / 0.7;
+            c.energy -= 0.004 * amt;
+            w.pher.add(ch, c.x, c.y, 0.12 * amt);
+            c.use_n[ch] += 1;
+        }
+    }
+    if o[13] > 0.5 {
+        c.use_n[3] += 1;
+    }
+    if o[14] > 0.5 {
+        c.use_n[4] += 1;
+    }
+    if o[15].abs() > 0.4 {
+        c.use_n[5] += 1;
+    }
 
     // speaking
     if !w.knock[K_LANG] && o[3] > 0.3 && c.speak_cool == 0 && sal > 0.3 && c.energy > SPEAK_COST {

@@ -252,7 +252,7 @@ pub fn random_genome(carn: bool, rng: &mut Rng, innov: &mut Innov) -> Genome {
     let look = random_look(rng);
     let nh = 4 + rng.below(4) as u32;
     let nodes: Vec<NodeGene> = (0..nh).map(|k| NodeGene { id: HID0 + k, d: 0.5 }).collect();
-    let mut g = Genome { tr, shape, dw, motor, hue, look, look_set: true, soc: if carn { rng.range(0.05, 0.4) } else { rng.range(0.15, 1.0) }, parts, nodes, conns: Vec::new(), mutated: false, gv: 1 };
+    let mut g = Genome { tr, shape, dw, motor, hue, look, look_set: true, soc: if carn { rng.range(0.05, 0.4) } else { rng.range(0.15, 1.0) }, parts, nodes, conns: Vec::new(), mutated: false, gv: 2 };
     let h = |k: u32| HID0 + k;
     let o = |k: u32| OUT0 + k;
     add_conn(&mut g, innov, 1, h(0), 2.5);
@@ -277,11 +277,11 @@ pub fn random_genome(carn: bool, rng: &mut Rng, innov: &mut Innov) -> Genome {
             let w = rng.gauss() * 0.6;
             add_conn(&mut g, innov, s, h(k), w);
         }
-        let t = o(rng.below(NOUT) as u32);
+        let t = o(rng.below(NOUT_V1 as usize) as u32);
         let w = rng.gauss() * 0.6;
         add_conn(&mut g, innov, h(k), t, w);
     }
-    for oo in 0..NOUT as u32 {
+    for oo in 0..NOUT_V1 {
         for _ in 0..2 {
             let s = if rng.chance(0.7) { rng.below(NIN) as u32 } else { h(rng.below(nh as usize) as u32) };
             let w = rng.gauss() * 0.6;
@@ -493,26 +493,37 @@ pub fn crossover(a: &Genome, b: &Genome, rng: &mut Rng) -> Genome {
 }
 
 /// Repairs genomes from imported files: clamps every value and removes broken references.
-fn migrate_id(id: u32) -> u32 {
-    if id < NIN_LEGACY {
+fn shift_id(id: u32, nin_old: u32, nout_old: u32, nin_new: u32, nout_new: u32) -> u32 {
+    if id < nin_old {
         id
-    } else if id < NIN_LEGACY + NOUT_LEGACY {
-        id + (NIN as u32 - NIN_LEGACY)
+    } else if id < nin_old + nout_old {
+        id + (nin_new - nin_old)
     } else {
-        id + (NIN as u32 - NIN_LEGACY) + (NOUT as u32 - NOUT_LEGACY)
+        id + (nin_new - nin_old) + (nout_new - nout_old)
     }
 }
 
 pub fn sanitize(g: &mut Genome) {
     if g.gv == 0 {
         for n in g.nodes.iter_mut() {
-            n.id = migrate_id(n.id);
+            n.id = shift_id(n.id, NIN_V0, NOUT_V0, NIN_V1, NOUT_V1);
         }
         for c in g.conns.iter_mut() {
-            c.s = migrate_id(c.s);
-            c.t = migrate_id(c.t);
+            c.s = shift_id(c.s, NIN_V0, NOUT_V0, NIN_V1, NOUT_V1);
+            c.t = shift_id(c.t, NIN_V0, NOUT_V0, NIN_V1, NOUT_V1);
         }
         g.gv = 1;
+    }
+    if g.gv == 1 {
+        let (a, b) = (NIN as u32, NOUT as u32);
+        for n in g.nodes.iter_mut() {
+            n.id = shift_id(n.id, NIN_V1, NOUT_V1, a, b);
+        }
+        for c in g.conns.iter_mut() {
+            c.s = shift_id(c.s, NIN_V1, NOUT_V1, a, b);
+            c.t = shift_id(c.t, NIN_V1, NOUT_V1, a, b);
+        }
+        g.gv = 2;
     }
     for (i, r) in RANGES.iter().enumerate() {
         g.tr[i] = if g.tr[i].is_finite() { clamp(g.tr[i], r.0, r.1) } else { r.0 };

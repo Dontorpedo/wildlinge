@@ -83,6 +83,7 @@ fn main() {
     let same = a.creatures.len() == b.creatures.len() && a.creatures.iter().zip(b.creatures.iter()).all(|(x, y)| x.x == y.x && x.y == y.y && x.energy == y.energy);
     println!("deterministic (same seed, 600 steps): {}", same);
     println!("milestones: {:?}", w.milestones.keys().collect::<Vec<_>>());
+    println!("novelty: use {:?} div {} masks {}", w.use_frac, w.beh_div, w.seen_masks.len());
     println!("newick: {}...", &metrics::newick(&w).chars().take(160).collect::<String>());
     let p = api::panel(&w, w.creatures[0].id);
     println!("panel bytes {}", p.len());

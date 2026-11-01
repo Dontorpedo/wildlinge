@@ -25,7 +25,7 @@ let carryId = 0, carryWait = false, serverMode = false, srvWs = null, srvChain =
 let sendHost = () => {}, worker = null, mode = 'worker', labWorker = null;
 let viewMode = 'wild';
 let relIds = new Set(), frame = null, panel = null, tool = 'select', running = true, selId = 0, activeTab = 'world';
-let showSense = false, showBubbles = true, showMeaning = true, follow = false;
+let showScent = false, showSense = false, showBubbles = true, showMeaning = true, follow = false;
 let mapInfo = null, terrainSummer = null, terrainWinter = null, miniBase = null;
 let bubbles = [], animT = 0, lastView = '', toastTimer = null, centered = false, gotInit = false, welcomeOk = false;
 let seriesData = null, upl = null, uplSet = '', lastSeriesAt = 0, phyloSig = '', brainPts = [], lastLab = null;
@@ -205,6 +205,7 @@ function render() {
 
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(bufCanvas, 0, 0, BW * S, BH * S);
+  if (showScent && frame && frame.meta && frame.meta.sc) drawScent(frame.meta.sc, ox, oy, wpp);
   drawBubbles(ox, oy, wpp);
   drawHover();
 }
@@ -259,6 +260,16 @@ function selThought(s) {
   if (!s.thought) return t('hud.noThought');
   const a = s.thought.split('|');
   return tThought(a[0] + '|' + s.name + '|' + (a[1] || '')) + ' (' + t('hud.ago', Math.round(s.thoughtAgo / 60)) + ')';
+}
+function drawScent(sc, ox, oy, wpp) {
+  const cell = 40 / wpp * S, gw = WORLD_W / 40;
+  for (let k = 0; k + 1 < sc.length; k += 2) {
+    const i = sc[k], v = sc[k + 1], a = Math.floor(v / 10000) / 99, b = Math.floor(v / 100) % 100 / 99, c = (v % 100) / 99;
+    const x = ((i % gw) * 40 - ox) / wpp * S, y = (Math.floor(i / gw) * 40 - oy) / wpp * S;
+    if (x < -cell || y < -cell || x > VIEW_W || y > VIEW_H) continue;
+    ctx.fillStyle = `rgba(${Math.round(255 * a)},${Math.round(255 * b)},${Math.round(255 * c)},${(0.15 + 0.45 * Math.max(a, b, c)).toFixed(2)})`;
+    ctx.fillRect(x, y, cell, cell);
+  }
 }
 function drawHover() {
   if (!hoverId || hoverId === selId) return;
@@ -327,6 +338,7 @@ function renderWorld(p) {
     row(t('st.cycle'), `${st.dets} / ${st.fert}`) +
     (st.react && st.react[0] >= 20 ? row(t('st.react'), `${Math.round(100 * st.react[1] / st.react[0])}% / ${st.react[2] ? Math.round(100 * st.react[3] / st.react[2]) : 0}%`) + row(t('st.react2'), st.react[0]) : '') +
     (st.speaker ? row(t('st.speaker'), `<a class="w" data-id="${st.speaker.id}">${esc(st.speaker.name)}</a> (${esc(tr('spkWhy')[st.speaker.why] || '')})`) + (st.speaker.last ? row(t('st.speakerLast'), esc(st.speaker.last)) : '') : '') +
+    (st.novel ? row(t('st.novel'), `${st.novel.div} (${st.novel.masks})`) + row(t('st.use'), st.novel.use.slice(0, 3).map(v => Math.round(v * 100) + '%').join(' / ')) + row(t('st.use2'), [3, 4, 5].map(k => Math.round(st.novel.use[k] * 100) + '%').join(' / ')) : '') +
     (st.tri && st.tri[1] >= 20 ? row(t('st.tri'), `${st.tri[0]}`) + row(t('st.tri2'), `${Math.round(100 * st.tri[2] / st.tri[1])}%`) : '') +
     (st.cache ? row(t('st.cache'), `${st.cache[0]} | ${st.cache[3]}`) + row(t('st.cache2'), `${st.cache[1]} / ${st.cache[2]}`) : '') +
     (st.acts ? tr('acts').map((n, k) => (st.acts[k] ? row(t('st.acts') + ': ' + n, `${st.acts[k]} (${Math.round(100 * st.acts[k] / Math.max(1, st.acts.reduce((p, q) => p + q, 0)))}%)`) : '')).join('') : '') +
@@ -1078,6 +1090,7 @@ $('info').addEventListener('toggle', e => {
     });
   });
 })();
+$('showScent').onchange = e => { showScent = e.target.checked; };
 $('showBubbles').onchange = e => { showBubbles = e.target.checked; if (!showBubbles) bubbles = []; };
 $('showMeaning').onchange = e => { showMeaning = e.target.checked; if (panel) renderPanel(panel); };
 $('chartSet').onchange = () => { upl = null; drawSeries(); };

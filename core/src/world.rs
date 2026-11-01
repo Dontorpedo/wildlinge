@@ -249,6 +249,7 @@ pub struct Seen {
     pub weapon: f32,
     pub armor: f32,
     pub display: f32,
+    pub sig: f32,
     pub mature: bool,
     pub md: f32,
     pub sp: i32,
@@ -304,6 +305,14 @@ pub struct World {
     pub sentences: u32,
     pub flyer: bool,
     pub knock: [bool; 6],
+    #[serde(skip)]
+    pub pher: crate::field::Field,
+    #[serde(default)]
+    pub use_frac: [f32; 6],
+    #[serde(default)]
+    pub beh_div: u32,
+    #[serde(default)]
+    pub seen_masks: Vec<u8>,
     pub mirrors: Vec<[f32; 2]>,
     pub lineage: Vec<Lin>,
     pub memorial: Vec<Memorial>,
@@ -633,7 +642,47 @@ impl World {
         }
     }
 
+    fn novelty_scan(&mut self) {
+        let n = self.creatures.len().max(1) as f32;
+        let mut cnt = [0u32; 6];
+        let mut masks: std::collections::HashMap<u8, u32> = std::collections::HashMap::new();
+        for c in &self.creatures {
+            let mut m = 0u8;
+            for k in 0..6 {
+                if c.use_n[k] >= 120 {
+                    cnt[k] += 1;
+                    m |= 1 << k;
+                }
+            }
+            if m != 0 {
+                *masks.entry(m).or_insert(0) += 1;
+            }
+        }
+        for k in 0..6 {
+            self.use_frac[k] = cnt[k] as f32 / n;
+        }
+        self.beh_div = masks.values().filter(|&&q| q >= 3).count() as u32;
+        let mut fresh: Vec<u8> = masks.iter().filter(|(m, q)| **q >= 3 && !self.seen_masks.contains(m)).map(|(m, _)| *m).collect();
+        fresh.sort();
+        if let Some(m) = fresh.first().copied() {
+            self.seen_masks.push(m);
+            let names = ["A", "B", "C", "dig", "build", "signal"];
+            let txt: Vec<&str> = (0..6).filter(|k| m & (1 << k) != 0).map(|k| names[k]).collect();
+            self.event("ev.newBeh", vec![txt.join("+"), masks[&m].to_string()]);
+        }
+        if self.use_frac[0].max(self.use_frac[1]).max(self.use_frac[2]) >= 0.10 {
+            self.achieve("scent");
+        }
+        if self.use_frac[5] >= 0.10 {
+            self.achieve("signal");
+        }
+        for c in self.creatures.iter_mut() {
+            c.use_n = [0; 6];
+        }
+    }
+
     fn chronicle(&mut self) {
+        self.novelty_scan();
         self.world_events();
         self.word_of_day();
         let n = self.creatures.len();
@@ -1436,6 +1485,9 @@ impl World {
         self.speech = std::mem::take(&mut self.speech_next);
         if self.wev == 3 && self.t % 60 == 0 {
             self.spread_disease();
+        }
+        if self.t % 4 == 0 {
+            self.pher.step();
         }
         for _ in 0..PLANT_TRIES {
             if self.plants < PLANT_MAX && (self.wev != 1 || self.rng.chance(0.4)) {

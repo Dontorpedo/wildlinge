@@ -99,7 +99,7 @@ const I18N = {
     'tool.say': 'Say', 'tool.food': 'Food', 'tool.mirror': 'Mirror',
     'help.keys': 'Drag: move map | Wheel or + / -: zoom | Keys 1 to 7: tool | Arrow keys: move',
     'opt.speed': 'Speed', 'opt.follow': 'Camera follows selection', 'opt.sense': 'Show sensing radius',
-    'opt.title': 'Settings', 'opt.sound': 'Sound', 'opt.bubbles': 'Speech bubbles and body events', 'opt.meaning': 'Show meanings (simulator knowledge)',
+    'opt.title': 'Settings', 'opt.scent': 'Show scent trails (A red, B green, C blue)', 'opt.sound': 'Sound', 'opt.bubbles': 'Speech bubbles and body events', 'opt.meaning': 'Show meanings (simulator knowledge)',
     'box.map': 'Map', 'box.mine': 'My Plimploms', 'box.goals': 'Goals', 'box.stats': 'Statistics',
     'box.lang': 'Language of the population', 'box.species': 'Species and bosses', 'box.events': 'Events',
     'box.log': 'Spoken', 'box.sel': 'Selection', 'box.brain': 'Brain', 'box.charts': 'Measurements over time',
@@ -232,6 +232,7 @@ const I18N = {
       swim: 'A species lives in water (avg. swimming over 0.4)', fly: 'A creature can fly', species3: 'Three species live at the same time',
       boss: 'First boss elected', mirror: 'A creature recognises itself in the mirror',
       understand: 'Communication: over 50 % of utterances understood', sentence: 'First two-word sentence understood',
+      scent: 'Scent marks: over 10 % of the population lay scent trails', signal: 'Visible signals: over 10 % of the population use them',
       grammar: 'Fixed word order: over 80 % of a species use the same', culture: 'Culture: a word survives three generations',
       taught: 'A word of yours is used by creatures', answer: 'First answer to your words'
     },
@@ -249,7 +250,8 @@ const I18N = {
       foodMem: 'remembered food', heard: 'heard', meaning: 'meaning', where: 'heard place', boss: 'boss', isBoss: 'am boss',
       surprise: 'surprise', cert: 'certainty', compass: 'compass', horm: ['adrenaline', 'endorphin', 'cortisol'], night: 'night',
       dir: ['sin', 'cos', 'near', 'size', 'similar', 'weapon', 'display', 'loud'] },
-    io: { out: ['turn', 'speed', 'attack', 'speak', 'say where', 'memory 1', 'memory 2', 'memory 3', 'memory 4'] },
+    io: { out: ['turn', 'speed', 'attack', 'speak', 'say where', 'memory 1', 'memory 2', 'memory 3', 'memory 4', 'cache', 'scent A', 'scent B', 'scent C', 'dig', 'build', 'signal'] },
+    ioNew: { scent: 'scent', here: 'here', left: 'left', right: 'right', cache: 'food store', soil: 'soil fertility', dug: 'dug ground', struct: 'structure here', carry: 'carrying', sig: 'signal of the other', season: 'season' },
 
     't.stroke': '{0} was stroked', 't.scold': '{0} was scolded', 't.miss': 'No creature hit', 't.say': 'Said "{0}"',
     't.teach': '{0} creatures linked "{1}" to what you showed', 't.teachMiss': 'Nothing hit or nobody within hearing range',
@@ -273,6 +275,8 @@ const I18N = {
     'app.wevBanner': '{0} - {1} ticks left{2}',
     'app.wevSick': ', {0} sick',
     'ev.word': 'The word "{0}" is now used by {1} creatures',
+    'ev.newBeh': 'New behaviour combination ({0}) in {1} creatures',
+    'st.novel': 'Behaviour combinations (new abilities)', 'st.use': 'Use of scent A / B / C',  'st.use2': 'Use of dig / build / signal',
     'ev.spread': '{1} spreads in the species {0} ({2} %)',
     'ev.boss': '{1} is the new boss of the {0} ({3} of {4} votes)',
     'ev.bossDied': 'The boss of the {0}, {1}, has died ({2})',
@@ -387,7 +391,7 @@ const I18N = {
     'tool.say': 'Sagen', 'tool.food': 'Futter', 'tool.mirror': 'Spiegel',
     'help.keys': 'Ziehen: Karte verschieben | Mausrad oder + / -: Zoom | Tasten 1 bis 7: Werkzeug | Pfeiltasten: bewegen',
     'opt.speed': 'Tempo', 'opt.follow': 'Kamera folgt Auswahl', 'opt.sense': 'Sichtradius anzeigen',
-    'opt.title': 'Einstellungen', 'opt.sound': 'Klang', 'opt.bubbles': 'Sprechblasen und Körperereignisse', 'opt.meaning': 'Bedeutungen anzeigen (Simulator-Wissen)',
+    'opt.title': 'Einstellungen', 'opt.scent': 'Duftspuren anzeigen (A rot, B grün, C blau)', 'opt.sound': 'Klang', 'opt.bubbles': 'Sprechblasen und Körperereignisse', 'opt.meaning': 'Bedeutungen anzeigen (Simulator-Wissen)',
     'box.map': 'Karte', 'box.mine': 'Meine Plimploms', 'box.goals': 'Ziele', 'box.stats': 'Statistik',
     'box.lang': 'Sprache der Population', 'box.species': 'Arten und Bosse', 'box.events': 'Ereignisse',
     'box.log': 'Gesprochenes', 'box.sel': 'Auswahl', 'box.brain': 'Gehirn', 'box.charts': 'Messwerte im Verlauf',
@@ -520,6 +524,7 @@ const I18N = {
       swim: 'Eine Art lebt im Wasser (Ø Schwimmen über 0,4)', fly: 'Eine Kreatur kann fliegen', species3: 'Drei Arten leben gleichzeitig',
       boss: 'Erster Boss gewählt', mirror: 'Eine Kreatur erkennt sich im Spiegel',
       understand: 'Verständigung: über 50 % der Äußerungen richtig verstanden', sentence: 'Erster Zwei-Wort-Satz richtig verstanden',
+      scent: 'Duftspuren: über 10 % der Population legen Duftmarken', signal: 'Sichtbare Signale: über 10 % der Population nutzen sie',
       grammar: 'Feste Wortstellung: über 80 % einer Art nutzen dieselbe', culture: 'Kultur: ein Wort überdauert drei Generationen',
       taught: 'Ein Wort von Ihnen wird von Kreaturen verwendet', answer: 'Erste Antwort auf Ihre Worte'
     },
@@ -537,7 +542,8 @@ const I18N = {
       foodMem: 'erinnertes Futter', heard: 'gehört', meaning: 'Bedeutung', where: 'gehörter Ort', boss: 'Boss', isBoss: 'bin Boss',
       surprise: 'Überraschung', cert: 'Gewissheit', compass: 'Kompass', horm: ['Adrenalin', 'Endorphin', 'Cortisol'], night: 'Nacht',
       dir: ['sin', 'cos', 'nah', 'Größe', 'ähnlich', 'Waffe', 'Signal', 'laut'] },
-    io: { out: ['drehen', 'Tempo', 'angreifen', 'sprechen', 'Ort nennen', 'Gedächtnis 1', 'Gedächtnis 2', 'Gedächtnis 3', 'Gedächtnis 4'] },
+    io: { out: ['drehen', 'Tempo', 'angreifen', 'sprechen', 'Ort nennen', 'Gedächtnis 1', 'Gedächtnis 2', 'Gedächtnis 3', 'Gedächtnis 4', 'Vorrat', 'Duft A', 'Duft B', 'Duft C', 'graben', 'bauen', 'Signal'] },
+    ioNew: { scent: 'Duft', here: 'hier', left: 'links', right: 'rechts', cache: 'Vorrat', soil: 'Bodenfruchtbarkeit', dug: 'aufgegrabener Boden', struct: 'Bauwerk hier', carry: 'trägt', sig: 'Signal des anderen', season: 'Jahreszeit' },
 
     't.stroke': '{0} wurde gestreichelt', 't.scold': '{0} wurde getadelt', 't.miss': 'Keine Kreatur getroffen', 't.say': '"{0}" gesagt',
     't.teach': '{0} Kreaturen haben "{1}" mit dem Gezeigten verknüpft', 't.teachMiss': 'Nichts getroffen oder niemand in Hörweite',
@@ -561,6 +567,8 @@ const I18N = {
     'app.wevBanner': '{0} - noch {1} Ticks{2}',
     'app.wevSick': ', {0} krank',
     'ev.word': 'Das Wort "{0}" wird jetzt von {1} Kreaturen benutzt',
+    'ev.newBeh': 'Neue Verhaltenskombination ({0}) bei {1} Kreaturen',
+    'st.novel': 'Verhaltenskombinationen (neue Fähigkeiten)', 'st.use': 'Nutzung Duft A / B / C',  'st.use2': 'Nutzung graben / bauen / Signal',
     'ev.spread': '{1} verbreitet sich in der Art {0} ({2} %)',
     'ev.boss': '{1} ist neuer Boss der {0} ({3} von {4} Stimmen)',
     'ev.bossDied': 'Der Boss der {0}, {1}, ist gestorben ({2})',
@@ -640,6 +648,7 @@ function tEvent(k, p) {
     case 'ev.boss': return t(k, p[0], p[1], p[2], p[3], p[4]) + (p[5] ? ' - ' + t('ev.bossWhy', tr('bossWhy')[p[5]] || p[5], tr('bossTrig')[p[6]] || p[6] || '') : '');
     case 'ev.speaker': return t(k, p[0], tr('spkWhy')[p[2]] || p[2], tr('bossTrig')[p[3]] || p[3], p[4]);
     case 'ev.wev': return t(k, tr('wev')[p[0]] || p[0], p[1]);
+    case 'ev.newBeh': return t(k, p[0], p[1]);
     case 'ev.wevEnd': return t(k, tr('wev')[p[0]] || p[0], p[1]);
     case 'ev.adoptedDied': return t(k, p[0], tCause(p[1]));
     default: return t(k, ...p);
@@ -698,7 +707,16 @@ function inName(i) {
   if (i <= 64) return g.compass + ' ' + [d[0], d[1]][i - 63];
   if (i <= 67) return g.horm[i - 65];
   if (i === 68) return g.night;
-  const o = tr('io').out;
-  if (i < 78) return o[i - 69];
-  return 'H' + (i - 78);
+  const n = tr('ioNew'), o = tr('io').out, ch = ['A', 'B', 'C'];
+  if (i <= 72) return n.cache + ' ' + [d[0], d[1], '', ''][i - 69];
+  if (i <= 81) return n.scent + ' ' + ch[((i - 73) / 3) | 0] + ' ' + [n.here, n.left, n.right][(i - 73) % 3];
+  if (i === 82) return n.soil;
+  if (i === 83) return n.dug;
+  if (i === 84) return n.struct;
+  if (i === 85) return n.carry;
+  if (i === 86) return n.sig;
+  if (i === 87) return n.season + ' sin';
+  if (i === 88) return n.season + ' cos';
+  if (i < 105) return o[i - 89];
+  return 'H' + (i - 105);
 }

@@ -69,7 +69,30 @@ pub fn frame(w: &mut World, x0: f32, y0: f32, x1: f32, y1: f32, wpp: f32, sel: u
         .map(|b| json!({"x": b.x, "y": b.y, "text": b.text, "kind": b.kind}))
         .collect();
     w.bubbles.clear();
-    json!({"t": w.t, "sf": w.sf, "night": w.night, "frozen": w.frozen, "mirrors": w.mirrors, "bub": bub, "sel": sel_found}).to_string()
+    let mut sc: Vec<u32> = Vec::new();
+    {
+        let f = &w.pher;
+        let n = f.gw * f.gh;
+        let cx0 = ((x0 / crate::field::PH_CELL).floor().max(0.0) as usize).min(f.gw - 1);
+        let cx1 = ((x1 / crate::field::PH_CELL).ceil().max(0.0) as usize).min(f.gw);
+        let cy0 = ((y0 / crate::field::PH_CELL).floor().max(0.0) as usize).min(f.gh - 1);
+        let cy1 = ((y1 / crate::field::PH_CELL).ceil().max(0.0) as usize).min(f.gh);
+        'o: for cy in cy0..cy1 {
+            for cx in cx0..cx1 {
+                let i = cy * f.gw + cx;
+                let (a, b, c) = (f.v[i], f.v[n + i], f.v[2 * n + i]);
+                if a.max(b).max(c) > 0.06 {
+                    let q = |v: f32| (v * 99.0).round().clamp(0.0, 99.0) as u32;
+                    sc.push(i as u32);
+                    sc.push(q(a) * 10000 + q(b) * 100 + q(c));
+                    if sc.len() >= 800 {
+                        break 'o;
+                    }
+                }
+            }
+        }
+    }
+    json!({"t": w.t, "sc": sc, "sf": w.sf, "night": w.night, "frozen": w.frozen, "mirrors": w.mirrors, "bub": bub, "sel": sel_found}).to_string()
 }
 
 pub const TERRA_MAX: usize = 8;
@@ -353,6 +376,7 @@ pub fn panel(w: &World, sel: u32) -> String {
             "react": [w.rx_n, w.rx_hit, w.rc_n, w.rc_hit],
             "speaker": w.id_idx_get(w.spk_id).map(|i| json!({"id": cs[i].id, "name": cs[i].name, "why": w.spk_why, "since": World::day_of(w.spk_since), "last": w.spk_log.last().map(|x| x.1.clone())})),
             "tri": [w.tri_say, w.tri_n, w.tri_ok],
+            "novel": {"use": w.use_frac, "div": w.beh_div, "masks": w.seen_masks.len()},
             "acts": (0..9usize).map(|k| cs.iter().filter(|c| c.actv as usize == k).count()).collect::<Vec<_>>()},
         "hist": &w.hist[w.hist.len().saturating_sub(170)..],
         "lang": {"what": what, "where": whr, "map": lang_map(w),
