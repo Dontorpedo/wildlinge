@@ -101,8 +101,10 @@ function tzGalleryHtml() {
     const a = v.k === 'teach' ? v.a : v.k === 'death' ? (tr('causes')[v.a] || v.a) : v.a, bb = v.k === 'teach' ? (tr('tz.needs')[v.b] || v.b) : v.b;
     return `<tr><td class="l muted" style="white-space:nowrap">${esc(fmt(v.ts))}</td><td>${esc(t('tz.gal.ev.' + v.k, a, bb))}</td></tr>`;
   }).join('');
+  const kids = TZ.album.filter(q => q.pa === e.id || q.pb === e.id).map(q => q.name);
+  const kin = (e.pan ? `<div class="muted">${esc(t('tz.gal.parents', e.pan, e.pbn))}</div>` : '') + (kids.length ? `<div class="muted">${esc(t('tz.gal.children', kids.join(', ')))}</div>` : '');
   const img = e.photo ? `<img src="${e.photo}" alt="" style="width:144px;image-rendering:pixelated;border:5px solid #d9b25a;border-radius:3px;background:#fff8e8;float:left;margin:0 10px 6px 0">` : '';
   const pg = tzGalPages() > 1 ? `<div class="row"><button data-galpage="-1">&lt;</button><span class="muted">${TZ.galPage + 1} / ${tzGalPages()}</span><button data-galpage="1">&gt;</button></div>` : '';
-  return `<div class="tzcard on">${img}<b>${esc(e.name)}</b><div class="muted">${esc(st)}</div><div style="margin-top:6px">${esc(sum)}</div><div style="clear:both"></div><table>${evs}</table></div>${pg}`;
+  return `<div class="tzcard on">${img}<b>${esc(e.name)}</b><div class="muted">${esc(st)}</div><div style="margin-top:6px">${esc(sum)}</div>${kin}<div style="clear:both"></div><table>${evs}</table></div>${pg}`;
 }
 tzEl('tzList').addEventListener('click', ev => { const bt = ev.target.closest('[data-galpage]'); if (bt) { TZ.galPage = (TZ.galPage + (+bt.dataset.galpage) + tzGalPages()) % tzGalPages(); tzPanel(true); } });

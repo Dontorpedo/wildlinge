@@ -2,6 +2,7 @@
 /* Terrarium: side-view care room for adopted Plimploms.
    Genomes, brains and language live in the WebAssembly world (world.terra); needs, positions and objects live here. */
 const TZ = {
+  feed: [],
   news: [],
   MAX: 8, GROW: 600, ADULT: 0.98, list: [], eggs: [], items: [], parts: [], graves: [], sel: 0, tool: 'select',
   room: { food: 70, water: 70, lamp: true, light: false, music: 0 }, extra: [], lv: [], reach: [],
@@ -149,6 +150,73 @@ function tzMood(c) { const n = c.needs; return (n.food + n.water + n.warmth + n.
 function tzFind(id) { return TZ.list.find(c => c.id === id); }
 function tzAlone() { return TZ.list.length <= 1; }
 
+function tzFeed(c, key, a) {
+  c.fk = c.fk || {}; if (Date.now() - (c.fk[key] || 0) < 60000) return; c.fk[key] = Date.now();
+  const txt = t('tz.fd.' + key, c.name, a || '');
+  TZ.feed.push({ ts: Date.now(), txt, id: c.id });
+  if (TZ.feed.length > 8) TZ.feed.shift();
+}
+function tzFeel(c, dt, now) {
+  const n = c.needs;
+  let low = null, lv = 28;
+  for (const q of TZ_NEEDS) if (n[q] < lv) { lv = n[q]; low = q; }
+  const mood = tzMood(c);
+  const key = c.sleeping ? 'sleep' : low ? 'n_' + low : c.stress > 60 ? 'stress' : c.love >= 100 ? 'love' : mood > 72 ? 'good' : 'ok';
+  const gt = c.goal ? c.goal.type : '';
+  const pan = (c.x - 400) / 400;
+  c.fcool = (c.fcool || 0) - dt;
+  if (c.fkey === undefined) { c.fkey = key; c.gkey = gt; return; }
+  if (key !== c.fkey) {
+    const old = c.fkey; c.fkey = key;
+    if (key === 'sleep') { tzFeed(c, 'sleep'); sndFx('sigh', pan); }
+    else if (old === 'sleep') { tzFeed(c, 'wake'); if (n.rest < 50) sndFx('yawn', pan); }
+    else if (key.startsWith('n_') || key === 'stress') { tzFeed(c, key); sndFx('sad', pan); c.sadAt = TZ.clock; }
+    else if (key === 'love') { tzFeed(c, 'love'); tzAlbumNote(c.id, 'mood', t('tz.fe.love')); }
+    else if (key === 'good' && (old.startsWith('n_') || old === 'stress')) { tzFeed(c, 'relief'); sndFx('joy', pan); }
+  }
+  if (gt !== c.gkey && c.fcool <= 0) {
+    c.gkey = gt;
+    let msg = null, a = '';
+    if (gt === 'play' && c.goal.with) { msg = 'play'; a = c.goal.with.name; tzAlbumNote(c.id, 'play', a); }
+    else if (['social', 'music', 'swim', 'machine', 'lab', 'tramp', 'ball', 'bubble', 'plush', 'puzzle', 'gaze', 'flutter'].includes(gt)) msg = gt;
+    else if (gt === 'door') { msg = 'door'; a = (tr('tz.rooms') || [])[Math.max(0, Math.min(5, c.room + c.goal.dir))] || ''; }
+    if (msg) { tzFeed(c, msg, a); c.fcool = 10; }
+  }
+  const sadNow = (key.startsWith('n_') && n[key.slice(2)] < 22) || mood < 35 || key === 'stress';
+  if (sadNow && !c.sleeping && TZ.clock - (c.sadAt || -99) > 14 + (c.id % 7)) { c.sadAt = TZ.clock; sndFx('sad', pan); }
+  if (!c.sleeping && n.rest < 26 && TZ.clock - (c.yawnAt || -99) > 40 + (c.id % 11)) { c.yawnAt = TZ.clock; sndFx('yawn', pan); c.yawnUntil = Date.now() + 1500; }
+}
+const TZ_EMO = {
+  heart: ['.XX.XX.', 'XXXXXXX', 'XXXXXXX', '.XXXXX.', '..XXX..', '...X...'],
+  excl: ['.XX.', '.XX.', '.XX.', '.XX.', '....', '.XX.'],
+  ques: ['.XXX.', 'X...X', '...X.', '..X..', '.....', '..X..'],
+  sweat: ['..X..', '.XXX.', '.XXX.', '..X..'],
+  anger: ['X.X.X', '.XXX.', 'XXXXX', '.XXX.', 'X.X.X'],
+  spark: ['..X..', '..X..', 'XXXXX', '..X..', '..X..'],
+  tear: ['..X..', '.XXX.', '.XXX.', '..X..']
+};
+function tzEmote(c, now) {
+  const n = c.needs, mood = tzMood(c) / 100;
+  let k = null, col = '#ffffff';
+  const ph = ((now / 1000) + c.id * 1.7) % 5;
+  if (c.surpriseUntil > now) { k = 'excl'; col = '#ffd84a'; }
+  else if (c.sleeping || c.held) return;
+  else if (c.heartUntil > now) { k = 'heart'; col = '#ff6fa8'; }
+  else if (ph < 2.4) {
+    if (n.food < 15 || n.water < 15) { k = 'anger'; col = '#ff5a4a'; }
+    else if (c.stress > 60) { k = 'sweat'; col = '#9ad8ff'; }
+    else if ((c.soc > 0.35 && n.social < 25) || mood < 0.35) { k = 'tear'; col = '#6aaaf0'; }
+    else if (c.stuck > 0) { k = 'ques'; col = '#ffffff'; }
+    else if (c.love >= 100) { k = 'heart'; col = '#ff6fa8'; }
+    else if (mood > 0.85) { k = 'spark'; col = '#fff2a0'; }
+  }
+  if (!k) return;
+  const bob = Math.round(Math.sin(now / 220 + c.id) * 1.5), pop = c.surpriseUntil > now ? Math.min(1, (c.surpriseUntil - now) / 1000 > 0.8 ? 0.5 : 1) : 1;
+  const spr = TZ_EMO[k], x0 = Math.round(c.x + c.half * 0.8) - 3, y0 = Math.round(c.y - c.half * 2) - 14 + bob;
+  b.globalAlpha = Math.min(1, pop + 0.4);
+  for (let j = 0; j < spr.length; j++) for (let q = 0; q < spr[j].length; q++) if (spr[j][q] === 'X') { b.fillStyle = col; b.fillRect(x0 + q, y0 + j, 1, 1); }
+  b.globalAlpha = 1;
+}
 function tzNews(key, ...args) {
   const msg = t(key, ...args);
   toast(msg);
@@ -213,7 +281,7 @@ async function tzReconcile() {
 /* ---------- persistence ---------- */
 function tzSerialize() {
   return JSON.stringify({
-    v: 2, savedAt: Date.now(), lab: tzLabSer(), garden: TZ.garden, room: TZ.room, graves: TZ.graves, extra: TZ.extra, album: TZ.album.map(a => ({ id: a.id, name: a.name, gen: a.gen, hue: a.hue, born: a.born, state: a.state, end: a.end, cause: a.cause, ev: a.ev, kids: a.kids, words: a.words, adult: a.adult, photo: a.photo, snapAt: a.snapAt })),
+    v: 2, savedAt: Date.now(), lab: tzLabSer(), garden: TZ.garden, room: TZ.room, graves: TZ.graves, extra: TZ.extra, album: TZ.album.map(a => ({ id: a.id, name: a.name, gen: a.gen, hue: a.hue, born: a.born, state: a.state, end: a.end, cause: a.cause, ev: a.ev, kids: a.kids, words: a.words, adult: a.adult, pa: a.pa, pb: a.pb, pan: a.pan, pbn: a.pbn, photo: a.photo, snapAt: a.snapAt })),
     eggs: TZ.eggs.map(e => ({ id: e.id, x: e.x, left: e.left })),
     list: TZ.list.map(c => ({ id: c.id, age: c.age, needs: c.needs, hp: c.hp, stress: c.stress, love: c.love, breedCool: c.breedCool, x: c.x, y: c.y, lvl: c.lvl, acc: c.acc, skill: c.skill, obey: c.obey, vocab: c.vocab, wi: c.wi, room: c.room, lsk: c.lsk }))
   });
@@ -326,6 +394,7 @@ function tzStep(dt) {
     tzAI(c, dt, k);
     tzPhys(c, k);
     tzWatch(c, dt);
+    tzFeel(c, dt, Date.now());
     { const wet = tzWet(c); if (wet !== !!c.wasWet) { c.wasWet = wet; tzBurst('drop', c.x, 318, 7); sndFx('pop', (c.x - 400) / 400); } if (wet && c.moving && Math.random() < dt * 1.6) tzBurst('ripple', c.x + tzRnd(-8, 8), 319, 1); if (c.sleeping && Math.random() < dt * 0.5) tzBurst('zz', c.x + c.half * 0.6, c.y - c.half * 2, 1); }
     { const gg = tzGrowth(c); if (gg >= TZ.ADULT && c.wasYoung) { c.wasYoung = false; tzNews('tz.n.adult', c.name); } else if (gg < TZ.ADULT) c.wasYoung = true; }
     if (c.age / TZ.GROW < 1 && ((c.age / TZ.GROW) * 20 | 0) !== (((c.age - dt) / TZ.GROW) * 20 | 0)) tzGeom(c);
@@ -360,7 +429,7 @@ function tzHatch() {
     const c = tzMake({ id: e.id, name: e.name, gen: e.gen, rec: e.rec, growth: 0, children: 0, learn: e.learn, cur: e.cur, soc: e.soc }, { age: 0, x: e.x });
     c.heartUntil = Date.now() + 2500;
     TZ.list.push(c);
-    tzAlbumAdd(c, 'hatch');
+    tzAlbumAdd(c, 'hatch'); { const al = tzAlbumGet(c.id); if (al && e.pa) { al.pa = e.pa; al.pb = e.pb; al.pan = e.pan; al.pbn = e.pbn; } }
     tzBurst('star', c.x, c.y - c.half, 14);
     tzBurst('heart', c.x, c.y - c.half * 2, 4);
     sndFx('born', (c.x - 400) / 400);
@@ -402,7 +471,7 @@ async function tzBreeding() {
     c.love = o.love = 0;
     c.breedCool = o.breedCool = 180;
     if (r.ok) {
-      TZ.eggs.push({ id: r.id, name: r.name, gen: r.gen, rec: Array.from(r.rec), learn: r.learn, cur: r.cur, soc: r.soc, x: (c.x + o.x) / 2, y: Math.min(c.y, o.y) - 20, vy: 0, left: 90 });
+      TZ.eggs.push({ pa: c.id, pb: o.id, pan: c.name, pbn: o.name, id: r.id, name: r.name, gen: r.gen, rec: Array.from(r.rec), learn: r.learn, cur: r.cur, soc: r.soc, x: (c.x + o.x) / 2, y: Math.min(c.y, o.y) - 20, vy: 0, left: 90 });
       c.kids++; o.kids++;
       tzAlbumNote(c.id, 'kid', r.name); tzAlbumNote(o.id, 'kid', r.name);
       c.heartUntil = o.heartUntil = Date.now() + 2500;
@@ -808,7 +877,8 @@ function tzSide(c, sel, now) {
         if (nx * nx + ny * ny <= 1.1) P(Math.round(eu - ew / 2) + i, Math.round(ev - eh / 2) + j, 1, 1);
       }
     }
-    tzEye(P, eu, ev, ew, eh, iris, !closed, laugh ? 'laugh' : '');
+    const wink = c.goal && c.goal.type === 'play' && ((now / 800 + c.id) % 4) < 0.35;
+    tzEye(P, eu, ev, ew, eh, iris, !closed && !wink, laugh ? 'laugh' : '');
     if (hr >= 99 && !c.sleeping) tzEye(P, hu + hr * 0.9, hv - hr * 0.1, Math.max(2, ew - 1), Math.max(3, eh - 1), iris, !closed, laugh ? 'laugh' : '');
     if (sad && !c.sleeping && !closed) { b.fillStyle = '#6aaaf0'; const tq = Math.round((now / 120) % 6); P(Math.round(eu - ew / 2 + 1), Math.round(ev + eh + tq), 1, 2); b.fillStyle = '#3a2f58'; P(Math.round(eu - 1), Math.round(ev - 2), ew + 1, 1); }
     /* nose and mouth */
@@ -816,7 +886,12 @@ function tzSide(c, sel, now) {
     const mu = Math.round(F ? F.mouth[0] : hu + hr * 0.62), mv = Math.round(F ? F.mouth[1] : hv + hr * 0.52);
     if (hr >= 5) {
       b.fillStyle = '#8a4660';
-      if (laugh) { P(mu - 1, mv - 1, 4, 3); b.fillStyle = '#ff8fae'; P(mu, mv + 1, 2, 1); }
+      const g0 = c.goal, eatN = g0 && ['food', 'water', 'treat', 'plant', 'use'].includes(g0.type) && c.arrived && !c.moving;
+      if (c.surpriseUntil > now) { P(mu, mv - 1, 2, 3); }
+      else if (c.yawnUntil > now) { P(mu - 1, mv - 1, 4, 4); b.fillStyle = '#ff8fae'; P(mu, mv + 1, 2, 1); }
+      else if (eatN) { if (Math.floor(now / 170) % 2) P(mu - 1, mv, 4, 2); else P(mu, mv, 2, 1); }
+      else if (g0 && g0.type === 'music' && c.arrived) { P(mu, mv, 2, 1 + (Math.floor(now / 220) % 2) * 2); }
+      else if (laugh) { P(mu - 1, mv - 1, 4, 3); b.fillStyle = '#ff8fae'; P(mu, mv + 1, 2, 1); }
       else if (c.sleeping) P(mu, mv, 2, 1);
       else if (sad || fear) { P(mu - 1, mv + 1, 1, 1); P(mu, mv, 2, 1); P(mu + 2, mv + 1, 1, 1); }
       else if (mood > 0.5) { P(mu - 1, mv, 1, 1); P(mu, mv + 1, 2, 1); P(mu + 2, mv, 1, 1); }
@@ -887,6 +962,7 @@ function tzRender() {
     if (rot) { const cy = c.y - c.half; b.save(); b.translate(c.x, cy); b.rotate(rot); b.translate(-c.x, -cy); }
     tzSide(c, c.id === TZ.sel, now);
     if (rot) b.restore();
+    tzEmote(c, now);
     c.y = oy;
   }
   tzGalleryShots(order);
@@ -927,6 +1003,9 @@ function tzRender() {
   tc.drawImage(bufCanvas, 0, 0, BW * S, BH * S);
   tc.font = '12px Silkscreen, monospace';
   tc.textAlign = 'center';
+  { const nowF = Date.now(), fl = TZ.feed.filter(q => nowF - q.ts < 9000).slice(-5); tc.textAlign = 'left'; tc.font = '12px Silkscreen, monospace';
+    fl.forEach((q, ix) => { const age = nowF - q.ts, al = age > 7000 ? (9000 - age) / 2000 : 1, y = 20 + ix * 18, w = tc.measureText(q.txt).width; tc.globalAlpha = al * 0.8; tc.fillStyle = 'rgba(30,24,50,.7)'; tc.fillRect(8, y - 12, w + 12, 17); tc.globalAlpha = al; tc.fillStyle = q.id === TZ.sel ? '#ffd84a' : '#fffaf0'; tc.fillText(q.txt, 14, y); });
+    tc.globalAlpha = 1; tc.textAlign = 'center'; }
   for (const c of order) {
     const nx = c.x * S, ny = (c.y + 12) * S;
     tc.fillStyle = 'rgba(40,30,60,.75)'; tc.fillText(c.name, nx + 1, ny + 1);
@@ -1001,6 +1080,7 @@ function tzMove(e) {
   const c = tzFind(d.id);
   if (!c) { TZ.drag = null; return; }
   const [x, y] = tzXY(e);
+  if (!c.held) { c.surpriseUntil = Date.now() + 1100; sndFx('oh', (c.x - 400) / 400); }
   d.moved = true; c.held = true; c.sleeping = false; c.ground = false; c.vy = 0;
   c.x = tzClamp(x - d.dx, 20, 780);
   c.y = tzClamp(y - d.dy + c.half, c.half + 10, TZ_FLOOR);
