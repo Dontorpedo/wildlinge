@@ -96,7 +96,7 @@ pub fn frame(w: &mut World, x0: f32, y0: f32, x1: f32, y1: f32, wpp: f32, sel: u
     for c in &w.creatures {
         if c.x > x0 - 40.0 && c.x < x1 + 40.0 && c.y > y0 - 40.0 && c.y < y1 + 40.0 {
             let mut m = 0u32;
-            for k in 0..7 {
+            for k in 0..8 {
                 if c.fxt[k] > 0 && w.t.saturating_sub(c.fxt[k]) <= 8 {
                     m |= 1 << k;
                 }
@@ -141,7 +141,21 @@ pub fn frame(w: &mut World, x0: f32, y0: f32, x1: f32, y1: f32, wpp: f32, sel: u
             fr.extend_from_slice(&[q.x, q.y, q.life as f32]);
         }
     }
-    json!({"t": w.t, "fr": fr, "sc": sc, "sl": sl, "fx": fx, "stc": stc, "cl": w.clim, "sf": w.sf, "night": w.night, "frozen": w.frozen, "mirrors": w.mirrors, "bub": bub, "sel": sel_found}).to_string()
+    let mut it: Vec<f32> = Vec::new();
+    for q in &w.items {
+        if q.x > x0 - 20.0 && q.x < x1 + 20.0 && q.y > y0 - 20.0 && q.y < y1 + 20.0 {
+            it.extend_from_slice(&[q.x, q.y, q.kind() as f32]);
+        }
+    }
+    let mut hd: Vec<f32> = Vec::new();
+    for c in &w.creatures {
+        if let Some(h) = &c.hold {
+            if c.x > x0 - 40.0 && c.x < x1 + 40.0 && c.y > y0 - 40.0 && c.y < y1 + 40.0 {
+                hd.extend_from_slice(&[c.x, c.y, h.kind() as f32, if h.burn > 0 { 1.0 } else { 0.0 }, c.size()]);
+            }
+        }
+    }
+    json!({"t": w.t, "fr": fr, "it": it, "hd": hd, "sc": sc, "sl": sl, "fx": fx, "stc": stc, "cl": w.clim, "sf": w.sf, "night": w.night, "frozen": w.frozen, "mirrors": w.mirrors, "bub": bub, "sel": sel_found}).to_string()
 }
 
 pub const TERRA_MAX: usize = 8;
@@ -433,7 +447,7 @@ pub fn panel(w: &World, sel: u32) -> String {
             "react": [w.rx_n, w.rx_hit, w.rc_n, w.rc_hit],
             "speaker": w.id_idx_get(w.spk_id).map(|i| json!({"id": cs[i].id, "name": cs[i].name, "why": w.spk_why, "since": World::day_of(w.spk_since), "last": w.spk_log.last().map(|x| x.1.clone())})),
             "tri": [w.tri_say, w.tri_n, w.tri_ok],
-            "novel": {"sp": plant_sp, "st": w.structs.len(), "clim": w.clim, "use": w.use_frac, "div": w.beh_div, "masks": w.seen_masks.len(), "fires": w.fires.len(), "ign": w.ignites, "burnt": w.burnt, "cooked": w.cooked},
+            "novel": {"sp": plant_sp, "st": w.structs.len(), "clim": w.clim, "use": w.use_frac, "div": w.beh_div, "masks": w.seen_masks.len(), "fires": w.fires.len(), "ign": w.ignites, "burnt": w.burnt, "cooked": w.cooked, "items": w.items.len(), "cracks": w.cracks, "sparks": w.sparks, "combos": w.combos, "hammers": w.hammers, "torches": w.torches, "held": w.creatures.iter().filter(|c| c.hold.is_some()).count()},
             "acts": (0..9usize).map(|k| cs.iter().filter(|c| c.actv as usize == k).count()).collect::<Vec<_>>()},
         "hist": &w.hist[w.hist.len().saturating_sub(170)..],
         "lang": {"what": what, "where": whr, "map": lang_map(w),

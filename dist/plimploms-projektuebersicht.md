@@ -129,3 +129,6 @@ Materialien mit Eigenschaften (hart, schwer, lang, brennbar, Schale, essbar), al
 
 ## Feuer in der Wildnis
 Feuer als Weltobjekt: breitet sich ueber Pflanzen aus (Asche duengt), beschaedigt Bauwerke und Tiere, waermt in der Naehe, gart Fleisch und erlischt bei Frost. Quellen: seltene Blitze in der Trockenzeit, Waechter-Werkzeug 'Feuer' (Kosten 30) und Tiere selbst (Ausgang o[14] unter -0,6 schlaegt Funken). Keine neuen Gehirn-Ein-/Ausgaben, Savegames bleiben kompatibel.
+
+## Werkzeuge in der Wildnis
+Gegenstaende (Stein, Stock, Nuss, Kombinationen) mit Eigenschaften; Gehirn jetzt 95 Eingaenge / 19 Ausgaenge (greifen/ablegen, schlagen, kombinieren). Nuss knacken, Funken aus zwei Steinen, Fackel am Feuer, Hammer aus Stein und Stock. Feuer zaehlt als Bedrohung fuer das bestehende Sprachsystem. Genom-Version 3 mit Migration. Nutzung nicht geskriptet.

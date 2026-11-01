@@ -281,6 +281,7 @@ function render() {
   if (showScent && frame && frame.meta && frame.meta.sc) drawScent(frame.meta.sc, ox, oy, wpp);
   if (frame && frame.meta && frame.meta.stc) drawStructs(frame.meta.stc, ox, oy, wpp);
   if (frame && frame.meta && frame.meta.fr && frame.meta.fr.length) drawFires(frame.meta.fr, ox, oy, wpp);
+  if (frame && frame.meta && (frame.meta.it || frame.meta.hd)) drawItems(frame.meta.it || [], frame.meta.hd || [], ox, oy, wpp);
   drawPfx(ox, oy, wpp);
   drawCarry(cs, ox, oy, wpp);
   if (frame && frame.meta && frame.meta.fx) drawFx(frame.meta.fx, ox, oy, wpp);
@@ -338,6 +339,31 @@ function selThought(s) {
   if (!s.thought) return t('hud.noThought');
   const a = s.thought.split('|');
   return tThought(a[0] + '|' + s.name + '|' + (a[1] || '')) + ' (' + t('hud.ago', Math.round(s.thoughtAgo / 60)) + ')';
+}
+function itemSprite(kind, x, y, u, burn) {
+  const R = (c, dx, dy, w, h) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x + dx * u), Math.round(y + dy * u), Math.max(1, Math.round(w * u)), Math.max(1, Math.round(h * u))); };
+  if (kind === 0) { R('#15191d', -3.5, -3.5, 7, 5); R('#8d939c', -3, -3, 6, 4); R('#b9bec6', -2, -3, 3, 1); }
+  else if (kind === 1) { R('#15191d', -6, -2, 12, 3); R('#8a5a30', -5.5, -1.5, 11, 2); R('#a8763f', -5.5, -1.5, 11, 1); }
+  else if (kind === 2) { R('#15191d', -2.5, -4, 5, 5); R('#8a5a30', -2, -3.5, 4, 4); R('#b07a44', -1.5, -3.5, 2, 1.5); }
+  else if (kind === 3) { R('#15191d', -6, -1.5, 12, 3); R('#8a5a30', -5.5, -1, 11, 2); R('#15191d', 2, -5, 5, 6); R('#8d939c', 2.5, -4.5, 4, 5); }
+  else { R('#15191d', -4.5, -3, 9, 4); R('#9aa04a', -4, -2.5, 8, 3); }
+  if (burn) {
+    const f = Math.floor(animT * 0.5) % 3, h = 5 + f;
+    R('#e8602a', -2.5, -h - 2, 5, h); R('#ffb02a', -1.5, -h, 3, h - 1); R('#fff07a', -0.6, -h + 2, 1.2, 2);
+  }
+}
+function drawItems(it, hd, ox, oy, wpp) {
+  const u = Math.max(1.6, 1.7 / wpp * S);
+  for (let k = 0; k + 2 < it.length; k += 3) {
+    const x = (it[k] - ox) / wpp * S, y = (it[k + 1] - oy) / wpp * S;
+    if (x < -30 || y < -30 || x > VIEW_W + 30 || y > VIEW_H + 30) continue;
+    itemSprite(it[k + 2] | 0, x, y, u, false);
+  }
+  for (let k = 0; k + 4 < hd.length; k += 5) {
+    const x = (hd[k] - ox) / wpp * S, y = (hd[k + 1] - oy) / wpp * S, sz = hd[k + 4] / wpp * S;
+    if (x < -30 || y < -30 || x > VIEW_W + 30 || y > VIEW_H + 30) continue;
+    itemSprite(hd[k + 2] | 0, x + sz * 0.6, y - sz * 0.9, u, hd[k + 3] > 0);
+  }
 }
 function drawFires(fr, ox, oy, wpp) {
   const u = Math.max(2.6, 2.8 / wpp * S);
@@ -578,6 +604,13 @@ function drawFx(fx, ox, oy, wpp) {
         const q = Math.max(2, r * 0.14); ctx.fillRect(x + Math.cos(a) * r * (0.5 + u) - q / 2, y + Math.sin(a) * r * (0.5 + u) - q / 2, q, q);
       }
     }
+    if (m & 128) {
+      for (let j = 0; j < 4; j++) {
+        const u = (ph * 1.4 + j * 0.25) % 1, a = seed + j * 1.57;
+        ctx.fillStyle = `rgba(255,255,255,${(0.9 * (1 - u)).toFixed(2)})`;
+        const q = Math.max(2, r * 0.1); ctx.fillRect(x + Math.cos(a) * r * (0.4 + u * 0.8) - q / 2, y - r * 0.5 - Math.sin(a) * r * (0.4 + u * 0.8) - q / 2, q, q);
+      }
+    }
     if (m & 64) {
       for (let j = 0; j < 6; j++) {
         const u = (ph * 1.6 + j * 0.17) % 1, a = seed + j * 1.05;
@@ -681,7 +714,7 @@ function renderWorld(p) {
     row(t('st.cycle'), `${st.dets} / ${st.fert}`) +
     (st.react && st.react[0] >= 20 ? row(t('st.react'), `${Math.round(100 * st.react[1] / st.react[0])}% / ${st.react[2] ? Math.round(100 * st.react[3] / st.react[2]) : 0}%`) + row(t('st.react2'), st.react[0]) : '') +
     (st.speaker ? row(t('st.speaker'), `<a class="w" data-id="${st.speaker.id}">${esc(st.speaker.name)}</a> (${esc(tr('spkWhy')[st.speaker.why] || '')})`) + (st.speaker.last ? row(t('st.speakerLast'), esc(st.speaker.last)) : '') : '') +
-    (st.novel ? row(t('st.plant'), Math.round(st.novel.sp)) + row(t('st.struct'), st.novel.st) + row(t('st.fire'), `${st.novel.ign} / ${st.novel.burnt} / ${st.novel.cooked}`) + row(t('st.clim'), (st.novel.clim >= 0 ? '+' : '') + st.novel.clim.toFixed(1)) + row(t('st.novel'), `${st.novel.div} (${st.novel.masks})`) + row(t('st.use'), useBars(st.novel.use, [0, 1, 2], ['A', 'B', 'C'], ['#ff5a5a', '#5ae66e', '#6496ff'])) + row(t('st.use2'), useBars(st.novel.use, [3, 4, 5], [t('io.dig'), t('io.build'), t('io.sig')], ['#8a6238', '#ffd84a', '#ffec8c'])) : '') +
+    (st.novel ? row(t('st.plant'), Math.round(st.novel.sp)) + row(t('st.struct'), st.novel.st) + row(t('st.fire'), `${st.novel.ign} / ${st.novel.burnt} / ${st.novel.cooked}`) + row(t('st.items'), `${st.novel.items} / ${st.novel.held} / ${st.novel.cracks} / ${st.novel.sparks} / ${st.novel.hammers} / ${st.novel.torches}`) + row(t('st.clim'), (st.novel.clim >= 0 ? '+' : '') + st.novel.clim.toFixed(1)) + row(t('st.novel'), `${st.novel.div} (${st.novel.masks})`) + row(t('st.use'), useBars(st.novel.use, [0, 1, 2], ['A', 'B', 'C'], ['#ff5a5a', '#5ae66e', '#6496ff'])) + row(t('st.use2'), useBars(st.novel.use, [3, 4, 5], [t('io.dig'), t('io.build'), t('io.sig')], ['#8a6238', '#ffd84a', '#ffec8c'])) : '') +
     (st.tri && st.tri[1] >= 20 ? row(t('st.tri'), `${st.tri[0]}`) + row(t('st.tri2'), `${Math.round(100 * st.tri[2] / st.tri[1])}%`) : '') +
     (st.cache ? row(t('st.cache'), `${st.cache[0]} | ${st.cache[3]}`) + row(t('st.cache2'), `${st.cache[1]} / ${st.cache[2]}`) : '') +
     (st.acts ? tr('acts').map((n, k) => (st.acts[k] ? row(t('st.acts') + ': ' + n, `${st.acts[k]} (${Math.round(100 * st.acts[k] / Math.max(1, st.acts.reduce((p, q) => p + q, 0)))}%)`) : '')).join('') : '') +

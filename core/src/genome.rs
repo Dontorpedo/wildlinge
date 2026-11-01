@@ -252,7 +252,7 @@ pub fn random_genome(carn: bool, rng: &mut Rng, innov: &mut Innov) -> Genome {
     let look = random_look(rng);
     let nh = 4 + rng.below(4) as u32;
     let nodes: Vec<NodeGene> = (0..nh).map(|k| NodeGene { id: HID0 + k, d: 0.5 }).collect();
-    let mut g = Genome { tr, shape, dw, motor, hue, look, look_set: true, soc: if carn { rng.range(0.05, 0.4) } else { rng.range(0.15, 1.0) }, parts, nodes, conns: Vec::new(), mutated: false, gv: 2 };
+    let mut g = Genome { tr, shape, dw, motor, hue, look, look_set: true, soc: if carn { rng.range(0.05, 0.4) } else { rng.range(0.15, 1.0) }, parts, nodes, conns: Vec::new(), mutated: false, gv: 3 };
     let h = |k: u32| HID0 + k;
     let o = |k: u32| OUT0 + k;
     add_conn(&mut g, innov, 1, h(0), 2.5);
@@ -271,6 +271,13 @@ pub fn random_genome(carn: bool, rng: &mut Rng, innov: &mut Innov) -> Genome {
     add_conn(&mut g, innov, 0, o(3), w3);
     let w4 = rng.gauss() * 0.8;
     add_conn(&mut g, innov, 0, o(4), w4);
+    if rng.chance(0.25) {
+        add_conn(&mut g, innov, 91, o(16), 1.6);
+        add_conn(&mut g, innov, 93, o(17), rng.range(0.8, 1.8));
+        if rng.chance(0.3) {
+            add_conn(&mut g, innov, 93, o(18), rng.range(0.4, 1.2));
+        }
+    }
     for k in 0..nh {
         for _ in 0..3 {
             let s = rng.below(NIN) as u32;
@@ -515,7 +522,7 @@ pub fn sanitize(g: &mut Genome) {
         g.gv = 1;
     }
     if g.gv == 1 {
-        let (a, b) = (NIN as u32, NOUT as u32);
+        let (a, b) = (NIN_V2, NOUT_V2);
         for n in g.nodes.iter_mut() {
             n.id = shift_id(n.id, NIN_V1, NOUT_V1, a, b);
         }
@@ -524,6 +531,17 @@ pub fn sanitize(g: &mut Genome) {
             c.t = shift_id(c.t, NIN_V1, NOUT_V1, a, b);
         }
         g.gv = 2;
+    }
+    if g.gv == 2 {
+        let (a, b) = (NIN as u32, NOUT as u32);
+        for n in g.nodes.iter_mut() {
+            n.id = shift_id(n.id, NIN_V2, NOUT_V2, a, b);
+        }
+        for c in g.conns.iter_mut() {
+            c.s = shift_id(c.s, NIN_V2, NOUT_V2, a, b);
+            c.t = shift_id(c.t, NIN_V2, NOUT_V2, a, b);
+        }
+        g.gv = 3;
     }
     for (i, r) in RANGES.iter().enumerate() {
         g.tr[i] = if g.tr[i].is_finite() { clamp(g.tr[i], r.0, r.1) } else { r.0 };

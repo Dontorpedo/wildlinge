@@ -449,6 +449,26 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
             f[4] = cl * 0.6 + 0.2;
         }
     }
+    let mut fire_focus: Option<(f32, f32)> = None;
+    {
+        let rr = sense_r.min(160.0);
+        let mut bs = 0.0f32;
+        for q in &w.fires {
+            let d = (q.x - c.x).hypot(q.y - c.y);
+            if d < rr {
+                let s = ((1.0 - d / rr) * 1.2 + 0.2).min(1.0);
+                if s > bs {
+                    bs = s;
+                    fire_focus = Some((q.x, q.y));
+                }
+            }
+        }
+        if bs > f[0] {
+            f[0] = bs;
+        } else {
+            fire_focus = None;
+        }
+    }
     f[1] = food_score;
     f[5] = if c.d[0] > 0.6 { (c.d[0] - 0.6) / 0.4 } else { 0.0 };
     f[6] = (100.0 - c.health) / 100.0;
@@ -472,6 +492,8 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
     c.focus_f = if sal > 0.25 { sk } else { -1 };
     c.fo = if sk == 1 {
         food_pos.map(|p| (p.0, p.1))
+    } else if sk == 0 && fire_focus.is_some() {
+        fire_focus
     } else if matches!(sk, 0 | 2 | 3 | 4) {
         other.as_ref().map(|o| (o.x, o.y))
     } else {
@@ -737,6 +759,28 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
             inp[10] = o.display.min(1.0);
             inp[86] = o.sig;
         }
+        {
+            let mut bd = sense_r.min(140.0).powi(2);
+            let mut best: Option<(f32, f32, f32, f32)> = None;
+            for q in &w.items {
+                let (dx, dy) = (q.x - c.x, q.y - c.y);
+                let d2 = dx * dx + dy * dy;
+                if d2 < bd {
+                    bd = d2;
+                    best = Some((dy.atan2(dx) - c.dir, d2.sqrt(), q.hard, 0.0));
+                }
+            }
+            if let Some((a, d, hd, _)) = best {
+                inp[89] = a.sin();
+                inp[90] = a.cos();
+                inp[91] = 1.0 - d / sense_r.min(140.0);
+                inp[92] = hd;
+            }
+            if let Some(h) = &c.hold {
+                inp[93] = 1.0;
+                inp[94] = h.power().min(1.0);
+            }
+        }
         inp[84] = (w.soil.st_at(c.x, c.y) & 1) as f32;
         inp[85] = ((w.soil.st_at(c.x, c.y) >> 1) & 1) as f32;
         inp[82] = w.soil.fert_at(c.x, c.y);
@@ -886,6 +930,120 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
                 }
             }
         }
+    }
+    // items: grab / drop / strike / combine
+    c.itcool = c.itcool.saturating_sub(1);
+    if !c.fly && c.itcool == 0 && c.energy > 3.0 {
+        let reach = size + 22.0;
+        let near = |w: &World| -> Option<usize> {
+            let mut bd = reach * reach;
+            let mut bi = None;
+            for (i, q) in w.items.iter().enumerate() {
+                let d2 = (q.x - c.x).powi(2) + (q.y - c.y).powi(2);
+                if d2 < bd {
+                    bd = d2;
+                    bi = Some(i);
+                }
+            }
+            bi
+        };
+        if o[16] > 0.5 && c.hold.is_none() {
+            if let Some(i) = near(w) {
+                c.hold = Some(w.items.swap_remove(i));
+                c.itcool = 15;
+                c.energy -= 0.02;
+                c.fxt[7] = w.t;
+            }
+        } else if o[16] < -0.5 && c.hold.is_some() {
+            if let Some(mut it) = c.hold.take() {
+                it.x = clamp(c.x + c.dir.cos() * size, 2.0, WORLD_W - 2.0);
+                it.y = clamp(c.y + c.dir.sin() * size, 2.0, WORLD_H - 2.0);
+                if it.burn > 0 {
+                    w.ignite(it.x, it.y);
+                } else {
+                    w.items.push(it);
+                }
+            }
+            c.itcool = 15;
+        } else if o[17] > 0.5 && c.hold.is_some() {
+            c.itcool = 25;
+            c.energy -= 0.03;
+            c.fxt[7] = w.t;
+            let (hp, hhard, hburn, hflam) = { let h = c.hold.as_ref().unwrap(); (h.power(), h.hard, h.burn, h.flam) };
+            if let Some(i) = near(w) {
+                if w.items[i].shell {
+                    if w.rng.chance(clamp((hp - 0.2) / 0.4, 0.0, 1.0)) {
+                        let it = w.items.swap_remove(i);
+                        let b = w.bio_at(it.x, it.y) as u8;
+                        w.add_food(it.x, it.y, 60.0, false, b);
+                        w.cracks += 1;
+                        w.achieve("crack");
+                        if hp > 0.5 {
+                            w.achieve("tool");
+                        }
+                    }
+                } else if hburn > 0 && w.items[i].flam > 0.15 {
+                    let it = w.items.swap_remove(i);
+                    w.ignite(it.x, it.y);
+                } else if hhard > 0.8 && w.items[i].hard > 0.8 && hp > 0.2 && w.rng.chance(0.3) {
+                    w.spark_at(c.x, c.y, 26.0);
+                    w.achieve("spark");
+                }
+            } else if hburn > 0 {
+                w.spark_at(c.x, c.y, 22.0);
+            }
+            if hburn == 0 && hflam > 0.3 && w.fires.iter().any(|f| (f.x - c.x).hypot(f.y - c.y) < 24.0) {
+                if let Some(h) = c.hold.as_mut() {
+                    h.burn = 500;
+                }
+                w.torches += 1;
+                w.achieve("torch");
+            }
+        } else if o[18] > 0.5 && c.hold.is_some() {
+            c.itcool = 40;
+            if let Some(i) = near(w) {
+                let h = c.hold.clone().unwrap();
+                let q = &w.items[i];
+                if !h.shell && !q.shell && h.burn == 0 && h.d < 2 && q.d < 2 {
+                    let n = Item {
+                        x: c.x,
+                        y: c.y,
+                        hard: h.hard.max(q.hard) * 0.95,
+                        heavy: (h.heavy + q.heavy).min(1.5),
+                        long: h.long.max(q.long),
+                        flam: (h.flam + q.flam) / 2.0,
+                        shell: false,
+                        burn: 0,
+                        d: h.d.max(q.d) + 1,
+                    };
+                    w.items.swap_remove(i);
+                    w.combos += 1;
+                    if n.kind() == 3 {
+                        w.hammers += 1;
+                        w.achieve("craft");
+                    }
+                    c.hold = Some(n);
+                    c.energy -= 0.05;
+                    c.fxt[7] = w.t;
+                }
+            }
+        }
+    }
+    let mut drop_burnt = false;
+    if let Some(h) = c.hold.as_mut() {
+        if h.burn > 0 {
+            h.burn -= 1;
+            c.health -= 0.15;
+            if w.t % 8 == 0 {
+                w.spark_at(c.x, c.y, 18.0);
+            }
+            if h.burn == 0 {
+                drop_burnt = true;
+            }
+        }
+    }
+    if drop_burnt {
+        c.hold = None;
     }
     if o[15].abs() > 0.4 {
         c.use_n[5] += 1;
