@@ -150,6 +150,7 @@ function tzUseR(c, g, dt) {
       if (r < 0 || r >= TZ_ROOMS.length) { c.goalT = 0; break; }
       c.room = r; c.goal = null; c.goalT = 0;
       if (r === TZ.cur) tzPlaceArrive(c, g.dir);
+      else if (TZ.follow && TZ.sel === c.id) { tzViewRoom(r); tzPlaceArrive(c, g.dir); }
       else { c.x = tzRnd(60, 740); c.y = TZ_FLOOR; c.lvl = 0; c.ground = true; c.vy = 0; c.sleeping = false; c.away = 0; if (TZ.sel === c.id && !TZ.follow) TZ.sel = 0; }
       break;
     }
