@@ -182,6 +182,8 @@ fn metabolize(w: &mut World, c: &mut Creature, water: u8, sleep: f32, drown: f32
             "drowned"
         } else if c.cold > 0.8 {
             "frozen"
+        } else if w.t.saturating_sub(c.burned) < 10 && c.burned > 0 {
+            "burned"
         } else if c.hot > 0.8 {
             "heat"
         } else if c.sick > 0 {
@@ -500,6 +502,23 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
     // temperature, body shape matters: long thin bodies lose heat, compact ones keep it
     let shp = c.g.shape;
     let temp = btemp + w.clim + (w.sf - 0.5) * 24.0 - if frozen { 2.0 } else { 0.0 } - w.night * 3.0 - if w.wev == 2 { 12.0 } else { 0.0 };
+    let mut near_fire = 0.0f32;
+    let mut in_fire = false;
+    for q in &w.fires {
+        let d = (q.x - c.x).hypot(q.y - c.y);
+        if d < 70.0 {
+            near_fire = near_fire.max(1.0 - d / 70.0);
+        }
+        if d < 12.0 {
+            in_fire = true;
+        }
+    }
+    let temp = temp + near_fire * 14.0;
+    if in_fire {
+        c.health -= 2.0;
+        c.fear = (c.fear + 0.3).min(1.0);
+        c.burned = w.t;
+    }
     let burrow = w.soil.dug_at(c.x, c.y);
     let shel = if w.soil.st_at(c.x, c.y) & 1 != 0 { 0.6 } else { 0.0 };
     let temp = temp + (18.0 - temp) * ((burrow * 1.5).min(0.6) + shel).min(0.8);
@@ -854,6 +873,17 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
                 c.energy -= 5.0;
                 c.fxt[4] = w.t;
                 w.builds += 1;
+            }
+        }
+    }
+    if o[14] < -0.6 && !c.fly && c.energy > 4.0 && (c.fxt[6] == 0 || w.t.saturating_sub(c.fxt[6]) > 60) {
+        c.energy -= 0.02;
+        c.fxt[6] = w.t;
+        if w.rng.chance(0.12) {
+            if let Some((fx, fy)) = w.flammable_near(c.x, c.y, 22.0) {
+                if w.ignite(fx, fy) {
+                    c.note(w.t, "d.fire", "");
+                }
             }
         }
     }

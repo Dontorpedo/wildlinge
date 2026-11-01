@@ -132,7 +132,7 @@ pub struct Creature {
     #[serde(default)]
     pub use_n: [u32; 6],
     #[serde(skip)]
-    pub fxt: [u32; 6],
+    pub fxt: [u32; 7],
     #[serde(default)]
     pub sig: f32,
     #[serde(default)]
@@ -166,6 +166,8 @@ pub struct Creature {
     pub mirror_tested: bool,
     pub flew_once: bool,
     pub hurt: bool,
+    #[serde(skip)]
+    pub burned: u32,
     pub was_boss: bool,
     pub dead: bool,
     pub cause: String,
@@ -253,7 +255,7 @@ impl Creature {
             sick: 0,
             thought_cool: 0,
             use_n: [0; 6],
-            fxt: [0; 6],
+            fxt: [0; 7],
             sig: 0.0,
             thought: String::new(),
             thought_age: 0,

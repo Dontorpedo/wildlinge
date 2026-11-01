@@ -100,6 +100,7 @@ const TOOL_ICONS = {
   carry: ['M12 21V8 M7 13l5-5 5 5 M5 3h14', '#e8d28a'],
   fertilize: ['M12 21v-9 M12 12c0-4-3-6-7-6 0 4 3 6 7 6z M12 15c0-3 2-5 6-5 0 3-2 5-6 5z', '#7ed957'],
   shelter: ['M3 20h18 M5 20a7 7 0 0 1 14 0 M10 20v-4a2 2 0 0 1 4 0v4', '#d9a066'],
+  ignite: ['M12 3c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-4 0-6 1-10z', '#ff7a2a'],
   wall: ['M5 20V7 M12 20V7 M19 20V7 M3 11h18 M3 16h18 M3.5 7L5 4l1.5 3 M10.5 7L12 4l1.5 3 M17.5 7L19 4l1.5 3', '#c9a46a'],
   pet: ['M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z', '#ff8fb1'],
   brush: ['M4 20c3 0 4-1 4-3l9-9-3-3-9 9c-2 0-2 3-1 6z M14 5l3-3 5 5-3 3', '#e8a0ff'],
@@ -135,7 +136,7 @@ function initToolIcons() {
   }
 }
 initToolIcons();
-const TOOL_COST = { stroke: 3, scold: 5, say: 4, teach: 8, food: 15, mirror: 30, fertilize: 20, shelter: 25, wall: 25, carry: '10+' };
+const TOOL_COST = { stroke: 3, scold: 5, say: 4, teach: 8, food: 15, mirror: 30, fertilize: 20, shelter: 25, wall: 25, ignite: 30, carry: '10+' };
 function markCosts() { for (const bt of document.querySelectorAll('#tools button[data-tool]')) { const c = TOOL_COST[bt.dataset.tool]; if (c !== undefined) bt.dataset.cost = c; } }
 markCosts();
 
@@ -279,6 +280,7 @@ function render() {
   if (showSoil && frame && frame.meta && frame.meta.sl) drawSoil(frame.meta.sl, ox, oy, wpp);
   if (showScent && frame && frame.meta && frame.meta.sc) drawScent(frame.meta.sc, ox, oy, wpp);
   if (frame && frame.meta && frame.meta.stc) drawStructs(frame.meta.stc, ox, oy, wpp);
+  if (frame && frame.meta && frame.meta.fr && frame.meta.fr.length) drawFires(frame.meta.fr, ox, oy, wpp);
   drawPfx(ox, oy, wpp);
   drawCarry(cs, ox, oy, wpp);
   if (frame && frame.meta && frame.meta.fx) drawFx(frame.meta.fx, ox, oy, wpp);
@@ -337,6 +339,20 @@ function selThought(s) {
   const a = s.thought.split('|');
   return tThought(a[0] + '|' + s.name + '|' + (a[1] || '')) + ' (' + t('hud.ago', Math.round(s.thoughtAgo / 60)) + ')';
 }
+function drawFires(fr, ox, oy, wpp) {
+  const u = Math.max(2.6, 2.8 / wpp * S);
+  for (let k = 0; k + 2 < fr.length; k += 3) {
+    const x = (fr[k] - ox) / wpp * S, y = (fr[k + 1] - oy) / wpp * S, life = fr[k + 2];
+    if (x < -80 || y < -80 || x > VIEW_W + 80 || y > VIEW_H + 80) continue;
+    const f = (Math.floor(animT * 0.5) + k) % 3, sc = Math.min(1, 0.4 + life / 150), h = (9 + f * 2.5) * u * sc;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, 32 * u * sc);
+    g.addColorStop(0, 'rgba(255,170,70,0.28)'); g.addColorStop(1, 'rgba(255,120,30,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 32 * u * sc, 0, 6.283); ctx.fill();
+    ctx.fillStyle = '#e8602a'; ctx.fillRect(x - 4.5 * u * sc, y - h, 9 * u * sc, h);
+    ctx.fillStyle = '#ffb02a'; ctx.fillRect(x - 3 * u * sc, y - h * 0.8, 6 * u * sc, h * 0.8);
+    ctx.fillStyle = '#fff07a'; ctx.fillRect(x - 1.2 * u * sc, y - h * 0.45, 2.4 * u * sc, h * 0.4);
+  }
+}
 function drawStructs(st, ox, oy, wpp) {
   const u = Math.max(1, 1 / wpp * S);
   for (let k = 0; k + 3 < st.length; k += 4) {
@@ -370,6 +386,7 @@ function actFeedback(o) {
     if (w) { bubbles.push({ x: a.x, y: a.y, text: w, kind: 1, until: performance.now() + 2600 }); sndSay(w, 0, 0); }
     pfx.push({ type: 'wave', x: a.x, y: a.y, at: performance.now(), seed: 0 });
   } else if (k === 't.mirror') { pfx.push({ type: 'glint', x: a.x, y: a.y - 20, at: performance.now(), seed: Math.random() * 6.28 }); sndFx('chime', 0); }
+  else if (k === 't.fire') { pfx.push({ type: 'glint', x: a.x, y: a.y, at: performance.now(), seed: Math.random() * 6.28 }); sndFx('tick', 0); }
   else if (k === 't.built' || k === 't.fert') { pfx.push({ type: k === 't.built' ? 'born' : 'glint', x: a.x, y: a.y, at: performance.now(), seed: Math.random() * 6.28 }); sndFx('pop', 0); }
 }
 /* ---------- relationship and death effects: hearts, sparkles, hits, ghosts ---------- */
@@ -561,6 +578,13 @@ function drawFx(fx, ox, oy, wpp) {
         const q = Math.max(2, r * 0.14); ctx.fillRect(x + Math.cos(a) * r * (0.5 + u) - q / 2, y + Math.sin(a) * r * (0.5 + u) - q / 2, q, q);
       }
     }
+    if (m & 64) {
+      for (let j = 0; j < 6; j++) {
+        const u = (ph * 1.6 + j * 0.17) % 1, a = seed + j * 1.05;
+        ctx.fillStyle = `rgba(255,${180 + j * 12},60,${(1 - u).toFixed(2)})`;
+        const q = Math.max(2, r * 0.12); ctx.fillRect(x + Math.cos(a) * r * (0.3 + u) - q / 2, y - r * 0.3 - u * r * 1.2 - q / 2, q, q);
+      }
+    }
     if (m & 32) {
       for (let j = 0; j < 2; j++) {
         const u = (ph * 0.5 + j * 0.5) % 1;
@@ -657,7 +681,7 @@ function renderWorld(p) {
     row(t('st.cycle'), `${st.dets} / ${st.fert}`) +
     (st.react && st.react[0] >= 20 ? row(t('st.react'), `${Math.round(100 * st.react[1] / st.react[0])}% / ${st.react[2] ? Math.round(100 * st.react[3] / st.react[2]) : 0}%`) + row(t('st.react2'), st.react[0]) : '') +
     (st.speaker ? row(t('st.speaker'), `<a class="w" data-id="${st.speaker.id}">${esc(st.speaker.name)}</a> (${esc(tr('spkWhy')[st.speaker.why] || '')})`) + (st.speaker.last ? row(t('st.speakerLast'), esc(st.speaker.last)) : '') : '') +
-    (st.novel ? row(t('st.plant'), Math.round(st.novel.sp)) + row(t('st.struct'), st.novel.st) + row(t('st.clim'), (st.novel.clim >= 0 ? '+' : '') + st.novel.clim.toFixed(1)) + row(t('st.novel'), `${st.novel.div} (${st.novel.masks})`) + row(t('st.use'), useBars(st.novel.use, [0, 1, 2], ['A', 'B', 'C'], ['#ff5a5a', '#5ae66e', '#6496ff'])) + row(t('st.use2'), useBars(st.novel.use, [3, 4, 5], [t('io.dig'), t('io.build'), t('io.sig')], ['#8a6238', '#ffd84a', '#ffec8c'])) : '') +
+    (st.novel ? row(t('st.plant'), Math.round(st.novel.sp)) + row(t('st.struct'), st.novel.st) + row(t('st.fire'), `${st.novel.ign} / ${st.novel.burnt} / ${st.novel.cooked}`) + row(t('st.clim'), (st.novel.clim >= 0 ? '+' : '') + st.novel.clim.toFixed(1)) + row(t('st.novel'), `${st.novel.div} (${st.novel.masks})`) + row(t('st.use'), useBars(st.novel.use, [0, 1, 2], ['A', 'B', 'C'], ['#ff5a5a', '#5ae66e', '#6496ff'])) + row(t('st.use2'), useBars(st.novel.use, [3, 4, 5], [t('io.dig'), t('io.build'), t('io.sig')], ['#8a6238', '#ffd84a', '#ffec8c'])) : '') +
     (st.tri && st.tri[1] >= 20 ? row(t('st.tri'), `${st.tri[0]}`) + row(t('st.tri2'), `${Math.round(100 * st.tri[2] / st.tri[1])}%`) : '') +
     (st.cache ? row(t('st.cache'), `${st.cache[0]} | ${st.cache[3]}`) + row(t('st.cache2'), `${st.cache[1]} / ${st.cache[2]}`) : '') +
     (st.acts ? tr('acts').map((n, k) => (st.acts[k] ? row(t('st.acts') + ': ' + n, `${st.acts[k]} (${Math.round(100 * st.acts[k] / Math.max(1, st.acts.reduce((p, q) => p + q, 0)))}%)`) : '')).join('') : '') +
@@ -1321,6 +1345,7 @@ window.addEventListener('keydown', e => {
   if (e.key >= '1' && e.key <= '9') setTool(tools[+e.key - 1]);
   else if (e.key === '0') setTool('shelter');
   else if (e.key === 'w' || e.key === 'W') setTool('wall');
+  else if (e.key === 'f' || e.key === 'F') setTool('ignite');
   else if (e.key === 'ArrowLeft') cam.x -= step;
   else if (e.key === 'ArrowRight') cam.x += step;
   else if (e.key === 'ArrowUp') cam.y -= step;

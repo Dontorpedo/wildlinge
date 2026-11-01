@@ -24,6 +24,13 @@ pub struct Food {
 }
 
 #[derive(Clone, Serialize, Deserialize, Default)]
+pub struct Fire {
+    pub x: f32,
+    pub y: f32,
+    pub life: u16,
+}
+
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Struct {
     pub x: f32,
     pub y: f32,
@@ -324,6 +331,14 @@ pub struct World {
     #[serde(default)]
     pub structs: Vec<Struct>,
     #[serde(default)]
+    pub fires: Vec<Fire>,
+    #[serde(default)]
+    pub ignites: u32,
+    #[serde(default)]
+    pub burnt: u32,
+    #[serde(default)]
+    pub cooked: u32,
+    #[serde(default)]
     pub clim: f32,
     #[serde(default)]
     pub use_frac: [f32; 6],
@@ -583,6 +598,93 @@ impl World {
         self.structs.push(Struct { x, y, kind, hp: if kind == 0 { 1600 } else { 1000 }, own });
         self.rebuild_structs();
         0
+    }
+
+    pub fn ignite(&mut self, x: f32, y: f32) -> bool {
+        if self.fires.len() >= 80 || self.frozen || BIOMES[self.bio_at(x, y)].water > 0 {
+            return false;
+        }
+        if self.fires.iter().any(|f| (f.x - x).hypot(f.y - y) < 14.0) {
+            return false;
+        }
+        self.fires.push(Fire { x, y, life: 700 });
+        self.ignites += 1;
+        true
+    }
+
+    /// something flammable (dry plant or structure) within reach of a spark
+    pub fn flammable_near(&self, x: f32, y: f32, r: f32) -> Option<(f32, f32)> {
+        for f in &self.foods {
+            if !f.meat && !f.det && (f.x - x).hypot(f.y - y) < r {
+                return Some((f.x, f.y));
+            }
+        }
+        for q in &self.structs {
+            if q.kind == 0 && (q.x - x).hypot(q.y - y) < r + 10.0 {
+                return Some((q.x, q.y));
+            }
+        }
+        None
+    }
+
+    pub fn fire_step(&mut self) {
+        let wet = self.wev == 0 && self.sf < 0.25;
+        for f in self.fires.iter_mut() {
+            f.life = f.life.saturating_sub(if self.frozen || wet { 4 } else { 1 });
+        }
+        if self.t % 8 == 0 {
+            // lightning in the dry season
+            if self.fires.len() < 3 && self.sf > 0.78 && self.t % 400 == 0 && self.rng.chance(0.08) && !self.foods.is_empty() {
+                let i = self.rng.below(self.foods.len());
+                let (x, y, plant) = (self.foods[i].x, self.foods[i].y, !self.foods[i].meat && !self.foods[i].det);
+                if plant {
+                    self.ignite(x, y);
+                }
+            }
+            if self.fires.is_empty() {
+                return;
+            }
+            let fires: Vec<(f32, f32)> = self.fires.iter().filter(|f| f.life > 0).map(|f| (f.x, f.y)).collect();
+            let mut spark: Vec<(f32, f32)> = Vec::new();
+            let mut i = 0;
+            while i < self.foods.len() {
+                let (fx, fy, meat, det, sp) = (self.foods[i].x, self.foods[i].y, self.foods[i].meat, self.foods[i].det, self.foods[i].sp);
+                let near = fires.iter().any(|q| (q.0 - fx).hypot(q.1 - fy) < 18.0);
+                if near && !det && !meat {
+                    if self.rng.chance(0.1) {
+                        spark.push((fx, fy));
+                        self.soil.fert_add(fx, fy, 70);
+                        self.foods.swap_remove(i);
+                        self.burnt += 1;
+                        continue;
+                    }
+                } else if near && meat && sp != 255 {
+                    let near2 = fires.iter().any(|q| (q.0 - fx).hypot(q.1 - fy) < 30.0);
+                    if near2 {
+                        self.foods[i].e *= 1.5;
+                        self.foods[i].sp = 255;
+                        self.cooked += 1;
+                    }
+                }
+                i += 1;
+            }
+            for (x, y) in spark {
+                self.ignite(x, y);
+            }
+            let mut ign: Vec<(f32, f32)> = Vec::new();
+            for q in self.structs.iter_mut() {
+                if fires.iter().any(|f| (f.0 - q.x).hypot(f.1 - q.y) < 30.0) {
+                    q.hp = q.hp.saturating_sub(120);
+                    ign.push((q.x, q.y));
+                }
+            }
+            for (x, y) in ign {
+                if self.rng.chance(0.25) {
+                    self.ignite(x + 6.0, y);
+                }
+            }
+            self.fires.retain(|f| f.life > 0);
+        }
     }
 
     pub fn update_season(&mut self) {
@@ -1554,6 +1656,7 @@ impl World {
             self.chronicle();
         }
         self.update_season();
+        self.fire_step();
         self.speech = std::mem::take(&mut self.speech_next);
         if self.wev == 3 && self.t % 60 == 0 {
             self.spread_disease();

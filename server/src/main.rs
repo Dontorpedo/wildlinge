@@ -294,6 +294,7 @@ impl Sim {
                     "fertilize" => 20.0,
                     "shelter" => 25.0,
                     "wall" => 25.0,
+                    "ignite" => 30.0,
                     _ => return,
                 };
                 if !self.pay(&token, cost) {

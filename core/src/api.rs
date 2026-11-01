@@ -96,7 +96,7 @@ pub fn frame(w: &mut World, x0: f32, y0: f32, x1: f32, y1: f32, wpp: f32, sel: u
     for c in &w.creatures {
         if c.x > x0 - 40.0 && c.x < x1 + 40.0 && c.y > y0 - 40.0 && c.y < y1 + 40.0 {
             let mut m = 0u32;
-            for k in 0..6 {
+            for k in 0..7 {
                 if c.fxt[k] > 0 && w.t.saturating_sub(c.fxt[k]) <= 8 {
                     m |= 1 << k;
                 }
@@ -135,7 +135,13 @@ pub fn frame(w: &mut World, x0: f32, y0: f32, x1: f32, y1: f32, wpp: f32, sel: u
             }
         }
     }
-    json!({"t": w.t, "sc": sc, "sl": sl, "fx": fx, "stc": stc, "cl": w.clim, "sf": w.sf, "night": w.night, "frozen": w.frozen, "mirrors": w.mirrors, "bub": bub, "sel": sel_found}).to_string()
+    let mut fr: Vec<f32> = Vec::new();
+    for q in &w.fires {
+        if q.x > x0 - 60.0 && q.x < x1 + 60.0 && q.y > y0 - 60.0 && q.y < y1 + 60.0 {
+            fr.extend_from_slice(&[q.x, q.y, q.life as f32]);
+        }
+    }
+    json!({"t": w.t, "fr": fr, "sc": sc, "sl": sl, "fx": fx, "stc": stc, "cl": w.clim, "sf": w.sf, "night": w.night, "frozen": w.frozen, "mirrors": w.mirrors, "bub": bub, "sel": sel_found}).to_string()
 }
 
 pub const TERRA_MAX: usize = 8;
@@ -427,7 +433,7 @@ pub fn panel(w: &World, sel: u32) -> String {
             "react": [w.rx_n, w.rx_hit, w.rc_n, w.rc_hit],
             "speaker": w.id_idx_get(w.spk_id).map(|i| json!({"id": cs[i].id, "name": cs[i].name, "why": w.spk_why, "since": World::day_of(w.spk_since), "last": w.spk_log.last().map(|x| x.1.clone())})),
             "tri": [w.tri_say, w.tri_n, w.tri_ok],
-            "novel": {"sp": plant_sp, "st": w.structs.len(), "clim": w.clim, "use": w.use_frac, "div": w.beh_div, "masks": w.seen_masks.len()},
+            "novel": {"sp": plant_sp, "st": w.structs.len(), "clim": w.clim, "use": w.use_frac, "div": w.beh_div, "masks": w.seen_masks.len(), "fires": w.fires.len(), "ign": w.ignites, "burnt": w.burnt, "cooked": w.cooked},
             "acts": (0..9usize).map(|k| cs.iter().filter(|c| c.actv as usize == k).count()).collect::<Vec<_>>()},
         "hist": &w.hist[w.hist.len().saturating_sub(170)..],
         "lang": {"what": what, "where": whr, "map": lang_map(w),
@@ -589,6 +595,13 @@ pub fn command(w: &mut World, v: &Value) -> Value {
                         }
                     }
                     json!({"k": "t.fert", "p": []})
+                }
+                "ignite" => {
+                    if w.ignite(x, y) {
+                        json!({"k": "t.fire", "p": []})
+                    } else {
+                        json!({"k": "t.fireNo", "p": []})
+                    }
                 }
                 "shelter" | "wall" => {
                     let r = w.build_at(x, y, if tool == "wall" { 1 } else { 0 }, true);

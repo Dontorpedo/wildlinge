@@ -106,6 +106,13 @@ impl Soil {
     pub fn st_at(&self, x: f32, y: f32) -> u8 {
         self.st.get(self.idx(x, y)).copied().unwrap_or(0)
     }
+    pub fn fert_add(&mut self, x: f32, y: f32, v: u8) {
+        let i = self.idx(x, y);
+        if i < self.fert.len() {
+            self.fert[i] = self.fert[i].saturating_add(v);
+        }
+    }
+
     pub fn dig(&mut self, x: f32, y: f32) {
         let i = self.idx(x, y);
         if i < self.dug.len() {

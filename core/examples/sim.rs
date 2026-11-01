@@ -85,6 +85,7 @@ fn main() {
     println!("milestones: {:?}", w.milestones.keys().collect::<Vec<_>>());
     println!("novelty: use {:?} div {} masks {}", w.use_frac, w.beh_div, w.seen_masks.len());
     println!("structs {} builds {} clim {:.2}", w.structs.len(), w.builds, w.clim);
+    println!("fires {} ignites {} burnt {} cooked {}", w.fires.len(), w.ignites, w.burnt, w.cooked);
     println!("newick: {}...", &metrics::newick(&w).chars().take(160).collect::<String>());
     let p = api::panel(&w, w.creatures[0].id);
     println!("panel bytes {}", p.len());

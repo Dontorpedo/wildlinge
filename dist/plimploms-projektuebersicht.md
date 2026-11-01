@@ -126,3 +126,6 @@ Erst Einzelplatz-Version "Kreaturen" in JavaScript, dann kompletter Umbau auf Ru
 
 ## Terrarium-Labor (Werkstatt)
 Materialien mit Eigenschaften (hart, schwer, lang, brennbar, Schale, essbar), allgemeine Handgriffe (aufheben, ablegen, schlagen, kombinieren, essen), Feuer als Physik (Funken, Entzündung, Fackeln, Wärme, Garen, Verbrennung). Die Tiere lernen pro Tier Aktionswerte durch Belohnung, ahmen erfolgreiche Nachbarn nach und protokollieren Entdeckungen. Nur im Terrarium, rein clientseitig (`web/lab.js`).
+
+## Feuer in der Wildnis
+Feuer als Weltobjekt: breitet sich ueber Pflanzen aus (Asche duengt), beschaedigt Bauwerke und Tiere, waermt in der Naehe, gart Fleisch und erlischt bei Frost. Quellen: seltene Blitze in der Trockenzeit, Waechter-Werkzeug 'Feuer' (Kosten 30) und Tiere selbst (Ausgang o[14] unter -0,6 schlaegt Funken). Keine neuen Gehirn-Ein-/Ausgaben, Savegames bleiben kompatibel.
