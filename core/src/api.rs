@@ -92,7 +92,27 @@ pub fn frame(w: &mut World, x0: f32, y0: f32, x1: f32, y1: f32, wpp: f32, sel: u
             }
         }
     }
-    json!({"t": w.t, "sc": sc, "sf": w.sf, "night": w.night, "frozen": w.frozen, "mirrors": w.mirrors, "bub": bub, "sel": sel_found}).to_string()
+    let mut sl: Vec<u32> = Vec::new();
+    {
+        let f = &w.soil;
+        let cx0 = ((x0 / crate::field::PH_CELL).floor().max(0.0) as usize).min(f.gw - 1);
+        let cx1 = ((x1 / crate::field::PH_CELL).ceil().max(0.0) as usize).min(f.gw);
+        let cy0 = ((y0 / crate::field::PH_CELL).floor().max(0.0) as usize).min(f.gh - 1);
+        let cy1 = ((y1 / crate::field::PH_CELL).ceil().max(0.0) as usize).min(f.gh);
+        'p: for cy in cy0..cy1 {
+            for cx in cx0..cx1 {
+                let i = cy * f.gw + cx;
+                if f.fert[i] > 8 || f.dug[i] > 8 {
+                    sl.push(i as u32);
+                    sl.push(f.fert[i] as u32 * 256 + f.dug[i] as u32);
+                    if sl.len() >= 1200 {
+                        break 'p;
+                    }
+                }
+            }
+        }
+    }
+    json!({"t": w.t, "sc": sc, "sl": sl, "sf": w.sf, "night": w.night, "frozen": w.frozen, "mirrors": w.mirrors, "bub": bub, "sel": sel_found}).to_string()
 }
 
 pub const TERRA_MAX: usize = 8;
@@ -364,6 +384,14 @@ pub fn panel(w: &World, sel: u32) -> String {
         None => Value::Null,
         Some(i) => sel_json(w, i),
     };
+    let plant_sp = {
+        let (mut a, mut n) = (0.0f32, 0u32);
+        for f in w.foods.iter().filter(|f| !f.meat && !f.det) {
+            a += f.sp as f32;
+            n += 1;
+        }
+        if n > 0 { a / n as f32 } else { 0.0 }
+    };
     json!({
         "t": w.t, "day": [year, day], "season": w.season_key(), "frozen": w.frozen, "night": w.night > 0.5, "seed": w.seed, "wev": [w.wev, w.wev_end.saturating_sub(w.t), cs.iter().filter(|c| c.sick > 0).count()],
         "pop": cs.len(), "spCount": w.species.iter().filter(|s| s.n >= 5).count(),
@@ -376,7 +404,7 @@ pub fn panel(w: &World, sel: u32) -> String {
             "react": [w.rx_n, w.rx_hit, w.rc_n, w.rc_hit],
             "speaker": w.id_idx_get(w.spk_id).map(|i| json!({"id": cs[i].id, "name": cs[i].name, "why": w.spk_why, "since": World::day_of(w.spk_since), "last": w.spk_log.last().map(|x| x.1.clone())})),
             "tri": [w.tri_say, w.tri_n, w.tri_ok],
-            "novel": {"use": w.use_frac, "div": w.beh_div, "masks": w.seen_masks.len()},
+            "novel": {"sp": plant_sp, "use": w.use_frac, "div": w.beh_div, "masks": w.seen_masks.len()},
             "acts": (0..9usize).map(|k| cs.iter().filter(|c| c.actv as usize == k).count()).collect::<Vec<_>>()},
         "hist": &w.hist[w.hist.len().saturating_sub(170)..],
         "lang": {"what": what, "where": whr, "map": lang_map(w),

@@ -19,6 +19,8 @@ pub struct Food {
     pub k: u8,
     #[serde(default)]
     pub det: bool,
+    #[serde(default)]
+    pub sp: u8,
 }
 
 #[derive(Clone, Serialize, Deserialize, Default)]
@@ -307,6 +309,8 @@ pub struct World {
     pub knock: [bool; 6],
     #[serde(skip)]
     pub pher: crate::field::Field,
+    #[serde(default)]
+    pub soil: crate::field::Soil,
     #[serde(default)]
     pub use_frac: [f32; 6],
     #[serde(default)]
@@ -673,6 +677,9 @@ impl World {
         if self.use_frac[0].max(self.use_frac[1]).max(self.use_frac[2]) >= 0.10 {
             self.achieve("scent");
         }
+        if self.use_frac[3] >= 0.10 {
+            self.achieve("dig");
+        }
         if self.use_frac[5] >= 0.10 {
             self.achieve("signal");
         }
@@ -727,7 +734,11 @@ impl World {
     }
 
     pub fn add_food(&mut self, x: f32, y: f32, e: f32, meat: bool, k: u8) {
-        self.foods.push(Food { x, y, e, meat, born: self.t, k, det: false });
+        self.add_food_sp(x, y, e, meat, k, 60);
+    }
+
+    pub fn add_food_sp(&mut self, x: f32, y: f32, e: f32, meat: bool, k: u8, sp: u8) {
+        self.foods.push(Food { x, y, e, meat, born: self.t, k, det: false, sp });
         if !meat {
             self.plants += 1;
         }
@@ -737,22 +748,25 @@ impl World {
         if self.dets >= DET_MAX {
             return;
         }
-        self.foods.push(Food { x, y, e, meat: false, born: self.t, k: 0, det: true });
+        self.foods.push(Food { x, y, e, meat: false, born: self.t, k: 0, det: true, sp: 0 });
         self.dets += 1;
     }
 
     pub fn grow_plant(&mut self, initial: bool) {
         let (mut x, mut y);
         let use_src = !initial && !self.foods.is_empty() && self.rng.chance(0.7);
+        let mut sp: f32 = 60.0;
         if use_src {
             let i = self.rng.below(self.foods.len());
             let f = &self.foods[i];
             if f.meat {
                 return;
             }
-            let (fx, fy) = (f.x, f.y);
-            x = fx + self.rng.gauss() * 35.0;
-            y = fy + self.rng.gauss() * 35.0;
+            let (fx, fy, fsp) = (f.x, f.y, f.sp as f32);
+            sp = clamp(fsp + self.rng.gauss() * 10.0, 0.0, 255.0);
+            let spread = 12.0 + sp / 255.0 * 90.0;
+            x = fx + self.rng.gauss() * spread;
+            y = fy + self.rng.gauss() * spread;
         } else {
             x = self.rng.range(0.0, WORLD_W);
             y = self.rng.range(0.0, WORLD_H);
@@ -769,10 +783,12 @@ impl World {
             0.15 + 0.85 * self.sf
         };
         let (growth, food) = (bm.growth, bm.food);
-        if self.rng.f() > growth / 1.3 * season {
+        let fert = self.soil.fert_at(x, y);
+        if self.rng.f() > growth / 1.3 * season * (0.75 + 0.9 * fert) {
             return;
         }
-        self.add_food(x, y, food, false, b as u8);
+        let e = food * (1.0 + 0.3 * fert) * (1.15 - 0.45 * sp / 255.0);
+        self.add_food_sp(x, y, e, false, b as u8, sp as u8);
     }
 
     pub fn rebuild_food_grid(&mut self) {
@@ -1488,6 +1504,7 @@ impl World {
         }
         if self.t % 4 == 0 {
             self.pher.step();
+            self.soil.step();
         }
         for _ in 0..PLANT_TRIES {
             if self.plants < PLANT_MAX && (self.wev != 1 || self.rng.chance(0.4)) {
