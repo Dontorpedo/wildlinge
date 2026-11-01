@@ -87,6 +87,54 @@ async function idbDo(modeName, fn) {
   });
 }
 
+
+/* ---------- tool buttons: inline SVG icons (24x24, stroke) ---------- */
+const TOOL_ICONS = {
+  select: ['M5 3l14 8-6 2 4 7-3 1-4-7-5 4z', '#cfd8dc'],
+  stroke: ['M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z', '#ff8fb1'],
+  scold: ['M12 3l10 18H2z M12 10v5 M12 18v.5', '#ffb04a'],
+  teach: ['M3 5h7a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H3z M21 5h-7a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h7z', '#8ec5ff'],
+  say: ['M4 5h16v11H10l-5 4v-4H4z M8 9h8 M8 12h5', '#c9b6ff'],
+  food: ['M12 8c-5-3-8 1-7 6s4 8 7 7 6 1 7-7-2-9-7-6z M12 8c0-2 1-4 3-5', '#8be28b'],
+  mirror: ['M12 2a6 7 0 1 0 0 14 6 7 0 0 0 0-14z M12 16v5 M8 21h8 M9 7a3 3 0 0 1 3-2', '#9fe3f0'],
+  carry: ['M12 21V8 M7 13l5-5 5 5 M5 3h14', '#e8d28a'],
+  fertilize: ['M12 21v-9 M12 12c0-4-3-6-7-6 0 4 3 6 7 6z M12 15c0-3 2-5 6-5 0 3-2 5-6 5z', '#7ed957'],
+  shelter: ['M3 20h18 M5 20a7 7 0 0 1 14 0 M10 20v-4a2 2 0 0 1 4 0v4', '#d9a066'],
+  wall: ['M5 20V7 M12 20V7 M19 20V7 M3 11h18 M3 16h18 M3.5 7L5 4l1.5 3 M10.5 7L12 4l1.5 3 M17.5 7L19 4l1.5 3', '#c9a46a'],
+  pet: ['M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z', '#ff8fb1'],
+  brush: ['M4 20c3 0 4-1 4-3l9-9-3-3-9 9c-2 0-2 3-1 6z M14 5l3-3 5 5-3 3', '#e8a0ff'],
+  tickle: ['M20 4C10 4 5 10 5 19 M5 19l5-5 M9 11c3 0 5-1 7-4 M8 15c3 0 6-2 8-5', '#ffd84a'],
+  treat: ['M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M8 9h.5 M15 8h.5 M10 15h.5 M15 14h.5 M12 11h.5', '#e0a96d'],
+  ball: ['M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M3 12c5 0 9-3 9-9 M21 12c-5 0-9 3-9 9', '#ff7a7a'],
+  bubbles: ['M8 14a4 4 0 1 0 0 .1z M17 8a3 3 0 1 0 0 .1z M16 18a2 2 0 1 0 0 .1z', '#9fe3f0'],
+  plush: ['M12 8a6 6 0 1 0 0 12 6 6 0 0 0 0-12z M6.5 9a2.5 2.5 0 1 1 1-4.5 M17.5 9a2.5 2.5 0 1 0-1-4.5 M10 13h.5 M14 13h.5 M11 16h2', '#d9a066'],
+  call: ['M4 10v4h3l6 4V6L7 10z M16 9a4 4 0 0 1 0 6 M18.5 6.5a8 8 0 0 1 0 11', '#c9b6ff'],
+  dress: ['M5 15h14 M7 15l1-9a4 4 0 0 1 8 0l1 9 M4 15l-1 4h18l-1-4', '#ff9de2'],
+  party: ['M12 3l2.6 5.6 6 .7-4.5 4.1 1.3 6L12 16.4 6.6 19.4l1.3-6L3.4 9.3l6-.7z', '#ffd84a'],
+  level: ['M3 20h5v-5h5v-5h5V5h3', '#8be28b']
+};
+function initToolIcons() {
+  const ns = 'http://www.w3.org/2000/svg';
+  for (const bt of document.querySelectorAll('#tools button[data-tool], #ttools button[data-ttool]')) {
+    if (bt.querySelector('svg')) continue;
+    const name = bt.dataset.tool || bt.dataset.ttool, ic = TOOL_ICONS[name];
+    const key = bt.dataset.i18n; bt.removeAttribute('data-i18n');
+    const sp = document.createElement('span'); sp.dataset.i18n = key; bt.textContent = ''; 
+    if (ic) {
+      const svg = document.createElementNS(ns, 'svg'); svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('class', 'ic');
+      const pth = document.createElementNS(ns, 'path'); pth.setAttribute('d', ic[0]); svg.appendChild(pth); bt.appendChild(svg);
+      bt.style.setProperty('--c', ic[1]);
+    }
+    bt.appendChild(sp);
+    if (bt.title && bt.title.length === 1) bt.dataset.k = bt.title;
+  }
+  for (const id of ['tools', 'ttools']) {
+    const box = document.getElementById(id), first = id === 'tools' ? ['stroke', 'fertilize'] : ['pet', 'party'];
+    for (const n of first) { const b = box.querySelector(`[data-tool="${n}"],[data-ttool="${n}"]`); if (b && !b.previousElementSibling?.classList.contains('sep')) { const sep = document.createElement('span'); sep.className = 'sep'; box.insertBefore(sep, b); } }
+  }
+}
+initToolIcons();
+
 /* ---------- static texts ---------- */
 function applyI18n() {
   document.documentElement.lang = LANG;
