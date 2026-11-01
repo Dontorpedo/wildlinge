@@ -4,6 +4,94 @@ use crate::consts::*;
 use crate::util::*;
 use serde::{Deserialize, Serialize};
 
+/// An evolvable sense: what it detects (target), how (mode) and where (cone relative to heading).
+#[derive(Clone, Serialize, Deserialize, Default, PartialEq)]
+pub struct Sensor {
+    pub slot: u8,
+    pub tg: u8,
+    pub md: u8,
+    pub ang: f32,
+    pub wid: f32,
+    pub rng: f32,
+}
+
+pub fn random_sensor(slot: u8, rng: &mut Rng) -> Sensor {
+    Sensor {
+        slot,
+        tg: rng.below(SENS_TG) as u8,
+        md: rng.below(SENS_MD) as u8,
+        ang: rng.range(-3.14, 3.14),
+        wid: rng.range(0.3, 1.6),
+        rng: rng.range(40.0, 160.0),
+    }
+}
+
+fn sanitize_sensors(v: &mut Vec<Sensor>) {
+    let mut used = [false; NSENS];
+    v.retain(|s| {
+        let k = s.slot as usize;
+        if k >= NSENS || used[k] {
+            return false;
+        }
+        used[k] = true;
+        true
+    });
+    for s in v.iter_mut() {
+        s.tg = s.tg.min(SENS_TG as u8 - 1);
+        s.md = s.md.min(SENS_MD as u8 - 1);
+        s.ang = if s.ang.is_finite() { s.ang.clamp(-3.1416, 3.1416) } else { 0.0 };
+        s.wid = if s.wid.is_finite() { s.wid.clamp(0.15, 3.1416) } else { 1.0 };
+        s.rng = if s.rng.is_finite() { s.rng.clamp(20.0, 200.0) } else { 80.0 };
+    }
+}
+
+fn mutate_sensors(g: &mut Genome, m: f32, rng: &mut Rng, innov: &mut Innov, ev: &mut Vec<MutEvent>) {
+    for s in g.sens.iter_mut() {
+        if rng.chance(m * 3.0) {
+            s.ang = (s.ang + rng.gauss() * 0.4 + 3.1416).rem_euclid(6.2832) - 3.1416;
+        }
+        if rng.chance(m * 3.0) {
+            s.wid = clamp(s.wid + rng.gauss() * 0.25, 0.15, 3.1416);
+        }
+        if rng.chance(m * 3.0) {
+            s.rng = clamp(s.rng + rng.gauss() * 25.0, 20.0, 200.0);
+        }
+        if rng.chance(0.012) {
+            s.tg = rng.below(SENS_TG) as u8;
+            ev.push(("mut.senseTg", format!("{}", s.tg)));
+        }
+        if rng.chance(0.012) {
+            s.md = rng.below(SENS_MD) as u8;
+        }
+    }
+    if g.sens.len() < NSENS && rng.chance(0.03) {
+        let free: Vec<u8> = (0..NSENS as u8).filter(|k| !g.sens.iter().any(|s| s.slot == *k)).collect();
+        if !free.is_empty() {
+            let slot = free[rng.below(free.len())];
+            let s = random_sensor(slot, rng);
+            ev.push(("mut.sense", format!("{}", s.tg)));
+            let src = (SENS0 + slot as usize) as u32;
+            let nh = g.nodes.len();
+            let t = if nh > 0 && rng.chance(0.4) { g.nodes[rng.below(nh)].id } else { OUT0 + rng.below(NOUT) as u32 };
+            if g.conns.len() < MAX_CONNS {
+                if let Some(c) = g.conns.iter_mut().find(|c| c.s == src && c.t == t) {
+                    c.en = true;
+                    c.w = rng.gauss();
+                } else {
+                    let inn = innov.conn(src, t);
+                    g.conns.push(ConnGene { s: src, t, w: rng.gauss(), en: true, inn });
+                }
+            }
+            g.sens.push(s);
+        }
+    }
+    if !g.sens.is_empty() && rng.chance(0.012) {
+        let i = rng.below(g.sens.len());
+        let s = g.sens.remove(i);
+        ev.push(("mut.senseLoss", format!("{}", s.tg)));
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Part {
     pub a: f32,
@@ -30,6 +118,8 @@ pub struct Genome {
     pub mutated: bool,
     #[serde(default)]
     pub gv: u8,
+    #[serde(default)]
+    pub sens: Vec<Sensor>,
 }
 
 fn soc_unset() -> f32 {
@@ -252,7 +342,7 @@ pub fn random_genome(carn: bool, rng: &mut Rng, innov: &mut Innov) -> Genome {
     let look = random_look(rng);
     let nh = 4 + rng.below(4) as u32;
     let nodes: Vec<NodeGene> = (0..nh).map(|k| NodeGene { id: HID0 + k, d: 0.5 }).collect();
-    let mut g = Genome { tr, shape, dw, motor, hue, look, look_set: true, soc: if carn { rng.range(0.05, 0.4) } else { rng.range(0.15, 1.0) }, parts, nodes, conns: Vec::new(), mutated: false, gv: 3 };
+    let mut g = Genome { tr, shape, dw, motor, hue, look, look_set: true, soc: if carn { rng.range(0.05, 0.4) } else { rng.range(0.15, 1.0) }, parts, nodes, conns: Vec::new(), mutated: false, gv: 4, sens: Vec::new() };
     let h = |k: u32| HID0 + k;
     let o = |k: u32| OUT0 + k;
     add_conn(&mut g, innov, 1, h(0), 2.5);
@@ -271,6 +361,13 @@ pub fn random_genome(carn: bool, rng: &mut Rng, innov: &mut Innov) -> Genome {
     add_conn(&mut g, innov, 0, o(3), w3);
     let w4 = rng.gauss() * 0.8;
     add_conn(&mut g, innov, 0, o(4), w4);
+    if rng.chance(0.5) {
+        let s = random_sensor(rng.below(NSENS) as u8, rng);
+        let src = (SENS0 + s.slot as usize) as u32;
+        let t = if rng.chance(0.5) { h(rng.below(nh as usize) as u32) } else { o(rng.below(NOUT) as u32) };
+        add_conn(&mut g, innov, src, t, rng.gauss());
+        g.sens.push(s);
+    }
     if rng.chance(0.25) {
         add_conn(&mut g, innov, 91, o(16), 1.6);
         add_conn(&mut g, innov, 93, o(17), rng.range(0.8, 1.8));
@@ -448,6 +545,7 @@ pub fn mutate(g: &Genome, st: &Stress, off: bool, rng: &mut Rng, innov: &mut Inn
     n.look = mutate_look(&g.look, m, rng);
     n.parts = mutate_parts(&g.parts, m, st, rng, &mut ev);
     mutate_brain(&mut n, m, rng, innov, &mut ev);
+    mutate_sensors(&mut n, m, rng, innov, &mut ev);
     n.mutated = true;
     (n, ev)
 }
@@ -533,7 +631,7 @@ pub fn sanitize(g: &mut Genome) {
         g.gv = 2;
     }
     if g.gv == 2 {
-        let (a, b) = (NIN as u32, NOUT as u32);
+        let (a, b) = (NIN_V3, NOUT_V3);
         for n in g.nodes.iter_mut() {
             n.id = shift_id(n.id, NIN_V2, NOUT_V2, a, b);
         }
@@ -543,6 +641,18 @@ pub fn sanitize(g: &mut Genome) {
         }
         g.gv = 3;
     }
+    if g.gv == 3 {
+        let (a, b) = (NIN as u32, NOUT as u32);
+        for n in g.nodes.iter_mut() {
+            n.id = shift_id(n.id, NIN_V3, NOUT_V3, a, b);
+        }
+        for c in g.conns.iter_mut() {
+            c.s = shift_id(c.s, NIN_V3, NOUT_V3, a, b);
+            c.t = shift_id(c.t, NIN_V3, NOUT_V3, a, b);
+        }
+        g.gv = 4;
+    }
+    sanitize_sensors(&mut g.sens);
     for (i, r) in RANGES.iter().enumerate() {
         g.tr[i] = if g.tr[i].is_finite() { clamp(g.tr[i], r.0, r.1) } else { r.0 };
     }

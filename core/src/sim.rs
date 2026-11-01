@@ -199,6 +199,131 @@ fn metabolize(w: &mut World, c: &mut Creature, water: u8, sleep: f32, drown: f32
     false
 }
 
+/// One evolvable sensor: scans a cone (heading + ang, half-width wid, reach rng) for one target class.
+/// Modes: 0 nearest proximity, 1 count, 2 change of proximity (approach), 3 strongest magnitude.
+fn sense_one(w: &World, c: &Creature, s: &crate::genome::Sensor, size: f32, prev: f32) -> f32 {
+    let dirc = c.dir + s.ang;
+    let (r, wid, md) = (s.rng, s.wid, s.md);
+    let in_cone = |x: f32, y: f32| -> Option<f32> {
+        let (dx, dy) = (x - c.x, y - c.y);
+        let d = (dx * dx + dy * dy).sqrt();
+        if d > r || d < 0.5 {
+            return None;
+        }
+        let mut a = dy.atan2(dx) - dirc;
+        a = (a + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
+        if a.abs() <= wid {
+            Some(d)
+        } else {
+            None
+        }
+    };
+    let (mut near, mut cnt, mut mag) = (0.0f32, 0.0f32, 0.0f32);
+    let mut hit = |d: f32, m: f32| {
+        near = near.max(1.0 - d / r);
+        cnt += 1.0;
+        mag = mag.max(m);
+    };
+    match s.tg {
+        0 | 1 => {
+            let g = &w.fgrid;
+            let (c0, c1, r0, r1) = g.range(c.x, c.y, r);
+            for row in r0..=r1 {
+                for cc in c0..=c1 {
+                    let cell = row * g.cols + cc;
+                    for k in g.start[cell]..g.start[cell + 1] {
+                        let fi = g.items[k as usize] as usize;
+                        if fi >= w.foods.len() {
+                            continue;
+                        }
+                        let f = &w.foods[fi];
+                        let meatish = f.meat || f.det;
+                        if f.e <= 0.0 || (s.tg == 0) == meatish {
+                            continue;
+                        }
+                        if let Some(d) = in_cone(f.x, f.y) {
+                            hit(d, (f.e / 40.0).min(1.0));
+                        }
+                    }
+                }
+            }
+        }
+        2 | 3 | 4 | 13 => {
+            let g = &w.grid;
+            let (c0, c1, r0, r1) = g.range(c.x, c.y, r);
+            for row in r0..=r1 {
+                for cc in c0..=c1 {
+                    let cell = row * g.cols + cc;
+                    for k in g.start[cell]..g.start[cell + 1] {
+                        let oi = g.items[k as usize] as usize;
+                        if oi >= w.creatures.len() {
+                            continue;
+                        }
+                        let o = &w.creatures[oi];
+                        if o.dead || o.id == c.id {
+                            continue;
+                        }
+                        let ok = match s.tg {
+                            3 => o.sp == c.sp,
+                            4 => o.sp != c.sp,
+                            13 => o.size() > size * 1.3,
+                            _ => true,
+                        };
+                        if !ok {
+                            continue;
+                        }
+                        if let Some(d) = in_cone(o.x, o.y) {
+                            hit(d, (o.size() / size.max(0.1) * 0.5).min(1.0));
+                        }
+                    }
+                }
+            }
+        }
+        5 => {
+            for q in &w.items {
+                if let Some(d) = in_cone(q.x, q.y) {
+                    hit(d, q.hard);
+                }
+            }
+        }
+        6 => {
+            for q in &w.fires {
+                if let Some(d) = in_cone(q.x, q.y) {
+                    hit(d, (q.life as f32 / 700.0).min(1.0));
+                }
+            }
+        }
+        7 => {
+            for q in &w.structs {
+                if let Some(d) = in_cone(q.x, q.y) {
+                    hit(d, (q.hp as f32 / 1600.0).min(1.0));
+                }
+            }
+        }
+        _ => {
+            // fields: sampled at the far point of the cone axis
+            let (px, py) = (clamp(c.x + dirc.cos() * r * 0.6, 1.0, WORLD_W - 1.0), clamp(c.y + dirc.sin() * r * 0.6, 1.0, WORLD_H - 1.0));
+            let v = match s.tg {
+                8 => BIOMES[w.bio_at(px, py)].water as f32 / 2.0,
+                9 => w.soil.fert_at(px, py),
+                10 => w.pher.at(0, px, py).min(1.0),
+                11 => w.pher.at(1, px, py).min(1.0),
+                _ => w.pher.at(2, px, py).min(1.0),
+            };
+            return match md {
+                2 => clamp((v - prev) * 10.0, -1.0, 1.0),
+                _ => v,
+            };
+        }
+    }
+    match md {
+        0 => near,
+        1 => (cnt / 4.0).min(1.0),
+        2 => clamp((near - prev) * 10.0, -1.0, 1.0),
+        _ => mag,
+    }
+}
+
 pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
     let t = w.t;
     let size = c.size();
@@ -779,6 +904,23 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
             if let Some(h) = &c.hold {
                 inp[93] = 1.0;
                 inp[94] = h.power().min(1.0);
+            }
+        }
+        if !c.g.sens.is_empty() {
+            let sens = c.g.sens.clone();
+            for sn in &sens {
+                let k = sn.slot as usize;
+                let base = if sn.md == 2 { c.sprev[k] } else { 0.0 };
+                let raw = sense_one(w, c, sn, size, base);
+                if sn.md == 2 {
+                    // keep the underlying proximity for the next derivative
+                    let mut s0 = sn.clone();
+                    s0.md = 0;
+                    c.sprev[k] = sense_one(w, c, &s0, size, 0.0);
+                }
+                inp[SENS0 + k] = raw;
+                c.sval[k] = raw;
+                c.energy -= 0.0002 * (sn.rng / 100.0) * (0.4 + sn.wid / 1.6);
             }
         }
         inp[84] = (w.soil.st_at(c.x, c.y) & 1) as f32;

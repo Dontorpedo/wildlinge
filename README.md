@@ -63,3 +63,13 @@ Plimploms ist ein offenes Experiment zu künstlichem Leben, das komplett im Brow
 
 `server/` runs one persistent world (Rust, WebSocket) with one terrarium per visitor token. The browser page connects to `/ws` of the same host and falls back to the single-player mode if no server answers. Install on Ubuntu 24.04: `tools/pack-server.sh`, upload `dist/wildlinge-server.tar.gz`, unpack, run `sudo ./install.sh`. Web server, domain and SSL are handled by Ploi (static files from `dist/plimploms-upload.zip`, `/ws` proxied to 127.0.0.1:8787).
 Visitors act as guardians with limited guardian power: stroke, scold, speak, teach, feed, mirror, carry (pick up and put down), adopt into their own terrarium and release.
+
+## Entwickelbare Sinne
+
+Jedes Genom kann bis zu 12 Sensoren tragen (`Sensor {slot, Ziel, Modus, Winkel, Breite, Reichweite}`). Ziele: Pflanzen, Fleisch, Lebewesen, eigene/fremde Art, Gegenstände, Feuer, Bauten, Wasser, fruchtbarer Boden, drei Duftkanäle, größere Tiere. Modi: Nähe, Anzahl, Annäherung, Stärke. Die Eingänge 95..106 werden vom Gehirn genutzt; Sensoren kosten Energie je Reichweite und Breite. Mutation: Verschieben, Ziel/Modus wechseln, hinzufügen (mit neuer Verbindung), verlieren. Neue Sinnesarten erscheinen als Ereignis und Meilenstein. Genom-Version 4, NIN 107.
+
+## Terrarium und Ton
+
+- Folgen: Schaltfläche im Auswahlfeld, die Ansicht wechselt mit dem gewählten Tier durch die Räume.
+- Tiere spielen zusammen (Ziel `play`): Hüpfen, Herzen, Freude.
+- Wildnis: bei starkem Herauszoomen nur Musik, nah weiche pentatonische Stimmen; neue Laute ach, hm, oh, Seufzer.

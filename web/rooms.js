@@ -104,6 +104,7 @@ function tzChooseR(c) {
       else opt.push([100 - n.fun, { type: 'tramp', x: 600, lvl: 0, t: 12 }]);
     }
   }
+    { const pls = TZ.list.filter(o => o !== c && o.room === c.room && !o.sleeping && !o.held); if (pls.length && n.fun < 80 && Math.random() < 0.4) { const o = pls[(Math.random() * pls.length) | 0]; opt.push([100 - n.fun + 6, { type: 'play', with: o, x: o.x, lvl: o.lvl, t: 11 }]); } }
   if (n.social < 55) {
     const others = TZ.list.filter(o => o !== c && o.room === c.room);
     if (others.length) { const o = others.sort((a, b) => Math.abs(a.x - c.x) - Math.abs(b.x - c.x))[0]; opt.push([100 - n.social, { type: 'social', x: o.x + tzRnd(-20, 20), lvl: o.lvl, t: 8 }]); }
@@ -149,7 +150,7 @@ function tzUseR(c, g, dt) {
       if (r < 0 || r >= TZ_ROOMS.length) { c.goalT = 0; break; }
       c.room = r; c.goal = null; c.goalT = 0;
       if (r === TZ.cur) tzPlaceArrive(c, g.dir);
-      else { c.x = tzRnd(60, 740); c.y = TZ_FLOOR; c.lvl = 0; c.ground = true; c.vy = 0; c.sleeping = false; c.away = 0; if (TZ.sel === c.id) TZ.sel = 0; }
+      else { c.x = tzRnd(60, 740); c.y = TZ_FLOOR; c.lvl = 0; c.ground = true; c.vy = 0; c.sleeping = false; c.away = 0; if (TZ.sel === c.id && !TZ.follow) TZ.sel = 0; }
       break;
     }
     default: c.goalT = 0; break;

@@ -399,6 +399,12 @@ pub struct World {
     pub builds: u32,
     #[serde(default)]
     pub seen_masks: Vec<u8>,
+    #[serde(default)]
+    pub seen_sens: Vec<u16>,
+    #[serde(skip)]
+    pub sens_use: Vec<(u16, u32)>,
+    #[serde(skip)]
+    pub sens_frac: f32,
     pub mirrors: Vec<[f32; 2]>,
     pub lineage: Vec<Lin>,
     pub memorial: Vec<Memorial>,
@@ -903,6 +909,34 @@ impl World {
 
     fn novelty_scan(&mut self) {
         let n = self.creatures.len().max(1) as f32;
+        {
+            let mut cnt: std::collections::BTreeMap<u16, u32> = std::collections::BTreeMap::new();
+            let mut with = 0u32;
+            for c in &self.creatures {
+                if c.g.sens.is_empty() {
+                    continue;
+                }
+                with += 1;
+                let mut kinds: Vec<u16> = c.g.sens.iter().map(|s| s.tg as u16 * 8 + s.md as u16).collect();
+                kinds.sort();
+                kinds.dedup();
+                for k in kinds {
+                    *cnt.entry(k).or_insert(0) += 1;
+                }
+            }
+            self.sens_frac = with as f32 / n;
+            let mut v: Vec<(u16, u32)> = cnt.into_iter().collect();
+            v.sort_by(|a, b| b.1.cmp(&a.1));
+            if let Some(&(k, q)) = v.iter().find(|(k, q)| *q as f32 / n >= 0.05 && !self.seen_sens.contains(k)) {
+                self.seen_sens.push(k);
+                self.event("ev.newSense", vec![(k / 8).to_string(), (k % 8).to_string(), ((q as f32 / n * 100.0).round() as u32).to_string()]);
+                if self.seen_sens.len() >= 3 {
+                    self.achieve("senses");
+                }
+            }
+            v.truncate(12);
+            self.sens_use = v;
+        }
         let mut cnt = [0u32; 6];
         let mut masks: std::collections::HashMap<u8, u32> = std::collections::HashMap::new();
         for c in &self.creatures {

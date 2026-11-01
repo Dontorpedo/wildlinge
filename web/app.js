@@ -430,7 +430,7 @@ function addPfx(q, old, silent) {
   pfx.push(e);
   if (viewMode !== 'terra' && !silent) {
     const hw = BW * ZOOMS[cam.zi] / 2, dx = (q.x - cam.x) / hw;
-    if (Math.abs(dx) < 1.1 && Math.abs(q.y - cam.y) < hw * 0.6) sndFx(type, Math.max(-1, Math.min(1, dx)));
+    if (Math.abs(dx) < 1.1 && Math.abs(q.y - cam.y) < hw * 0.6) { if (hw <= 2000) sndFx(type, Math.max(-1, Math.min(1, dx))); }
   }
 }
 const PFX_LIFE = { drop: 4200, wave: 1400, glint: 1600, love: 2600, born: 1800, nuzzle: 1500, hit: 500, death: 7000 };
@@ -714,7 +714,7 @@ function renderWorld(p) {
     row(t('st.cycle'), `${st.dets} / ${st.fert}`) +
     (st.react && st.react[0] >= 20 ? row(t('st.react'), `${Math.round(100 * st.react[1] / st.react[0])}% / ${st.react[2] ? Math.round(100 * st.react[3] / st.react[2]) : 0}%`) + row(t('st.react2'), st.react[0]) : '') +
     (st.speaker ? row(t('st.speaker'), `<a class="w" data-id="${st.speaker.id}">${esc(st.speaker.name)}</a> (${esc(tr('spkWhy')[st.speaker.why] || '')})`) + (st.speaker.last ? row(t('st.speakerLast'), esc(st.speaker.last)) : '') : '') +
-    (st.novel ? row(t('st.plant'), Math.round(st.novel.sp)) + row(t('st.struct'), st.novel.st) + row(t('st.fire'), `${st.novel.ign} / ${st.novel.burnt} / ${st.novel.cooked}`) + row(t('st.items'), `${st.novel.items} / ${st.novel.held} / ${st.novel.cracks} / ${st.novel.sparks} / ${st.novel.hammers} / ${st.novel.torches}`) + row(t('st.clim'), (st.novel.clim >= 0 ? '+' : '') + st.novel.clim.toFixed(1)) + row(t('st.novel'), `${st.novel.div} (${st.novel.masks})`) + row(t('st.use'), useBars(st.novel.use, [0, 1, 2], ['A', 'B', 'C'], ['#ff5a5a', '#5ae66e', '#6496ff'])) + row(t('st.use2'), useBars(st.novel.use, [3, 4, 5], [t('io.dig'), t('io.build'), t('io.sig')], ['#8a6238', '#ffd84a', '#ffec8c'])) : '') +
+    (st.novel ? row(t('st.plant'), Math.round(st.novel.sp)) + row(t('st.struct'), st.novel.st) + row(t('st.fire'), `${st.novel.ign} / ${st.novel.burnt} / ${st.novel.cooked}`) + row(t('st.sens'), `${pct(st.novel.sensFrac || 0)} / ${st.novel.sensSeen || 0}`) + row(t('st.sensTop'), (st.novel.sensUse || []).slice(0, 4).map(q => esc(`${tr('sensTg')[q[0]]} (${tr('sensMd')[q[1]]}) ${q[2]}`)).join(', ') || '-') + row(t('st.items'), `${st.novel.items} / ${st.novel.held} / ${st.novel.cracks} / ${st.novel.sparks} / ${st.novel.hammers} / ${st.novel.torches}`) + row(t('st.clim'), (st.novel.clim >= 0 ? '+' : '') + st.novel.clim.toFixed(1)) + row(t('st.novel'), `${st.novel.div} (${st.novel.masks})`) + row(t('st.use'), useBars(st.novel.use, [0, 1, 2], ['A', 'B', 'C'], ['#ff5a5a', '#5ae66e', '#6496ff'])) + row(t('st.use2'), useBars(st.novel.use, [3, 4, 5], [t('io.dig'), t('io.build'), t('io.sig')], ['#8a6238', '#ffd84a', '#ffec8c'])) : '') +
     (st.tri && st.tri[1] >= 20 ? row(t('st.tri'), `${st.tri[0]}`) + row(t('st.tri2'), `${Math.round(100 * st.tri[2] / st.tri[1])}%`) : '') +
     (st.cache ? row(t('st.cache'), `${st.cache[0]} | ${st.cache[3]}`) + row(t('st.cache2'), `${st.cache[1]} / ${st.cache[2]}`) : '') +
     (st.acts ? tr('acts').map((n, k) => (st.acts[k] ? row(t('st.acts') + ': ' + n, `${st.acts[k]} (${Math.round(100 * st.acts[k] / Math.max(1, st.acts.reduce((p, q) => p + q, 0)))}%)`) : '')).join('') : '') +
@@ -858,6 +858,7 @@ function renderSel(s) {
     `<tr><td>${esc(t('sel.tired'))}</td><td>${barHtml(s.tired, '#8f8fe8')}</td></tr>` +
     '</table>' + secNext('sel.criteria') + '<table>' +
     tr('life').map((n, i) => row(esc(n), yn(s.lifeC[i]))).join('') + tr('mind').map((n, i) => row(esc(n), yn(s.mindC[i]))).join('') +
+    '</table>' + secNext('sel.sens') + '<table>' + sensRows(s) +
     '</table>' + secNext('sel.brainSelf') + '<table>' +
     row(t('sel.neurons'), `${s.hidden} / ${s.conns} / ${s.plast.toFixed(4)}`) +
     row(t('sel.learned'), s.learned.toFixed(2)) +
@@ -901,6 +902,12 @@ function renderSel(s) {
 }
 
 /* ---------- brain graph ---------- */
+function sensRows(s) {
+  const L = s.sens || [];
+  curSens = L;
+  if (!L.length) return row(esc(t('sel.sens')), esc(t('sel.sensNone')));
+  return L.map(q => `<tr><td>${esc(t('sel.sensRow', tr('sensTg')[q[1]] || q[1], tr('sensMd')[q[2]] || q[2], sensDir(q[3]) + ' ' + Math.round(q[4] * 114.6) + '°', q[5]))}</td><td>${barHtml(Math.min(1, Math.abs(q[6])), q[6] < 0 ? '#e0645a' : '#9fd8ff')}</td></tr>`).join('');
+}
 function drawBrain(g, cid) {
   const c = $(cid || 'brain'), x = c.getContext('2d'), W = c.width, H = c.height, main = !cid;
   x.clearRect(0, 0, W, H);

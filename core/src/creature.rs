@@ -171,6 +171,10 @@ pub struct Creature {
     #[serde(skip)]
     pub itcool: u32,
     #[serde(skip)]
+    pub sprev: [f32; NSENS],
+    #[serde(skip)]
+    pub sval: [f32; NSENS],
+    #[serde(skip)]
     pub burned: u32,
     pub was_boss: bool,
     pub dead: bool,

@@ -24,8 +24,16 @@ pub const HEAR: f32 = 170.0;
 pub const SPEAK_COST: f32 = 0.3;
 pub const SPEAK_COOL: u32 = 24;
 pub const MAX_WORDS: usize = 28;
-pub const NIN: usize = 95;
+pub const NIN: usize = 107;
 pub const NOUT: usize = 19;
+pub const NIN_V3: u32 = 95;
+pub const NOUT_V3: u32 = 19;
+/// evolvable sensors: inputs SENS0..SENS0+NSENS
+pub const SENS0: usize = 95;
+pub const NSENS: usize = 12;
+/// sensor targets and modes
+pub const SENS_TG: usize = 14;
+pub const SENS_MD: usize = 4;
 pub const NIN_V2: u32 = 89;
 pub const NOUT_V2: u32 = 16;
 pub const ITEM_MAX: usize = 220;

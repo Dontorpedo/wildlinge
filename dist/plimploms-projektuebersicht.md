@@ -132,3 +132,6 @@ Feuer als Weltobjekt: breitet sich ueber Pflanzen aus (Asche duengt), beschaedig
 
 ## Werkzeuge in der Wildnis
 Gegenstaende (Stein, Stock, Nuss, Kombinationen) mit Eigenschaften; Gehirn jetzt 95 Eingaenge / 19 Ausgaenge (greifen/ablegen, schlagen, kombinieren). Nuss knacken, Funken aus zwei Steinen, Fackel am Feuer, Hammer aus Stein und Stock. Feuer zaehlt als Bedrohung fuer das bestehende Sprachsystem. Genom-Version 3 mit Migration. Nutzung nicht geskriptet.
+
+## Entwickelbare Sinne, Terrarium-Folgen, Ton
+Siehe README (Abschnitte "Entwickelbare Sinne" und "Terrarium und Ton"). Sim 60000 Schritte: 89 % der Tiere mit Sensor, 11 Sinnesarten, Population stabil.

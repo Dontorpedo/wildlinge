@@ -48,6 +48,7 @@ select{background:#10151a;color:var(--fg);border:1px solid #34404c;border-radius
 .tzcard.on{border-color:var(--acc)}
 #tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
 #tools button.on{background:#3b4a2e;border-color:var(--acc);color:#fff}
+#tzFollow.on{background:#3b4a2e;border-color:var(--acc);color:#fff}
 #tools,#ttools{gap:5px}
 #tools button,#ttools button{position:relative;display:inline-flex;flex-direction:column;align-items:center;gap:3px;min-width:60px;padding:8px 8px 6px;border-radius:10px;background:linear-gradient(180deg,#26303a,#1d252d);border-color:#303c47;font:400 9px var(--pix);letter-spacing:.4px;transition:transform .12s,box-shadow .12s,border-color .12s}
 #tools button:hover,#ttools button:hover{transform:translateY(-2px);border-color:var(--c,#46535f)}
@@ -307,7 +308,7 @@ ul.tree{margin:2px 0 6px 0;padding-left:14px;list-style:none;border-left:1px sol
     <div class="box"><b data-i18n="tz.inhabitants"></b><div id="tzList"></div><div id="tzEggs"></div></div>
     <div class="box"><b data-i18n="box.sel"></b>
       <div id="tzSelHead" style="display:none">
-        <div class="row"><span id="selName2" style="font:400 14px var(--pix);color:#e8f0d8"><span id="tzSelName"></span></span><button id="tzRelease" data-i18n="tz.release"></button></div>
+        <div class="row"><span id="selName2" style="font:400 14px var(--pix);color:#e8f0d8"><span id="tzSelName"></span></span><button id="tzFollow" data-i18n="tz.follow"></button><button id="tzRelease" data-i18n="tz.release"></button></div>
         <div class="row"><input type="text" id="tzName" maxlength="16" data-i18n-ph="ph.name" style="width:150px"><button id="tzRename" data-i18n="btn.rename"></button></div>
       </div>
       <div id="tzInfo"></div>

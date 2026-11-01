@@ -90,7 +90,7 @@ const I18N = {
     'tz.needs': { food: 'Food', water: 'Water', warmth: 'Warmth', light: 'Light', fun: 'Play', rest: 'Rest', social: 'Company' },
     'tz.help': 'Click bowls, lamp, light, music and puzzle box | Keys 1 to 9 and 0: tool',
     'tz.intro': 'Adopted Plimploms live here. They need food, water, warmth, light, play and rest. Neglect causes stress and death. While you are away, time passes at a quarter of the speed and never below a safe minimum. Happy adults nearby become fond of each other and lay eggs. Release them into the wild and they take everything they learned with them.',
-    'tz.inhabitants': 'Inhabitants', 'tz.release': 'Release into the wild', 'tz.room': 'Room', 'tz.memorial': 'In memory',
+    'tz.inhabitants': 'Inhabitants', 'tz.release': 'Release into the wild', 'tz.follow': 'Follow', 'tz.room': 'Room', 'tz.memorial': 'In memory',
     'tz.releaseConfirm': 'Release {0} into the wild? It takes everything it has learned with it.',
     'tz.full': 'The terrarium is full (8 places including eggs)', 'tz.noTake': 'This Plimplom could not be adopted',
     'tz.adopted': '{0} moved into the terrarium', 'tz.released': '{0} was released into the wild', 'tz.died': '{0} has died ({1})',
@@ -243,7 +243,7 @@ const I18N = {
       swim: 'A species lives in water (avg. swimming over 0.4)', fly: 'A creature can fly', species3: 'Three species live at the same time',
       boss: 'First boss elected', mirror: 'A creature recognises itself in the mirror',
       understand: 'Communication: over 50 % of utterances understood', sentence: 'First two-word sentence understood',
-      crack: 'Nut cracked: a Plimplom opened a nut by striking it', tool: 'Tool use: a nut cracked with real force (hammer)', spark: 'Sparks: a Plimplom struck sparks from two stones', torch: 'Torch: a Plimplom lit a stick at a fire and carries it', craft: 'Crafting: a Plimplom combined stone and stick into a hammer', scent: 'Scent marks: over 10 % of the population lay scent trails', signal: 'Visible signals: over 10 % of the population use them', build: 'Building: at least 10 structures built by Plimploms', dig: 'Digging: over 10 % of the population dig the ground',
+      senses: 'New senses: three different evolved senses have spread to at least 5 % of the population', crack: 'Nut cracked: a Plimplom opened a nut by striking it', tool: 'Tool use: a nut cracked with real force (hammer)', spark: 'Sparks: a Plimplom struck sparks from two stones', torch: 'Torch: a Plimplom lit a stick at a fire and carries it', craft: 'Crafting: a Plimplom combined stone and stick into a hammer', scent: 'Scent marks: over 10 % of the population lay scent trails', signal: 'Visible signals: over 10 % of the population use them', build: 'Building: at least 10 structures built by Plimploms', dig: 'Digging: over 10 % of the population dig the ground',
       grammar: 'Fixed word order: over 80 % of a species use the same', culture: 'Culture: a word survives three generations',
       taught: 'A word of yours is used by creatures', answer: 'First answer to your words'
     },
@@ -287,6 +287,13 @@ const I18N = {
     'app.wevSick': ', {0} sick',
     'ev.word': 'The word "{0}" is now used by {1} creatures',
     'ev.newBeh': 'New behaviour combination ({0}) in {1} creatures',
+    'ev.newSense': 'A new sense is spreading: {0} ({1}), {2} % of the population',
+    sensTg: ['plants', 'meat', 'creatures', 'own species', 'other species', 'items', 'fire', 'structures', 'water', 'fertile soil', 'scent A', 'scent B', 'scent C', 'bigger creatures'],
+    sensMd: ['nearness', 'count', 'approach', 'strength'],
+    sensDir: ['ahead', 'ahead right', 'right', 'behind right', 'behind', 'behind left', 'left', 'ahead left'],
+    'mut.sense': 'new sense for {0}', 'mut.senseLoss': 'lost a sense for {0}', 'mut.senseTg': 'sense now detects {0}',
+    'sel.sens': 'Evolved senses', 'sel.sensNone': 'none yet', 'sel.sensRow': '{0}, {1}, {2}, reach {3}',
+    'st.sens': 'Creatures with evolved senses / kinds established', 'st.sensTop': 'Most common senses', 'io.sense': 'sense',
     'io.dig': 'Dig', 'io.build': 'Build', 'io.sig': 'Signal', 'st.novel': 'Behaviour combinations (new abilities)', 'st.use': 'Use of scent A / B / C',  'st.use2': 'Use of dig / build / signal',
     'ev.spread': '{1} spreads in the species {0} ({2} %)',
     'ev.boss': '{1} is the new boss of the {0} ({3} of {4} votes)',
@@ -393,7 +400,7 @@ const I18N = {
     'tz.needs': { food: 'Futter', water: 'Wasser', warmth: 'Wärme', light: 'Licht', fun: 'Spiel', rest: 'Ruhe', social: 'Gesellschaft' },
     'tz.help': 'Näpfe, Lampe, Licht, Spieluhr und Tüftelbox anklicken | Tasten 1 bis 9 und 0: Werkzeug',
     'tz.intro': 'Adoptierte Plimploms leben hier. Sie brauchen Futter, Wasser, Wärme, Licht, Spiel und Ruhe. Vernachlässigung führt zu Stress und Tod. Während Ihrer Abwesenheit vergeht die Zeit mit einem Viertel der Geschwindigkeit und nie unter einem sicheren Minimum. Zufriedene Erwachsene in der Nähe werden sich zugetan und legen Eier. Wenn Sie sie auswildern, nehmen sie alles Gelernte mit.',
-    'tz.inhabitants': 'Bewohner', 'tz.release': 'In die Wildnis entlassen', 'tz.room': 'Raum', 'tz.memorial': 'In Erinnerung',
+    'tz.inhabitants': 'Bewohner', 'tz.release': 'In die Wildnis entlassen', 'tz.follow': 'Folgen', 'tz.room': 'Raum', 'tz.memorial': 'In Erinnerung',
     'tz.releaseConfirm': '{0} in die Wildnis entlassen? Alles Gelernte geht mit.',
     'tz.full': 'Das Terrarium ist voll (8 Plätze inklusive Eier)', 'tz.noTake': 'Dieser Plimplom konnte nicht adoptiert werden',
     'tz.adopted': '{0} ist ins Terrarium eingezogen', 'tz.released': '{0} wurde in die Wildnis entlassen', 'tz.died': '{0} ist gestorben ({1})',
@@ -546,7 +553,7 @@ const I18N = {
       swim: 'Eine Art lebt im Wasser (Ø Schwimmen über 0,4)', fly: 'Eine Kreatur kann fliegen', species3: 'Drei Arten leben gleichzeitig',
       boss: 'Erster Boss gewählt', mirror: 'Eine Kreatur erkennt sich im Spiegel',
       understand: 'Verständigung: über 50 % der Äußerungen richtig verstanden', sentence: 'Erster Zwei-Wort-Satz richtig verstanden',
-      crack: 'Nuss geknackt: ein Plimplom hat eine Nuss durch Schlagen geöffnet', tool: 'Werkzeuggebrauch: Nuss mit echter Wucht (Hammer) geknackt', spark: 'Funken: ein Plimplom hat Funken aus zwei Steinen geschlagen', torch: 'Fackel: ein Plimplom hat einen Stock am Feuer entzündet und trägt ihn', craft: 'Herstellen: ein Plimplom hat Stein und Stock zu einem Hammer kombiniert', scent: 'Duftspuren: über 10 % der Population legen Duftmarken', signal: 'Sichtbare Signale: über 10 % der Population nutzen sie', build: 'Bauen: mindestens 10 Bauwerke von Plimploms errichtet', dig: 'Graben: über 10 % der Population graben im Boden',
+      senses: 'Neue Sinne: drei verschiedene entwickelte Sinne haben sich auf mindestens 5 % der Population ausgebreitet', crack: 'Nuss geknackt: ein Plimplom hat eine Nuss durch Schlagen geöffnet', tool: 'Werkzeuggebrauch: Nuss mit echter Wucht (Hammer) geknackt', spark: 'Funken: ein Plimplom hat Funken aus zwei Steinen geschlagen', torch: 'Fackel: ein Plimplom hat einen Stock am Feuer entzündet und trägt ihn', craft: 'Herstellen: ein Plimplom hat Stein und Stock zu einem Hammer kombiniert', scent: 'Duftspuren: über 10 % der Population legen Duftmarken', signal: 'Sichtbare Signale: über 10 % der Population nutzen sie', build: 'Bauen: mindestens 10 Bauwerke von Plimploms errichtet', dig: 'Graben: über 10 % der Population graben im Boden',
       grammar: 'Feste Wortstellung: über 80 % einer Art nutzen dieselbe', culture: 'Kultur: ein Wort überdauert drei Generationen',
       taught: 'Ein Wort von Ihnen wird von Kreaturen verwendet', answer: 'Erste Antwort auf Ihre Worte'
     },
@@ -590,6 +597,13 @@ const I18N = {
     'app.wevSick': ', {0} krank',
     'ev.word': 'Das Wort "{0}" wird jetzt von {1} Kreaturen benutzt',
     'ev.newBeh': 'Neue Verhaltenskombination ({0}) bei {1} Kreaturen',
+    'ev.newSense': 'Ein neuer Sinn breitet sich aus: {0} ({1}), {2} % der Population',
+    sensTg: ['Pflanzen', 'Fleisch', 'Kreaturen', 'eigene Art', 'fremde Art', 'Gegenstände', 'Feuer', 'Bauwerke', 'Wasser', 'fruchtbarer Boden', 'Duft A', 'Duft B', 'Duft C', 'größere Kreaturen'],
+    sensMd: ['Nähe', 'Anzahl', 'Annäherung', 'Stärke'],
+    sensDir: ['vorne', 'vorne rechts', 'rechts', 'hinten rechts', 'hinten', 'hinten links', 'links', 'vorne links'],
+    'mut.sense': 'neuer Sinn für {0}', 'mut.senseLoss': 'Sinn für {0} verloren', 'mut.senseTg': 'Sinn erkennt jetzt {0}',
+    'sel.sens': 'Entwickelte Sinne', 'sel.sensNone': 'noch keine', 'sel.sensRow': '{0}, {1}, {2}, Reichweite {3}',
+    'st.sens': 'Kreaturen mit entwickelten Sinnen / etablierte Arten', 'st.sensTop': 'Häufigste Sinne', 'io.sense': 'Sinn',
     'io.dig': 'Graben', 'io.build': 'Bauen', 'io.sig': 'Signal', 'st.novel': 'Verhaltenskombinationen (neue Fähigkeiten)', 'st.use': 'Nutzung Duft A / B / C',  'st.use2': 'Nutzung graben / bauen / Signal',
     'ev.spread': '{1} verbreitet sich in der Art {0} ({2} %)',
     'ev.boss': '{1} ist neuer Boss der {0} ({3} von {4} Stimmen)',
@@ -652,6 +666,7 @@ function tMutList(enc) {
   return String(enc || '').split('|').filter(Boolean).map(part => {
     const i = part.indexOf(':'), k = i < 0 ? part : part.slice(0, i), p = i < 0 ? '' : part.slice(i + 1);
     if (k === 'mut.shape') return t(k, tr('shapes')[+p] || p);
+    if (k.startsWith('mut.sense')) return t(k, tr('sensTg')[+p] || p);
     if (k === 'mut.bud') return t(k, tStress(p));
     return t(k, tKind(p));
   }).join(', ');
@@ -671,6 +686,7 @@ function tEvent(k, p) {
     case 'ev.speaker': return t(k, p[0], tr('spkWhy')[p[2]] || p[2], tr('bossTrig')[p[3]] || p[3], p[4]);
     case 'ev.wev': return t(k, tr('wev')[p[0]] || p[0], p[1]);
     case 'ev.newBeh': return t(k, p[0], p[1]);
+    case 'ev.newSense': return t(k, tr('sensTg')[+p[0]] || p[0], tr('sensMd')[+p[1]] || p[1], p[2]);
     case 'ev.wevEnd': return t(k, tr('wev')[p[0]] || p[0], p[1]);
     case 'ev.adoptedDied': return t(k, p[0], tCause(p[1]));
     default: return t(k, ...p);
@@ -706,6 +722,9 @@ function tShape(s) {
   if (s[4] > 0.4) out.push(w.tail); else if (s[4] < -0.4) out.push(w.pear);
   return out.join(', ');
 }
+let curSens = null;
+function sensDir(a) { const k = Math.round(((a % 6.2832) + 6.2832) % 6.2832 / 0.7854) % 8; return tr('sensDir')[k]; }
+function sensName(q) { return `${tr('sensTg')[q[1]] || q[1]} (${tr('sensMd')[q[2]] || q[2]}, ${sensDir(q[3])})`; }
 function inName(i) {
   const g = tr('ioIn'), d = g.dir;
   if (i === 0) return g.bias;
@@ -745,6 +764,7 @@ function inName(i) {
   if (i === 92) return n.itemHard;
   if (i === 93) return n.holding;
   if (i === 94) return n.heldPower;
-  if (i < 114) return o[i - 95];
-  return 'H' + (i - 114);
+  if (i < 107) { const sn = (typeof curSens !== 'undefined' && curSens) ? curSens.find(q => q[0] === i - 95) : null; return sn ? sensName(sn) : t('io.sense') + ' ' + (i - 94); }
+  if (i < 126) return o[i - 107];
+  return 'H' + (i - 126);
 }

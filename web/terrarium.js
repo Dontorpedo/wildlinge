@@ -13,7 +13,7 @@ const TZ_OBJ = { food: 230, water: 292, lamp: 650, bed: 120, music: 395, ceiling
 const TZ_NEEDS = ['food', 'water', 'warmth', 'light', 'fun', 'rest', 'social'];
 const TZ_RATE = { food: 0.12, water: 0.15, warmth: 0.05, light: 0.08, fun: 0.1, rest: 0.04, social: 0.06 };
 const TZ_FEAT = { food: 1, water: 8, warmth: 7, light: 9, fun: 9, rest: 5, social: 3 };
-const TZ_GOALNEED = { food: 'food', treat: 'food', water: 'water', warm: 'warmth', sleep: 'rest', ball: 'fun', music: 'fun', puzzle: 'fun', bubble: 'fun', plush: 'social', social: 'social', call: 'social', wander: 'fun', party: 'fun' };
+const TZ_GOALNEED = { food: 'food', treat: 'food', water: 'water', warm: 'warmth', sleep: 'rest', ball: 'fun', music: 'fun', puzzle: 'fun', bubble: 'fun', plush: 'social', social: 'social', play: 'fun', call: 'social', wander: 'fun', party: 'fun' };
 const TZ_ACC = ['none', 'bow', 'hat', 'glasses', 'scarf', 'crown', 'flower'];
 const TZ_TOOLS = ['select', 'pet', 'brush', 'tickle', 'treat', 'ball', 'bubbles', 'plush', 'call', 'dress', 'party', 'teach', 'level', 'lab'];
 const TZ_GLYPH = {
@@ -313,6 +313,7 @@ function tzStep(dt) {
     tzWatch(c, dt);
     if (c.age / TZ.GROW < 1 && ((c.age / TZ.GROW) * 20 | 0) !== (((c.age - dt) / TZ.GROW) * 20 | 0)) tzGeom(c);
   }
+  if (TZ.follow && TZ.sel) { const f = tzFind(TZ.sel); if (f && !f.away && f.room !== TZ.cur) tzViewRoom(f.room); }
   if (TZ.cur === 0) tzItems(k, dt);
   tzRoomsStep(dt);
   tzLabStep(dt);
@@ -418,6 +419,7 @@ function tzChoose(c) {
     if (others.length) { const o = others.sort((a, b) => Math.abs(a.x - c.x) - Math.abs(b.x - c.x))[0]; opt.push([100 - n.social, { type: 'social', x: o.x + tzRnd(-20, 20), lvl: o.lvl, t: 8 }]); }
     else if (pl) opt.push([90 - n.social, { type: 'plush', item: pl, x: pl.x, lvl: tzLevelOf(pl.y), t: 20 }]);
   }
+    { const pls = TZ.list.filter(o => o !== c && o.room === c.room && !o.sleeping && !o.held); if (pls.length && n.fun < 80 && Math.random() < 0.4) { const o = pls[(Math.random() * pls.length) | 0]; opt.push([100 - n.fun + 6, { type: 'play', with: o, x: o.x, lvl: o.lvl, t: 11 }]); } }
   if (n.fun < 65) {
     const bub = TZ.items.find(i => i.type === 'sbub');
     const ball = TZ.items.find(i => i.type === 'ball');
@@ -448,6 +450,7 @@ function tzAI(c, dt, k) {
   const g = c.goal;
   if (g.item) { g.x = g.item.x; g.lvl = tzLevelOf(g.item.y + (g.type === 'bubble' ? 30 : 0)); }
   if (g.bf) g.x = g.bf.x;
+  if (g.with) { const w = g.with; if (!TZ.list.includes(w) || w.room !== c.room || w.sleeping) { c.goalT = 0; } else { g.x = tzClamp(w.x + Math.sin(TZ.clock * 2.2 + c.id) * 46, 30, 770); g.lvl = w.lvl; } }
   c.swim = false;
   const arrived = tzGo(c, g.x, g.lvl, k);
   c.arrived = arrived || g.type === 'wander' && false;
@@ -465,6 +468,11 @@ function tzAI(c, dt, k) {
     case 'warm': if (TZ.room.lamp && n.warmth < 96) n.warmth += 1.8 * dt; else c.goalT = 0; break;
     case 'sleep': c.sleeping = true; c.goal = null; break;
     case 'music': if (TZ.room.music > 0) n.fun += 4 * dt; else TZ.room.music = 20; break;
+    case 'play': { const w = g.with; if (w && w.goal && w.goal.type !== 'play' && !w.sleeping && !w.held) { w.goal = { type: 'play', with: c, x: c.x, lvl: c.lvl, t: g.t }; w.goalT = g.t; }
+      n.fun = Math.min(100, n.fun + 3 * dt); n.social = Math.min(100, n.social + 2 * dt);
+      if (c.ground && c.hopT <= 0 && Math.random() < dt * 1.2) { c.vy = -3; c.ground = false; c.hopT = 0.35; }
+      if (Math.random() < dt * 0.6) { tzBurst(Math.random() < 0.5 ? 'heart' : 'star', c.x, c.y - c.half * 2, 1); if (Math.random() < 0.25) sndFx('joy', (c.x - 400) / 400); }
+      break; }
     case 'social': n.social = Math.min(100, n.social + 0.8 * dt); break;
     case 'plush': n.social = Math.min(100, n.social + 2 * dt); n.fun = Math.min(100, n.fun + 0.6 * dt); if (Math.random() < dt * 0.5) tzBurst('heart', c.x, c.y - c.half * 2, 1); break;
     case 'call': if (c.goalT > 1.5) { n.fun = Math.min(100, n.fun + 2); c.obey = Math.min(1, c.obey + 0.04); c.heartUntil = Date.now() + 1200; c.goalT = 1.4; } break;
@@ -866,9 +874,9 @@ function tzRender() {
       if (key) {
         const pan = (c.x - 400) / 400;
         if (key === 'love') sndFx('joy', pan);
-        else if (key === 'rest') sndFx('sigh', pan);
+        else if (key === 'rest') sndFx(Math.random() < 0.5 ? 'seufz' : 'sigh', pan);
         else if (word) sndSay(word, pan, 0);
-        else sndFx('need', pan);
+        else if (Math.random() < 0.3) sndInterj(pan, -1); else sndFx('need', pan);
       }
     }
     c.thTop = key && key !== 'rest' ? top : 0; c.thKey = key; c.thWord = word;
@@ -1012,6 +1020,7 @@ function tzInit() {
     const v = tzEl('tzName').value, c = tzFind(TZ.sel);
     if (c && v.trim()) { tzCall({ type: 'trename', id: c.id, name: v }).then(() => tzReconcileNames()); tzEl('tzName').value = ''; }
   };
+  tzEl('tzFollow').onclick = () => { TZ.follow = !TZ.follow; tzEl('tzFollow').classList.toggle('on', TZ.follow); };
   tzEl('tzRelease').onclick = () => { if (TZ.sel) tzRelease(TZ.sel); };
   window.addEventListener('beforeunload', () => { tzSave(); });
   tzEl('tzRoom').addEventListener('click', e => { const bt = e.target.closest('[data-troom]'); if (bt) tzViewRoom(+bt.dataset.troom); });
