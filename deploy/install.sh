@@ -1,40 +1,27 @@
 #!/usr/bin/env bash
 # Installs or updates the Plimploms server on Ubuntu 24.04 (run as root).
-# Usage: sudo ./install.sh [--domain example.com] [--email you@example.com] [--port 80] [--no-nginx]
-# --no-nginx: for servers whose web server is managed elsewhere (e.g. Ploi): only installs the service and the poster.
+# Web server, domain and SSL are managed by Ploi; this script only installs the game service,
+# the X poster and the daily backup.
+# Usage: sudo ./install.sh [--origin https://plimploms.com]
 set -euo pipefail
 
-DOMAIN="_"
-EMAIL=""
-PORT="80"
-NGINX=1
+ORIGIN=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    --domain) DOMAIN="$2"; shift 2 ;;
-    --email) EMAIL="$2"; shift 2 ;;
-    --port) PORT="$2"; shift 2 ;;
-    --no-nginx) NGINX=0; shift ;;
+    --origin) ORIGIN="$2"; shift 2 ;;
     *) echo "Unknown option: $1" >&2; exit 1 ;;
   esac
 done
 [ "$(id -u)" -eq 0 ] || { echo "Please run as root (sudo)." >&2; exit 1; }
 HERE="$(cd "$(dirname "$0")" && pwd)"
-[ -x "$HERE/wildlinge-server" ] && [ -f "$HERE/wildlinge.html" ] || { echo "wildlinge-server or wildlinge.html missing next to install.sh" >&2; exit 1; }
-
-export DEBIAN_FRONTEND=noninteractive
-if [ "$NGINX" = 1 ]; then
-  apt-get update -qq
-  apt-get install -y -qq nginx >/dev/null
-fi
+[ -x "$HERE/wildlinge-server" ] || { echo "wildlinge-server missing next to install.sh" >&2; exit 1; }
 
 id wildlinge >/dev/null 2>&1 || useradd --system --home /var/lib/wildlinge --shell /usr/sbin/nologin wildlinge
 install -d -o wildlinge -g wildlinge -m 750 /var/lib/wildlinge
-install -d -m 755 /opt/wildlinge /var/www/wildlinge /var/backups/wildlinge
+install -d -m 755 /opt/wildlinge /var/backups/wildlinge
 
 systemctl stop wildlinge 2>/dev/null || true
 install -m 755 "$HERE/wildlinge-server" /opt/wildlinge/wildlinge-server
-install -m 644 "$HERE/wildlinge.html" /var/www/wildlinge/world.html
-[ -d "$HERE/static" ] && install -m 644 "$HERE"/static/* /var/www/wildlinge/
 install -m 644 "$HERE/wildlinge.service" /etc/systemd/system/wildlinge.service
 if [ -f "$HERE/poster.py" ]; then
   install -m 755 "$HERE/poster.py" /opt/wildlinge/poster.py
@@ -44,18 +31,7 @@ if [ -f "$HERE/poster.py" ]; then
 fi
 
 if [ ! -f /etc/wildlinge.env ]; then
-  if [ "$DOMAIN" != "_" ] && [ -n "$EMAIL" ]; then
-    echo "WL_ORIGIN=https://$DOMAIN" > /etc/wildlinge.env
-  else
-    : > /etc/wildlinge.env
-  fi
-fi
-
-if [ "$NGINX" = 1 ]; then
-  sed -e "s/@DOMAIN@/$DOMAIN/" -e "s/@PORT@/$PORT/" "$HERE/nginx.conf.template" > /etc/nginx/sites-available/wildlinge
-  ln -sf /etc/nginx/sites-available/wildlinge /etc/nginx/sites-enabled/wildlinge
-  if [ "$DOMAIN" = "_" ] && [ "$PORT" = "80" ]; then rm -f /etc/nginx/sites-enabled/default; fi
-  nginx -t
+  if [ -n "$ORIGIN" ]; then echo "WL_ORIGIN=$ORIGIN" > /etc/wildlinge.env; else : > /etc/wildlinge.env; fi
 fi
 
 cat > /etc/cron.daily/wildlinge-backup <<'CRON'
@@ -69,17 +45,11 @@ chmod 755 /etc/cron.daily/wildlinge-backup
 
 systemctl daemon-reload
 systemctl enable --now wildlinge
-[ -f /etc/systemd/system/wildlinge-poster.timer ] && systemctl enable --now wildlinge-poster.timer
-[ "$NGINX" = 1 ] && systemctl reload nginx
-
-if [ "$NGINX" = 1 ] && [ "$DOMAIN" != "_" ] && [ -n "$EMAIL" ]; then
-  apt-get install -y -qq certbot python3-certbot-nginx >/dev/null
-  certbot --nginx -d "$DOMAIN" -m "$EMAIL" --agree-tos --redirect -n || echo "certbot failed: check that the DNS record of $DOMAIN points to this server, then run the command again."
-fi
+if [ -f /etc/systemd/system/wildlinge-poster.timer ]; then systemctl enable --now wildlinge-poster.timer; fi
 
 sleep 2
 systemctl --no-pager --lines=5 status wildlinge || true
 echo
-echo "Done. Open: http://${DOMAIN/_/<server-ip>}:$PORT/"
+echo "Done. The game service listens on 127.0.0.1:8787 (WebSocket /ws is proxied by Ploi)."
 echo "Logs:   journalctl -u wildlinge -f"
 echo "Data:   /var/lib/wildlinge (backups in /var/backups/wildlinge)"

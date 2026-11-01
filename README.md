@@ -54,5 +54,5 @@ Plimploms ist ein offenes Experiment zu künstlichem Leben, das komplett im Brow
 
 ## Shared server
 
-`server/` runs one persistent world (Rust, WebSocket) with one terrarium per visitor token. The browser page connects to `/ws` of the same host and falls back to the single-player mode if no server answers. Install on Ubuntu 24.04: `tools/pack-server.sh`, upload `dist/wildlinge-server.tar.gz`, unpack, run `sudo ./install.sh [--domain example.com --email you@example.com]`.
+`server/` runs one persistent world (Rust, WebSocket) with one terrarium per visitor token. The browser page connects to `/ws` of the same host and falls back to the single-player mode if no server answers. Install on Ubuntu 24.04: `tools/pack-server.sh`, upload `dist/wildlinge-server.tar.gz`, unpack, run `sudo ./install.sh`. Web server, domain and SSL are handled by Ploi (static files from `dist/plimploms-upload.zip`, `/ws` proxied to 127.0.0.1:8787).
 Visitors act as guardians with limited guardian power: stroke, scold, speak, teach, feed, mirror, carry (pick up and put down), adopt into their own terrarium and release.
