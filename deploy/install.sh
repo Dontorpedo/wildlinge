@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
 # Installs or updates the Plimploms server on Ubuntu 24.04 (run as root).
-# Usage: sudo ./install.sh [--domain example.com] [--email you@example.com] [--port 80]
+# Usage: sudo ./install.sh [--domain example.com] [--email you@example.com] [--port 80] [--no-nginx]
+# --no-nginx: for servers whose web server is managed elsewhere (e.g. Ploi): only installs the service and the poster.
 set -euo pipefail
 
 DOMAIN="_"
 EMAIL=""
 PORT="80"
+NGINX=1
 while [ $# -gt 0 ]; do
   case "$1" in
     --domain) DOMAIN="$2"; shift 2 ;;
     --email) EMAIL="$2"; shift 2 ;;
     --port) PORT="$2"; shift 2 ;;
+    --no-nginx) NGINX=0; shift ;;
     *) echo "Unknown option: $1" >&2; exit 1 ;;
   esac
 done
@@ -19,8 +22,10 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 [ -x "$HERE/wildlinge-server" ] && [ -f "$HERE/wildlinge.html" ] || { echo "wildlinge-server or wildlinge.html missing next to install.sh" >&2; exit 1; }
 
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get install -y -qq nginx >/dev/null
+if [ "$NGINX" = 1 ]; then
+  apt-get update -qq
+  apt-get install -y -qq nginx >/dev/null
+fi
 
 id wildlinge >/dev/null 2>&1 || useradd --system --home /var/lib/wildlinge --shell /usr/sbin/nologin wildlinge
 install -d -o wildlinge -g wildlinge -m 750 /var/lib/wildlinge
@@ -46,10 +51,12 @@ if [ ! -f /etc/wildlinge.env ]; then
   fi
 fi
 
-sed -e "s/@DOMAIN@/$DOMAIN/" -e "s/@PORT@/$PORT/" "$HERE/nginx.conf.template" > /etc/nginx/sites-available/wildlinge
-ln -sf /etc/nginx/sites-available/wildlinge /etc/nginx/sites-enabled/wildlinge
-if [ "$DOMAIN" = "_" ] && [ "$PORT" = "80" ]; then rm -f /etc/nginx/sites-enabled/default; fi
-nginx -t
+if [ "$NGINX" = 1 ]; then
+  sed -e "s/@DOMAIN@/$DOMAIN/" -e "s/@PORT@/$PORT/" "$HERE/nginx.conf.template" > /etc/nginx/sites-available/wildlinge
+  ln -sf /etc/nginx/sites-available/wildlinge /etc/nginx/sites-enabled/wildlinge
+  if [ "$DOMAIN" = "_" ] && [ "$PORT" = "80" ]; then rm -f /etc/nginx/sites-enabled/default; fi
+  nginx -t
+fi
 
 cat > /etc/cron.daily/wildlinge-backup <<'CRON'
 #!/bin/sh
@@ -63,9 +70,9 @@ chmod 755 /etc/cron.daily/wildlinge-backup
 systemctl daemon-reload
 systemctl enable --now wildlinge
 [ -f /etc/systemd/system/wildlinge-poster.timer ] && systemctl enable --now wildlinge-poster.timer
-systemctl reload nginx
+[ "$NGINX" = 1 ] && systemctl reload nginx
 
-if [ "$DOMAIN" != "_" ] && [ -n "$EMAIL" ]; then
+if [ "$NGINX" = 1 ] && [ "$DOMAIN" != "_" ] && [ -n "$EMAIL" ]; then
   apt-get install -y -qq certbot python3-certbot-nginx >/dev/null
   certbot --nginx -d "$DOMAIN" -m "$EMAIL" --agree-tos --redirect -n || echo "certbot failed: check that the DNS record of $DOMAIN points to this server, then run the command again."
 fi
