@@ -563,6 +563,7 @@ function drawCreature(cs, o, sel, wpp, ox, oy, st) {
     b.fillRect(px - 2, yy - 1, 2, 1); b.fillRect(px + 1, yy - 1, 2, 1);
     b.fillRect(px - 2, yy, 5, 1); b.fillRect(px - 1, yy + 1, 3, 1); b.fillRect(px, yy + 2, 1, 1);
   }
+  if (typeof crHits !== 'undefined') { const hw = Math.max(5, rp(r * 1.5)), t0 = st.sprFor === o && st.sprTop !== undefined ? st.sprTop : py - Math.max(r, rp(ext)); crHits.push([cs[o] | 0, px - hw, t0, px + hw, py + r + 1]); }
   if (sel) {
     const s = Math.max(r, rp(ext)) + 3 + ((st.animT >> 3) & 1), x0 = px - s, x1 = px + s, y0 = py - s, y1 = py + s;
     b.fillStyle = '#ffd84a';

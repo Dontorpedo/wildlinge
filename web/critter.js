@@ -350,7 +350,7 @@ function crPartx(kind, i, tint) {
   return e;
 }
 /* optional AI animation frames (walk, sleep, eat, attack), recoloured like the base sprites */
-let crAnimData = null, crAnimScratch = null;
+let crAnimData = null, crAnimScratch = null, crBudget = 30;
 const crAnimCache = new Map();
 function crAnimInit() {
   if (typeof CR_ANIM_IMG === 'undefined' || typeof Image === 'undefined') return;
@@ -368,7 +368,9 @@ function crAnimFrame(sp, hue, acc, act, f) {
   if (!a || ai < 0 || (a.m !== undefined && !((a.m >> ai) & 1))) return null;
   const pat = sp.pat | 0, key = sp.idx + '|' + hue + '|' + acc + '|' + ai + '|' + f + '|' + pat;
   let e = crAnimCache.get(key);
-  if (e) return e;
+  if (e) { crAnimCache.delete(key); crAnimCache.set(key, e); return e; }
+  if (crBudget <= 0) return null;
+  crBudget--;
   let slot = ai;
   if (a.m !== undefined) { slot = 0; for (let j = 0; j < ai; j++) if ((a.m >> j) & 1) slot++; }
   /* read only this cell from the decoded atlas: keeps memory low with many sprites */
@@ -400,7 +402,7 @@ function crAnimFrame(sp, hue, acc, act, f) {
   }
   x.putImageData(img, 0, 0);
   e = { cnv, pad: a.mb };
-  if (crAnimCache.size > 1500) crAnimCache.delete(crAnimCache.keys().next().value);
+  if (crAnimCache.size > 5000) crAnimCache.delete(crAnimCache.keys().next().value);
   crAnimCache.set(key, e);
   return e;
 }
@@ -442,7 +444,7 @@ function crWholeSprite(idx, hue, accIdx, pat) {
   pat = pat | 0;
   const key = idx + '|' + hue + '|' + accIdx + '|' + pat;
   let e = crWholeCache.get(key);
-  if (e) return e;
+  if (e) { crWholeCache.delete(key); crWholeCache.set(key, e); return e; }
   const m = CR_WHOLE_META[idx], cx = (idx % 10) * 96, cy = ((idx / 10) | 0) * 64, A = crWholeData, ah = crAccHue(accIdx);
   const cnv = document.createElement('canvas'); cnv.width = m.w; cnv.height = m.h;
   const x = cnv.getContext('2d'), img = x.createImageData(m.w, m.h), d = img.data;
@@ -467,7 +469,7 @@ function crWholeSprite(idx, hue, accIdx, pat) {
   x.putImageData(img, 0, 0);
   const tg = CR_TAGS[idx] || '';
   e = { cnv, w: m.w, h: m.h, m, idx, pat, cl: undefined, def: new Map(), tail: tg.includes('t'), ear: tg.includes('e') };
-  if (crWholeCache.size > 700) crWholeCache.delete(crWholeCache.keys().next().value);
+  if (crWholeCache.size > 2500) crWholeCache.delete(crWholeCache.keys().next().value);
   crWholeCache.set(key, e);
   return e;
 }

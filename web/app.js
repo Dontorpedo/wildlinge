@@ -30,6 +30,8 @@ let mapInfo = null, terrainSummer = null, terrainWinter = null, miniBase = null;
 let bubbles = [], animT = 0, lastView = '', toastTimer = null, centered = false, gotInit = false, welcomeOk = false;
 let seriesData = null, upl = null, uplSet = '', lastSeriesAt = 0, phyloSig = '', brainPts = [], lastLab = null;
 const gst = { animT: 0, hue: 0, showSense: false };
+const crHits = [];
+let selAt = 0, selMiss = 0;
 const windP = Array.from({ length: 120 }, () => ({ x: Math.random() * WORLD_W, y: Math.random() * WORLD_H, l: Math.random() * 200 }));
 
 /* ---------- small helpers ---------- */
@@ -117,6 +119,7 @@ function viewRect() {
 function render() {
   animT++;
   gst.animT = animT;
+  if (typeof crBudget !== 'undefined') crBudget = 30;
   requestAnimationFrame(render);
   tzFrame();
   if (viewMode === 'terra') { tzRender(); if (activeTab === 'terra') tzPanel(false); return; }
@@ -187,6 +190,7 @@ function render() {
   const ordered = [];
   for (let o = 0; o + CS_STRIDE <= cs.length; o += CS_STRIDE) if (o !== selO) ordered.push(o);
   ordered.sort((p, q) => cs[p + 2] - cs[q + 2]);
+  crHits.length = 0;
   for (const o of ordered) drawCreature(cs, o, false, wpp, ox, oy, gst);
   if (selO >= 0) drawCreature(cs, selO, true, wpp, ox, oy, gst);
   if (relIds.size) {
@@ -612,9 +616,12 @@ function receive(m) {
       if (!centered && m.cs.length >= CS_STRIDE) { centered = true; cam.x = m.cs[1]; cam.y = m.cs[2]; }
       break;
     }
-    case 'panel': panel = JSON.parse(m.json); if (serverMode) srvSeen(panel); if (panel.sel) selId = panel.sel.id; else if (selId && !panel.sel) selId = 0; renderPanel(panel); break;
+    case 'panel': panel = JSON.parse(m.json); if (serverMode) srvSeen(panel); if (panel.sel && panel.sel.id !== selId) panel.sel = null;
+      if (panel.sel) selMiss = 0;
+      else if (selId && performance.now() - selAt > 2000 && ++selMiss >= 3) selId = 0;
+      renderPanel(panel); break;
     case 'sel':
-      selId = m.id;
+      selId = m.id; selAt = performance.now(); selMiss = 0;
       if (carryWait) { carryWait = false; if (m.id) { carryId = m.id; toast(t('t.carryPick')); } else toast(t('t.miss')); break; }
       if (m.id) setTab('creature');
       break;
@@ -843,7 +850,18 @@ cv.addEventListener('pointerup', e => {
   cv.classList.remove('drag');
   if (wasDrag) return;
   const [x, y] = screenToWorld(e), r = 8 * ZOOMS[cam.zi];
-  if (tool === 'select') { sendHost({ type: 'pick', x, y, r }); return; }
+  if (tool === 'select') {
+    /* pick what is drawn under the pointer (sprites are larger than the body and drawn at interpolated positions) */
+    const rc = cv.getBoundingClientRect(), bx = (e.clientX - rc.left) * VIEW_W / rc.width / S, by = (e.clientY - rc.top) * VIEW_H / rc.height / S;
+    let hit = 0, bd = Infinity;
+    for (const h of crHits) {
+      if (bx < h[1] - 2 || bx > h[3] + 2 || by < h[2] - 2 || by > h[4] + 2) continue;
+      const d = Math.hypot(bx - (h[1] + h[3]) / 2, by - (h[2] + h[4]) / 2);
+      if (d < bd) { bd = d; hit = h[0]; }
+    }
+    if (hit) { selId = hit; selAt = performance.now(); selMiss = 0; sendHost({ type: 'select', id: hit }); setTab('creature'); return; }
+    sendHost({ type: 'pick', x, y, r }); return;
+  }
   if (tool === 'carry') {
     if (!carryId) { carryWait = true; sendHost({ type: 'pick', x, y, r }); } else { sendHost({ type: 'move', id: carryId, x, y }); carryId = 0; }
     return;
@@ -889,7 +907,7 @@ document.addEventListener('click', e => {
   if (a && !a.getAttribute('href')) {
     e.preventDefault();
     if (a.dataset.id) {
-      selId = +a.dataset.id;
+      selId = +a.dataset.id; selAt = performance.now(); selMiss = 0;
       sendHost({ type: 'select', id: selId });
       if (a.dataset.focus || a.closest('#species')) { follow = true; $('follow').checked = true; }
       setTab('creature');

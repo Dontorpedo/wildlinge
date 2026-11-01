@@ -286,7 +286,37 @@ pub fn panel(w: &World, sel: u32) -> String {
             })
             .collect()
     };
-    let phylo: Vec<Value> = w.phylo.iter().filter(|r| r.max_n >= 3).map(|r| json!({"id": r.id, "name": r.name, "parent": r.parent, "born": r.born, "died": r.died, "carn": r.carn, "hue": r.hue, "maxN": r.max_n})).collect();
+    // the full history grows without end (thousands of species after years); send living species,
+    // their recent ancestry and the most recently extinct ones, capped
+    let phylo: Vec<Value> = {
+        let by: std::collections::HashMap<i32, &SpeciesRec> = w.phylo.iter().map(|r| (r.id, r)).collect();
+        let mut keep: std::collections::HashSet<i32> = std::collections::HashSet::new();
+        for r in w.phylo.iter().filter(|r| r.died < 0) {
+            let mut cur = Some(r);
+            for _ in 0..25 {
+                match cur {
+                    Some(q) => {
+                        if !keep.insert(q.id) {
+                            break;
+                        }
+                        cur = by.get(&q.parent).copied();
+                    }
+                    None => break,
+                }
+            }
+        }
+        let mut gone: Vec<&SpeciesRec> = w.phylo.iter().filter(|r| r.died >= 0 && r.max_n >= 5).collect();
+        gone.sort_by(|a, b| b.died.cmp(&a.died));
+        for r in gone.iter().take(30) {
+            keep.insert(r.id);
+        }
+        let mut v: Vec<&SpeciesRec> = w.phylo.iter().filter(|r| keep.contains(&r.id) && (r.max_n >= 3 || r.died < 0)).collect();
+        if v.len() > 400 {
+            v.sort_by(|a, b| (b.died < 0).cmp(&(a.died < 0)).then(b.born.cmp(&a.born)));
+            v.truncate(400);
+        }
+        v.iter().map(|r| json!({"id": r.id, "name": r.name, "parent": r.parent, "born": r.born, "died": r.died, "carn": r.carn, "hue": r.hue, "maxN": r.max_n})).collect()
+    };
     let events: Vec<Value> = w.events.iter().rev().take(40).map(|e| json!([World::day_of(e.t), e.k, e.p, e.t])).collect();
     let log: Vec<Value> = w.log.iter().rev().take(16).map(|e| json!({"words": e.words, "id": e.id, "name": e.name, "carn": e.carn, "vec": e.vec, "sector": e.sector})).collect();
     let adopted: Vec<Value> = cs.iter().filter(|c| c.adopted).map(|c| json!({"id": c.id, "name": c.name, "phase": c.phase(), "wb": c.wellbeing, "goal": c.goal, "asleep": c.asleep})).collect();
