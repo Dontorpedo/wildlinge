@@ -108,6 +108,7 @@ function sndFx(kind, pan) {
     case 'sigh': sndSyl(now, { f0: 360, f1: 230, dur: 0.4, amp: 0.07, f: [500, 900], pan: p, type: 'triangle' }); break;
     case 'gut': sndSyl(now, { f0: 130, f1: 90, dur: 0.3, amp: 0.12, f: [300, 500], pan: p, type: 'sawtooth' }); break;
     case 'need': sndSyl(now, { f0: 440, f1: 330, dur: 0.14, amp: 0.09, f: [800, 1500], pan: p, type: 'triangle' }); sndSyl(now + 0.17, { f0: 440, f1: 300, dur: 0.16, amp: 0.09, f: [800, 1500], pan: p, type: 'triangle' }); break;
+    case 'chime': { const f = 523.25 * Math.pow(2, SND_PENT[(Math.random() * 5) | 0] / 12 + (Math.random() < 0.4 ? 1 : 0)); sndNote(now, f, 1.8, 0.08, 'sine'); break; }
     case 'pop': sndSyl(now, { f0: 900, f1: 1800, dur: 0.05, amp: 0.12, f: [1200, 3000], pan: p, type: 'sine' }); break;
     case 'tick': sndSyl(now, { f0: 1000, f1: 1000, dur: 0.03, amp: 0.05, f: [1500, 2500], pan: p, type: 'sine' }); break;
   }

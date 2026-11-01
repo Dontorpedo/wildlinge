@@ -780,6 +780,7 @@ const I18N = {
     'tz.puzzleHint': 'Puzzle box: creatures learn to open it and get treats',
     th: { 't.fear': '{0} is scared', 't.sick': '{0} feels sick', 't.hurt': '{0}: ouch', 't.hungry': '{0} is hungry', 't.tired': '{0} is tired', 't.eat': '{0}: yum', 't.happy': '{0} is happy', 't.word': '{0} thinks of "{1}"',
       food: '{0} is hungry', water: '{0} is thirsty', warmth: '{0} is cold', light: '{0} wants light', fun: '{0} is bored', rest: '{0} is sleepy', social: '{0} is lonely', love: '{0} is happy', want: '{0} wants {1}' },
+    'tz.rooms': ['Living room', 'Garden', 'Pond', 'Cave', 'Workshop'],
     'tz.needs': { food: 'Food', water: 'Water', warmth: 'Warmth', light: 'Light', fun: 'Play', rest: 'Rest', social: 'Company' },
     'tz.help': 'Click bowls, lamp, light, music and puzzle box | Keys 1 to 9 and 0: tool',
     'tz.intro': 'Adopted Plimploms live here. They need food, water, warmth, light, play and rest. Neglect causes stress and death. While you are away, time passes at a quarter of the speed and never below a safe minimum. Happy adults nearby become fond of each other and lay eggs. Release them into the wild and they take everything they learned with them.',
@@ -1064,6 +1065,7 @@ const I18N = {
     'tz.puzzleHint': 'Tüftelbox: Kreaturen lernen sie zu öffnen und bekommen Leckerli',
     th: { 't.fear': '{0} hat Angst', 't.sick': '{0} fühlt sich krank', 't.hurt': '{0}: aua', 't.hungry': '{0} hungrig', 't.tired': '{0} müde', 't.eat': '{0}: mampf', 't.happy': '{0} froh', 't.word': '{0} denkt an "{1}"',
       food: '{0} hungrig', water: '{0} durstig', warmth: '{0} friert', light: '{0} will Licht', fun: '{0} langweilt sich', rest: '{0} müde', social: '{0} einsam', love: '{0} froh', want: '{0} will {1}' },
+    'tz.rooms': ['Wohnzimmer', 'Garten', 'Teich', 'Höhle', 'Werkstatt'],
     'tz.needs': { food: 'Futter', water: 'Wasser', warmth: 'Wärme', light: 'Licht', fun: 'Spiel', rest: 'Ruhe', social: 'Gesellschaft' },
     'tz.help': 'Näpfe, Lampe, Licht, Spieluhr und Tüftelbox anklicken | Tasten 1 bis 9 und 0: Werkzeug',
     'tz.intro': 'Adoptierte Plimploms leben hier. Sie brauchen Futter, Wasser, Wärme, Licht, Spiel und Ruhe. Vernachlässigung führt zu Stress und Tod. Während Ihrer Abwesenheit vergeht die Zeit mit einem Viertel der Geschwindigkeit und nie unter einem sicheren Minimum. Zufriedene Erwachsene in der Nähe werden sich zugetan und legen Eier. Wenn Sie sie auswildern, nehmen sie alles Gelernte mit.',
@@ -2091,6 +2093,7 @@ function sndFx(kind, pan) {
     case 'sigh': sndSyl(now, { f0: 360, f1: 230, dur: 0.4, amp: 0.07, f: [500, 900], pan: p, type: 'triangle' }); break;
     case 'gut': sndSyl(now, { f0: 130, f1: 90, dur: 0.3, amp: 0.12, f: [300, 500], pan: p, type: 'sawtooth' }); break;
     case 'need': sndSyl(now, { f0: 440, f1: 330, dur: 0.14, amp: 0.09, f: [800, 1500], pan: p, type: 'triangle' }); sndSyl(now + 0.17, { f0: 440, f1: 300, dur: 0.16, amp: 0.09, f: [800, 1500], pan: p, type: 'triangle' }); break;
+    case 'chime': { const f = 523.25 * Math.pow(2, SND_PENT[(Math.random() * 5) | 0] / 12 + (Math.random() < 0.4 ? 1 : 0)); sndNote(now, f, 1.8, 0.08, 'sine'); break; }
     case 'pop': sndSyl(now, { f0: 900, f1: 1800, dur: 0.05, amp: 0.12, f: [1200, 3000], pan: p, type: 'sine' }); break;
     case 'tick': sndSyl(now, { f0: 1000, f1: 1000, dur: 0.03, amp: 0.05, f: [1500, 2500], pan: p, type: 'sine' }); break;
   }
@@ -3269,7 +3272,7 @@ function tzResolve(m) {
 
 /* ---------- levels (shelves) and path finding ---------- */
 function tzBuildLevels() {
-  TZ.lv = TZ_BASE.concat(TZ.extra);
+  TZ.lv = TZ.cur > 0 ? TZ_ROOMS[TZ.cur].lv.slice() : TZ_BASE.concat(TZ.extra);
   const n = TZ.lv.length;
   TZ.reach = new Array(n).fill(false);
   TZ.reach[0] = true;
@@ -3328,6 +3331,7 @@ function tzMake(r, st) {
     hp: st && st.hp !== undefined ? st.hp : 100, stress: st && st.stress || 0, love: st && st.love || 0, breedCool: st && st.breedCool || 0,
     acc: st && st.acc || 0, skill: st && st.skill || 0, obey: st && st.obey || 0, vocab: st && st.vocab || {},
     x: st && st.x !== undefined ? tzClamp(st.x, 30, 770) : tzRnd(80, 720), y: TZ_FLOOR, vx: 0, vy: 0, face: 1, lvl: 0, ground: true, held: false,
+    room: st && st.room > 0 && st.room < 5 ? st.room | 0 : 0, dest: 0, stay: 0, swim: false,
     goal: null, goalT: 0, sleeping: false, bubble: null, bubbleUntil: 0, nextBubble: 0, heartUntil: 0, laughUntil: 0, danceUntil: 0, hopT: 0, moving: false, kick: 0, act: 0,
     px: 0, py: 0, pt: 0, stuck: 0, arrived: false
   };
@@ -3411,6 +3415,7 @@ async function tzReconcile() {
   }
   if (P) {
     if (P.room) Object.assign(TZ.room, P.room);
+    tzRestoreRooms(P);
     TZ.graves = Array.isArray(P.graves) ? P.graves.slice(-12) : [];
     if (P.savedAt) { const away = (Date.now() - P.savedAt) / 1000; if (away > 5) tzCatchUp(Math.min(away, 86400 * 3)); }
     TZ.persisted = null;
@@ -3423,9 +3428,9 @@ async function tzReconcile() {
 /* ---------- persistence ---------- */
 function tzSerialize() {
   return JSON.stringify({
-    v: 2, savedAt: Date.now(), room: TZ.room, graves: TZ.graves, extra: TZ.extra,
+    v: 2, savedAt: Date.now(), garden: TZ.garden, room: TZ.room, graves: TZ.graves, extra: TZ.extra,
     eggs: TZ.eggs.map(e => ({ id: e.id, x: e.x, left: e.left })),
-    list: TZ.list.map(c => ({ id: c.id, age: c.age, needs: c.needs, hp: c.hp, stress: c.stress, love: c.love, breedCool: c.breedCool, x: c.x, y: c.y, lvl: c.lvl, acc: c.acc, skill: c.skill, obey: c.obey, vocab: c.vocab, wi: c.wi }))
+    list: TZ.list.map(c => ({ id: c.id, age: c.age, needs: c.needs, hp: c.hp, stress: c.stress, love: c.love, breedCool: c.breedCool, x: c.x, y: c.y, lvl: c.lvl, acc: c.acc, skill: c.skill, obey: c.obey, vocab: c.vocab, wi: c.wi, room: c.room }))
   });
 }
 async function tzSave() {
@@ -3451,6 +3456,7 @@ function tzCatchUp(sec) {
     tzGeom(c);
   }
   for (const e of TZ.eggs) e.left -= sec;
+  tzGardenCatchUp(sec);
   TZ.room.food = Math.max(0, TZ.room.food - sec * 0.01);
   TZ.room.water = Math.max(0, TZ.room.water - sec * 0.01);
   tzHatch();
@@ -3491,6 +3497,28 @@ function tzFrame() {
   tzStep(ms / 1000);
   if (now - TZ.saveAt > 10000) tzSave();
 }
+function tzNeeds(c, dt, lightOn, alone) {
+  const n = c.needs, sl = c.sleeping, nt = c.room >= 3 ? 0 : TZ.night;
+  lightOn = tzLightOn(c);
+  c.age += dt;
+  if (c.stay > 0) c.stay -= dt;
+  n.food -= TZ_RATE.food * dt * (sl ? 0.4 : 1);
+  n.water -= TZ_RATE.water * dt * (sl ? 0.4 : 1);
+  n.warmth -= TZ_RATE.warmth * dt * (1 + nt);
+  if (lightOn) n.light = Math.min(100, n.light + 0.3 * dt); else n.light -= TZ_RATE.light * dt;
+  n.fun -= TZ_RATE.fun * dt * (sl ? 0 : 1);
+  n.rest += (sl ? 1.3 : -TZ_RATE.rest) * dt;
+  const near = TZ.list.some(o => o !== c && o.room === c.room && Math.abs(o.x - c.x) < 80 && Math.abs(o.y - c.y) < 70);
+  if (near) n.social += 1.2 * dt; else n.social -= TZ_RATE.social * (0.15 + 1.7 * c.soc) * (alone ? 1.6 : 1) * dt * (sl ? 0.3 : 1);
+  for (const q of TZ_NEEDS) n[q] = tzClamp(n[q], 0, 100);
+  const min = Math.min(n.food, n.water, n.warmth, n.light, n.fun, n.rest, n.social);
+  const w = n.social === min && min < 25 ? 0.5 : 1;
+  if (min < 25) c.stress = Math.min(100, c.stress + (25 - min) / 25 * 0.6 * dt * w); else if (min > 50) c.stress = Math.max(0, c.stress - 0.8 * dt);
+  if (n.food <= 0 || n.water <= 0 || n.warmth <= 0) { c.hp -= 0.4 * dt; c.cause = n.water <= 0 ? 'thirst' : n.food <= 0 ? 'hunger' : 'cold'; }
+  else if (c.stress > 80) { c.hp -= 0.1 * dt; c.cause = n.social < 15 ? 'lonely' : 'stress'; }
+  else if (tzMood(c) > 55) c.hp = Math.min(100, c.hp + 0.15 * dt);
+  c.breedCool = Math.max(0, c.breedCool - dt);
+}
 function tzStep(dt) {
   const k = Math.min(4, dt * 60);
   tzDay();
@@ -3501,30 +3529,15 @@ function tzStep(dt) {
   const lightOn = TZ.night < 0.5 || TZ.room.light, alone = tzAlone();
   for (const c of TZ.list) {
     if (c.held) continue;
-    const n = c.needs, sl = c.sleeping;
-    c.age += dt;
-    n.food -= TZ_RATE.food * dt * (sl ? 0.4 : 1);
-    n.water -= TZ_RATE.water * dt * (sl ? 0.4 : 1);
-    n.warmth -= TZ_RATE.warmth * dt * (1 + TZ.night);
-    if (lightOn) n.light = Math.min(100, n.light + 0.3 * dt); else n.light -= TZ_RATE.light * dt;
-    n.fun -= TZ_RATE.fun * dt * (sl ? 0 : 1);
-    n.rest += (sl ? 1.3 : -TZ_RATE.rest) * dt;
-    const near = TZ.list.some(o => o !== c && Math.abs(o.x - c.x) < 80 && Math.abs(o.y - c.y) < 70);
-    if (near) n.social += 1.2 * dt; else n.social -= TZ_RATE.social * (0.15 + 1.7 * c.soc) * (alone ? 1.6 : 1) * dt * (sl ? 0.3 : 1);
-    for (const q of TZ_NEEDS) n[q] = tzClamp(n[q], 0, 100);
-    const min = Math.min(n.food, n.water, n.warmth, n.light, n.fun, n.rest, n.social);
-    const w = n.social === min && min < 25 ? 0.5 : 1;
-    if (min < 25) c.stress = Math.min(100, c.stress + (25 - min) / 25 * 0.6 * dt * w); else if (min > 50) c.stress = Math.max(0, c.stress - 0.8 * dt);
-    if (n.food <= 0 || n.water <= 0 || n.warmth <= 0) { c.hp -= 0.4 * dt; c.cause = n.water <= 0 ? 'thirst' : n.food <= 0 ? 'hunger' : 'cold'; }
-    else if (c.stress > 80) { c.hp -= 0.1 * dt; c.cause = n.social < 15 ? 'lonely' : 'stress'; }
-    else if (tzMood(c) > 55) c.hp = Math.min(100, c.hp + 0.15 * dt);
-    c.breedCool = Math.max(0, c.breedCool - dt);
+    tzNeeds(c, dt, lightOn, alone);
+    if (c.room !== TZ.cur) { tzAway(c, dt); continue; }
     tzAI(c, dt, k);
     tzPhys(c, k);
     tzWatch(c, dt);
     if (c.age / TZ.GROW < 1 && ((c.age / TZ.GROW) * 20 | 0) !== (((c.age - dt) / TZ.GROW) * 20 | 0)) tzGeom(c);
   }
-  tzItems(k, dt);
+  if (TZ.cur === 0) tzItems(k, dt);
+  tzRoomsStep(dt);
   tzParts(k);
   for (const e of TZ.eggs) { e.left -= dt; e.vy += 0.25 * k; e.y = Math.min(TZ_FLOOR, e.y + e.vy * k); if (e.y >= TZ_FLOOR) e.vy = 0; }
   tzHatch();
@@ -3573,12 +3586,12 @@ async function tzBreeding() {
   const ad = TZ.list.filter(c => tzGrowth(c) >= TZ.ADULT && !c.sleeping && c.hp > 60 && !c.held);
   for (const c of ad) {
     let near = null;
-    for (const o of ad) if (o !== c && Math.abs(o.x - c.x) < 80 && Math.abs(o.y - c.y) < 60 && tzMood(c) > 60 && tzMood(o) > 60) { near = o; break; }
+    for (const o of ad) if (o !== c && o.room === c.room && Math.abs(o.x - c.x) < 80 && Math.abs(o.y - c.y) < 60 && tzMood(c) > 60 && tzMood(o) > 60) { near = o; break; }
     if (near) c.love = Math.min(100, c.love + 4); else c.love = Math.max(0, c.love - 1);
   }
   for (const c of ad) {
     if (c.love < 100 || c.breedCool > 0) continue;
-    const o = ad.find(q => q !== c && q.love >= 100 && q.breedCool <= 0 && Math.abs(q.x - c.x) < 80);
+    const o = ad.find(q => q !== c && q.room === c.room && q.love >= 100 && q.breedCool <= 0 && Math.abs(q.x - c.x) < 80);
     if (!o) continue;
     TZ.pending = true;
     const r = await tzCall({ type: 'tbreed', a: c.id, b: o.id });
@@ -3600,6 +3613,8 @@ async function tzBreeding() {
 /* ---------- behaviour ---------- */
 function tzSpot(x, lvl) { const L = TZ.lv[lvl] || TZ.lv[0]; return tzClamp(x, Math.max(L.x0, 0) + 12, Math.min(L.x1, 800) - 12); }
 function tzChoose(c) {
+  if (TZ.cur > 0) return tzChooseR(c);
+  { const tg = c.needs && Math.min(c.needs.food, c.needs.water, c.needs.warmth) > 30 ? tzTripGoal(c) : null; if (tg) return tg; }
   const n = c.needs, room = TZ.room, night = TZ.night, ps = TZ.reach;
   if (TZ.callT > 0 && c.obey + 0.3 > Math.random()) return { type: 'call', x: TZ.callX, lvl: TZ.callLvl, t: 6 };
   const tre = TZ.items.filter(i => i.type === 'treat' && i.ground).sort((a, b) => Math.abs(a.x - c.x) - Math.abs(b.x - c.x))[0];
@@ -3625,6 +3640,7 @@ function tzChoose(c) {
   }
   if (c.skill > 0.4 && n.food < 75 && ps[2]) opt.push([100 - n.food + 5, { type: 'puzzle', x: TZ_OBJ.puzzle, lvl: 2, t: 20 }]);
   if (opt.length) { opt.sort((a, b) => b[0] - a[0]); return opt[0][1]; }
+  if (Math.random() < 0.2 && Math.min(n.food, n.water, n.rest) > 50) { c.dest = 1 + ((Math.random() * 4) | 0); c.stay = tzRnd(60, 140); const tg = tzTripGoal(c); if (tg) return tg; }
   const cand = TZ.lv.map((L, i) => i).filter(i => TZ.reach[i]);
   const lv = Math.random() < 0.55 ? 0 : cand[(Math.random() * cand.length) | 0], L = TZ.lv[lv];
   return { type: 'wander', x: lv === 0 ? tzRnd(40, 760) : tzRnd(L.x0 + 15, L.x1 - 15), lvl: lv, t: tzRnd(3, 8) };
@@ -3643,6 +3659,8 @@ function tzAI(c, dt, k) {
   if (!g0 || c.goalT <= 0 || (g0.item && !TZ.items.includes(g0.item))) { c.goal = tzChoose(c); c.goalT = c.goal.t || 5; c.act = 0; }
   const g = c.goal;
   if (g.item) { g.x = g.item.x; g.lvl = tzLevelOf(g.item.y + (g.type === 'bubble' ? 30 : 0)); }
+  if (g.bf) g.x = g.bf.x;
+  c.swim = false;
   const arrived = tzGo(c, g.x, g.lvl, k);
   c.arrived = arrived || g.type === 'wander' && false;
   c.moving = !arrived || c.fly;
@@ -3681,6 +3699,7 @@ function tzAI(c, dt, k) {
       }
       break;
     }
+    default: tzUseR(c, g, dt); break;
   }
   c.kick -= dt;
 }
@@ -4028,14 +4047,14 @@ function tzSide(c, sel, now) {
 function tzRender() {
   sndAmbient('terra', TZ.night);
   const now = Date.now(), B = b;
-  tzRoom(now);
-  for (const e of TZ.eggs) {
+  if (TZ.cur) tzRoomDraw(TZ.cur, now); else tzRoom(now);
+  for (const e of TZ.cur ? [] : TZ.eggs) {
     const wob = e.left < 12 ? Math.sin(now / 60) * 1.5 : 0;
     B.fillStyle = OUTLINE; B.fillRect(e.x - 6 + wob, e.y - 17, 12, 17); B.fillRect(e.x - 4 + wob, e.y - 19, 8, 2);
     B.fillStyle = '#fff3d6'; B.fillRect(e.x - 5 + wob, e.y - 16, 10, 15); B.fillRect(e.x - 3 + wob, e.y - 18, 6, 2);
     B.fillStyle = `hsl(${(e.rec[5] || 0)},70%,80%)`; B.fillRect(e.x - 5 + wob, e.y - 9, 10, 3); B.fillRect(e.x - 2 + wob, e.y - 14, 3, 2);
   }
-  for (const i of TZ.items) {
+  for (const i of TZ.cur ? [] : TZ.items) {
     if (i.type === 'ball') { tzDisc(i.x, i.y, 6, OUTLINE); tzDisc(i.x, i.y, 5, '#ff9db8'); B.fillStyle = '#ffffff'; B.fillRect(Math.round(i.x) - 5, Math.round(i.y), 10, 2); tzDisc(i.x - 2, i.y - 3, 1, '#ffe0ea'); }
     else if (i.type === 'sbub') { tzDisc(i.x, i.y, 8, 'rgba(160,215,255,.55)'); tzDisc(i.x, i.y, 6, 'rgba(235,248,255,.5)'); B.fillStyle = 'rgba(255,255,255,.95)'; B.fillRect(Math.round(i.x) - 4, Math.round(i.y) - 4, 2, 2); }
     else if (i.type === 'plush') {
@@ -4044,8 +4063,9 @@ function tzRender() {
       B.fillStyle = '#ff8fae'; B.fillRect(Math.round(i.x) - 1, Math.round(i.y) + 1, 2, 2);
     } else { tzDisc(i.x, i.y, 5, OUTLINE); tzDisc(i.x, i.y, 4, '#e0a868'); B.fillStyle = '#8a5a30'; B.fillRect(Math.round(i.x) - 2, Math.round(i.y) - 1, 1, 1); B.fillRect(Math.round(i.x) + 1, Math.round(i.y), 1, 1); B.fillRect(Math.round(i.x) - 1, Math.round(i.y) + 2, 1, 1); }
   }
-  const order = TZ.list.slice().sort((p, q) => p.y - q.y);
-  for (const c of order) tzSide(c, c.id === TZ.sel, now);
+  const order = TZ.list.filter(c => c.room === TZ.cur).sort((p, q) => p.y - q.y);
+  for (const c of order) { const oy = c.y; if (c.swim) c.y += 7 + Math.sin(now / 300 + c.id) * 1.5; tzSide(c, c.id === TZ.sel, now); c.y = oy; }
+  if (TZ.cur) tzRoomOver(TZ.cur, now);
   for (const c of order) {
     const top = Math.round(c.y - c.half * 2 - 8);
     let key = null, word = null;
@@ -4070,8 +4090,8 @@ function tzRender() {
     else if (p.type === 'heart') { B.fillStyle = p.col; const x = Math.round(p.x), y = Math.round(p.y); B.fillRect(x - 2, y, 2, 2); B.fillRect(x + 1, y, 2, 2); B.fillRect(x - 2, y + 1, 5, 2); B.fillRect(x - 1, y + 3, 3, 1); }
     else { B.fillStyle = p.col; const x = Math.round(p.x), y = Math.round(p.y); B.fillRect(x, y - 1, 1, 3); B.fillRect(x - 1, y, 3, 1); }
   }
-  TZ.graves.slice(-4).forEach((q, i) => { const gx = 770 - i * 22; B.fillStyle = OUTLINE; B.fillRect(gx - 7, TZ_FLOOR - 17, 14, 17); B.fillStyle = '#cfc8d6'; B.fillRect(gx - 6, TZ_FLOOR - 16, 12, 16); B.fillStyle = '#9a93a3'; B.fillRect(gx - 1, TZ_FLOOR - 13, 2, 8); B.fillRect(gx - 3, TZ_FLOOR - 10, 6, 2); });
-  if (TZ.night > 0.05) { B.fillStyle = `rgba(20,24,70,${(TZ.room.light ? 0.12 : 0.36) * TZ.night})`; B.fillRect(0, 0, BW, BH); }
+  if (!TZ.cur) TZ.graves.slice(-4).forEach((q, i) => { const gx = 770 - i * 22; B.fillStyle = OUTLINE; B.fillRect(gx - 7, TZ_FLOOR - 17, 14, 17); B.fillStyle = '#cfc8d6'; B.fillRect(gx - 6, TZ_FLOOR - 16, 12, 16); B.fillStyle = '#9a93a3'; B.fillRect(gx - 1, TZ_FLOOR - 13, 2, 8); B.fillRect(gx - 3, TZ_FLOOR - 10, 6, 2); });
+  if (TZ.night > 0.05 && TZ.cur < 3) { B.fillStyle = `rgba(20,24,70,${(TZ.cur ? 0.3 : TZ.room.light ? 0.12 : 0.36) * TZ.night})`; B.fillRect(0, 0, BW, BH); }
   const tc = tzEl('terra').getContext('2d');
   tc.imageSmoothingEnabled = false;
   tc.drawImage(bufCanvas, 0, 0, BW * S, BH * S);
@@ -4100,6 +4120,7 @@ function tzXY(e) {
 function tzHit(x, y) {
   let hit = null, hd = 1e9;
   for (const c of TZ.list) {
+    if (c.room !== TZ.cur) continue;
     const d = Math.hypot(x - c.x, y - (c.y - c.half));
     if (d < c.half + c.halfW * 0.4 + 6 && d < hd) { hd = d; hit = c; }
   }
@@ -4122,6 +4143,7 @@ function tzDown(e) {
     tzPanel(true);
     return;
   }
+  if (TZ.cur) { if (!tzRoomClick(x, y) && (TZ.tool === 'call' || TZ.tool === 'party')) tzRoomTool(x, y, now); tzPanel(true); return; }
   const near = (ox, oy, w, h) => x >= ox - w && x <= ox + w && y >= oy - h && y <= oy + h;
   const bub = TZ.items.find(i => i.type === 'sbub' && Math.hypot(i.x - x, i.y - y) < 12);
   if (bub) { tzPop(bub, null); return; }
@@ -4201,6 +4223,7 @@ function tzInit() {
   };
   tzEl('tzRelease').onclick = () => { if (TZ.sel) tzRelease(TZ.sel); };
   window.addEventListener('beforeunload', () => { tzSave(); });
+  tzEl('tzRoom').addEventListener('click', e => { const bt = e.target.closest('[data-troom]'); if (bt) tzViewRoom(+bt.dataset.troom); });
   tzBuildLevels();
   tzLoad().then(() => { TZ.loaded = true; });
 }
@@ -4237,8 +4260,359 @@ function tzPanel(force) {
   const gr = TZ.graves.slice().reverse().map(q => `<tr><td class="l">${esc(q.name)} <span class="muted">${esc(t('tz.gen'))} ${q.gen}</span></td><td>${esc(tr('causes')[q.cause] || q.cause)}</td></tr>`).join('');
   setHtml(tzEl('tzGraves'), gr ? `<table>${gr}</table>` : `<div class="muted">-</div>`);
   const rm = TZ.room, yes = `<span class="yes">${esc(t('sel.yes'))}</span>`, no = `<span class="no">${esc(t('sel.no'))}</span>`;
-  setHtml(tzEl('tzRoom'), '<table>' + row(t('tz.bowlFood'), barHtml(rm.food / 100, '#c98f5a')) + row(t('tz.bowlWater'), barHtml(rm.water / 100, '#7cc0f0')) +
+  setHtml(tzEl('tzRoom'), tzNavHtml() + '<table>' + row(t('tz.bowlFood'), barHtml(rm.food / 100, '#c98f5a')) + row(t('tz.bowlWater'), barHtml(rm.water / 100, '#7cc0f0')) +
     row(t('tz.lamp'), rm.lamp ? yes : no) + row(t('tz.light'), rm.light ? yes : no) + row(t('tz.levels'), TZ.lv.length - 1) + '</table>');
+}
+
+'use strict';
+/* Terrarium rooms: garden, pond, cave, workshop. Loaded after terrarium.js.
+   Only the viewed room is simulated in detail; pets in other rooms are handled by tzAway(). */
+const TZ_FL = { x0: -1e9, x1: 1e9, y: 330 };
+const TZ_ROOMS = [
+  { key: 'home', lv: null, prov: { food: 0, water: 0, warmth: 0, rest: 1.0, fun: 0.5 } },
+  { key: 'garden', lv: [TZ_FL, { x0: 560, x1: 740, y: 270 }], prov: { food: 8, water: 20, warmth: 1.2, rest: 1.0, fun: 2 } },
+  { key: 'pond', lv: [TZ_FL, { x0: 560, x1: 760, y: 290 }], prov: { food: 8, water: 22, warmth: 1.2, rest: 1.0, fun: 3 } },
+  { key: 'cave', lv: [TZ_FL, { x0: 300, x1: 480, y: 270 }], prov: { food: 8, water: 20, warmth: 1.8, rest: 1.2, fun: 2 } },
+  { key: 'shop', lv: [TZ_FL, { x0: 520, x1: 700, y: 280 }], prov: { food: 12, water: 22, warmth: 1.4, rest: 1.0, fun: 3 } }
+];
+TZ.cur = 0;
+TZ.bf = [{ x: 300, y: 250 }, { x: 500, y: 240 }, { x: 650, y: 255 }];
+TZ.garden = [{ x: 150, g: 0.7 }, { x: 290, g: 0.35 }, { x: 430, g: 0.95 }, { x: 570, g: 0.15 }];
+const TZ_GROW_S = 240;
+
+function tzLightOn(c) {
+  const r = c.room;
+  if (r === 0) return TZ.night < 0.5 || TZ.room.light;
+  if (r >= 3) return true;
+  return TZ.night < 0.5;
+}
+function tzRestoreRooms(P) {
+  if (Array.isArray(P.garden) && P.garden.length === 4) TZ.garden = P.garden.map((q, i) => ({ x: [150, 290, 430, 570][i], g: tzClamp(+q.g || 0, 0, 1) }));
+}
+function tzRoomsStep(dt) {
+  for (const p of TZ.garden) p.g = Math.min(1, p.g + dt / TZ_GROW_S);
+  if (TZ.cur === 1) TZ.bf.forEach((q, i) => { const t = TZ.clock * 0.5 + i * 2.1; q.x = 400 + Math.sin(t) * 300 + Math.sin(t * 2.3) * 40; q.y = 240 + Math.sin(t * 1.7 + i) * 45; });
+}
+function tzGardenCatchUp(sec) { for (const p of TZ.garden) p.g = Math.min(1, p.g + sec / TZ_GROW_S); }
+
+/* ---------- navigation ---------- */
+function tzNavHtml() {
+  const names = tr('tz.rooms');
+  return '<div class="row" style="flex-wrap:wrap">' + names.map((n, i) => {
+    const cnt = TZ.list.filter(c => c.room === i).length;
+    return `<button data-troom="${i}"${i === TZ.cur ? ' class="on"' : ''}>${esc(n)} (${cnt})</button>`;
+  }).join('') + '</div>';
+}
+function tzPlaceArrive(c, dir) {
+  c.x = dir > 0 ? 44 : 756; c.y = TZ_FLOOR; c.lvl = 0; c.ground = true; c.vy = 0; c.goal = null; c.goalT = 0; c.sleeping = false; c.swim = false; c.px = c.x; c.py = c.y;
+}
+function tzViewRoom(r) {
+  if (r < 0 || r >= TZ_ROOMS.length || r === TZ.cur) return;
+  TZ.cur = r; TZ.drag = null;
+  tzBuildLevels();
+  for (const c of TZ.list) {
+    c.held = false;
+    if (c.room === r) { c.x = tzClamp(c.x, 40, 760); c.y = TZ_FLOOR; c.lvl = 0; c.ground = true; c.vy = 0; c.goal = null; c.goalT = 0; c.swim = false; c.pt = 0; c.px = c.x; c.py = c.y; }
+    tzGeom(c);
+  }
+  if (TZ.sel) { const s = tzFind(TZ.sel); if (s && s.room !== r) TZ.sel = 0; }
+  tzSetTool(TZ.tool);
+  tzPanel(true);
+}
+function tzDoors() {
+  const r = TZ.cur, d = [];
+  if (r > 0) d.push({ dir: -1, x: 18, to: r - 1 });
+  if (r < TZ_ROOMS.length - 1) d.push({ dir: 1, x: 782, to: r + 1 });
+  return d;
+}
+
+/* ---------- pet behaviour in the rooms ---------- */
+function tzTripGoal(c) {
+  const want = c.stay > 0 ? (c.dest || 0) : 0;
+  if (want === c.room) return null;
+  const dir = want > c.room ? 1 : -1;
+  return { type: 'door', dir, x: dir > 0 ? 776 : 24, lvl: 0, t: 15 };
+}
+function tzChooseR(c) {
+  const n = c.needs, R = c.room, night = TZ.night, day = night < 0.5, opt = [];
+  if (TZ.callT > 0 && c.obey + 0.3 > Math.random()) return { type: 'call', x: TZ.callX, lvl: 0, t: 6 };
+  if (Math.min(n.food, n.water, n.warmth) > 30) { const tg = tzTripGoal(c); if (tg) return tg; }
+  const use = (need, x, rate, lvl, t) => ({ type: 'use', need, rate, x, lvl: lvl || 0, t: t || 12 });
+  if (R === 1) {
+    if (n.food < 55) { const p = TZ.garden.slice().sort((a, b) => b.g - a.g)[0]; opt.push([100 - n.food, { type: 'plant', plant: p, x: p.x, lvl: 0, t: 14 }]); }
+    if (n.water < 55) opt.push([100 - n.water, use('water', 700, 26)]);
+    if (n.warmth < 50 && day) opt.push([100 - n.warmth, use('warmth', 380, 1.8, 0, 25)]);
+    if (n.rest < 30 || (night > 0.6 && n.rest < 70)) opt.push([100 - n.rest + night * 15, { type: 'sleep', x: 110, lvl: 0, t: 60 }]);
+    if (n.fun < 65) { const bf = TZ.bf[(Math.random() * 3) | 0]; opt.push([100 - n.fun, { type: 'flutter', bf, x: bf.x, lvl: 0, t: 10 }]); }
+  } else if (R === 2) {
+    if (n.food < 55) opt.push([100 - n.food, use('food', 80, 14)]);
+    if (n.water < 55) opt.push([100 - n.water, use('water', 215, 26)]);
+    if (n.warmth < 50 && day) opt.push([100 - n.warmth, use('warmth', 650, 1.8, 1, 25)]);
+    if (n.rest < 30 || (night > 0.6 && n.rest < 70)) opt.push([100 - n.rest + night * 15, { type: 'sleep', x: 160, lvl: 0, t: 60 }]);
+    if (n.fun < 65) opt.push([100 - n.fun, { type: 'swim', x: tzRnd(270, 490), lvl: 0, t: 14 }]);
+  } else if (R === 3) {
+    if (n.food < 55) opt.push([100 - n.food, use('food', 150, 14)]);
+    if (n.water < 55) opt.push([100 - n.water, use('water', 600, 26)]);
+    if (n.warmth < 55) opt.push([100 - n.warmth, use('warmth', 400, 2.4, 0, 25)]);
+    if (n.rest < 30 || (night > 0.6 && n.rest < 70)) opt.push([100 - n.rest + night * 15, { type: 'sleep', x: 720, lvl: 0, t: 60 }]);
+    if (n.fun < 65) opt.push([100 - n.fun, { type: 'gaze', x: tzRnd(330, 450), lvl: 1, t: 14 }]);
+  } else if (R === 4) {
+    if (n.food < 55) opt.push([100 - n.food, use('food', 110, 20)]);
+    if (n.water < 55) opt.push([100 - n.water, use('water', 190, 26)]);
+    if (n.warmth < 55) opt.push([100 - n.warmth, use('warmth', 300, 1.8, 0, 25)]);
+    if (n.rest < 30 || (night > 0.6 && n.rest < 70)) opt.push([100 - n.rest + night * 15, { type: 'sleep', x: 740, lvl: 0, t: 60 }]);
+    if (n.fun < 70) {
+      if (c.skill < 0.95 && Math.random() < 0.6) opt.push([100 - n.fun + 8, { type: 'machine', x: 420, lvl: 0, t: 16 }]);
+      else opt.push([100 - n.fun, { type: 'tramp', x: 600, lvl: 0, t: 12 }]);
+    }
+  }
+  if (n.social < 55) {
+    const others = TZ.list.filter(o => o !== c && o.room === c.room);
+    if (others.length) { const o = others.sort((a, b) => Math.abs(a.x - c.x) - Math.abs(b.x - c.x))[0]; opt.push([100 - n.social, { type: 'social', x: o.x + tzRnd(-20, 20), lvl: o.lvl, t: 8 }]); }
+  }
+  if (opt.length) { opt.sort((a, b) => b[0] - a[0]); return opt[0][1]; }
+  if (Math.random() < 0.12 && Math.min(n.food, n.water, n.rest) > 50) { c.dest = Math.random() < 0.5 ? 0 : (Math.random() * 5) | 0; c.stay = c.dest ? tzRnd(40, 100) : 0; const tg = tzTripGoal(c); if (tg) return tg; }
+  const cand = TZ.lv.map((L, i) => i).filter(i => TZ.reach[i]);
+  const lv = Math.random() < 0.6 ? 0 : cand[(Math.random() * cand.length) | 0], L = TZ.lv[lv];
+  return { type: 'wander', x: lv === 0 ? tzRnd(40, 760) : tzRnd(L.x0 + 15, L.x1 - 15), lvl: lv, t: tzRnd(3, 8) };
+}
+/* effect of a goal once the pet has arrived (called from tzAI for goal types it does not know) */
+function tzUseR(c, g, dt) {
+  const n = c.needs, mx = v => Math.min(100, v);
+  switch (g.type) {
+    case 'use': if (n[g.need] < 98) n[g.need] = mx(n[g.need] + g.rate * dt); else c.goalT = 0; break;
+    case 'plant': {
+      const p = g.plant;
+      if (p.g >= 1) {
+        n.food = mx(n.food + 24 * dt); c.act += dt;
+        if (c.act > 2.2) { c.act = 0; p.g = 0.15; n.fun = mx(n.fun + 6); c.heartUntil = Date.now() + 1200; tzBurst('star', p.x, TZ_FLOOR - 20, 6); c.goalT = 0; }
+      } else { p.g = Math.min(1, p.g + 0.03 * dt); n.fun = mx(n.fun + 1.2 * dt); if (Math.random() < dt * 0.4) tzBurst('star', p.x, TZ_FLOOR - 14, 1); }
+      break;
+    }
+    case 'flutter': n.fun = mx(n.fun + 4 * dt); if (Math.random() < dt * 0.5) tzBurst('heart', c.x, c.y - c.half * 2, 1); break;
+    case 'swim': c.swim = true; n.fun = mx(n.fun + 5 * dt); n.warmth = Math.max(0, n.warmth - 0.3 * dt); if (Math.random() < dt * 0.8) tzBurst('star', c.x + tzRnd(-10, 10), 318, 1); break;
+    case 'gaze': n.fun = mx(n.fun + 5 * dt); if (Math.random() < dt * 0.5) sndFx('chime', (c.x - 400) / 400); break;
+    case 'machine': {
+      c.act += dt;
+      if (c.act > 1.6) {
+        c.act = 0; c.skill = Math.min(1, c.skill + 0.035 * (c.learn / 0.06)); c.obey = Math.min(1, c.obey + 0.01); n.fun = mx(n.fun + 7);
+        tzBurst('star', 420, 290, 4); sndFx('tick', (420 - 400) / 400);
+      }
+      break;
+    }
+    case 'tramp': {
+      n.fun = mx(n.fun + 5 * dt);
+      if (c.ground && c.hopT <= 0) { c.vy = -7.5; c.ground = false; c.hopT = 0.55; c.laughUntil = Date.now() + 500; sndFx('pop', (c.x - 400) / 400); }
+      break;
+    }
+    case 'door': {
+      const r = c.room + g.dir;
+      if (r < 0 || r >= TZ_ROOMS.length) { c.goalT = 0; break; }
+      c.room = r; c.goal = null; c.goalT = 0;
+      if (r === TZ.cur) tzPlaceArrive(c, g.dir);
+      else { c.x = tzRnd(60, 740); c.y = TZ_FLOOR; c.lvl = 0; c.ground = true; c.vy = 0; c.sleeping = false; c.away = 0; if (TZ.sel === c.id) TZ.sel = 0; }
+      break;
+    }
+    default: c.goalT = 0; break;
+  }
+}
+/* pets in a room nobody is looking at: crude needs recovery and moving between rooms */
+function tzAway(c, dt) {
+  const n = c.needs, P = TZ_ROOMS[c.room].prov, mx = v => Math.min(100, v);
+  if (c.room === 0) {
+    if (TZ.room.food > 1 && n.food < 60) { n.food = mx(n.food + 6 * dt); TZ.room.food = Math.max(0, TZ.room.food - 1.5 * dt); }
+    if (TZ.room.water > 1 && n.water < 60) { n.water = mx(n.water + 7 * dt); TZ.room.water = Math.max(0, TZ.room.water - 1.5 * dt); }
+    if (TZ.room.lamp && n.warmth < 60) n.warmth = mx(n.warmth + 0.6 * dt);
+  } else {
+    if (n.food < 60) n.food = mx(n.food + P.food * dt);
+    if (n.water < 60) n.water = mx(n.water + P.water * dt);
+    if (n.warmth < 60 && (c.room >= 3 || TZ.night < 0.5)) n.warmth = mx(n.warmth + P.warmth * dt);
+  }
+  if (n.rest < 40) n.rest = mx(n.rest + P.rest * dt);
+  if (n.fun < 60) n.fun = mx(n.fun + P.fun * dt);
+  c.sleeping = false;
+  c.away = (c.away || 0) + dt;
+  if (c.away > 9) {
+    c.away = 0;
+    const want = c.stay > 0 ? (c.dest || 0) : 0;
+    if (want !== c.room) {
+      c.room += want > c.room ? 1 : -1;
+      c.x = tzRnd(60, 740);
+      if (c.room === TZ.cur) tzPlaceArrive(c, want > c.room - 1 ? 1 : -1);
+    }
+  }
+}
+
+/* ---------- clicks ---------- */
+function tzRoomClick(x, y) {
+  for (const d of tzDoors()) if (Math.abs(x - d.x) < 24 && y > TZ_FLOOR - 70 && y < TZ_FLOOR + 6) { tzViewRoom(d.to); return true; }
+  const r = TZ.cur;
+  if (r === 1) {
+    for (const p of TZ.garden) if (Math.abs(x - p.x) < 24 && y > 230) { p.g = Math.min(1, p.g + 0.2); tzBurst('star', p.x, TZ_FLOOR - 24, 6); sndFx('pop', (p.x - 400) / 400); return true; }
+  } else if (r === 2) {
+    if (x > 230 && x < 520 && y > 316) { for (let i = 0; i < 5; i++) tzBurst('star', x + tzRnd(-20, 20), 318, 1); sndFx('pop', (x - 400) / 400); TZ.fishScare = TZ.clock; return true; }
+  } else if (r === 3) {
+    if (y < 290 && x > 280 && x < 500) { sndFx('chime', (x - 400) / 400); tzBurst('star', x, 250, 6); return true; }
+  } else if (r === 4) {
+    if (Math.abs(x - 420) < 30 && y > 250) { sndFx('tick', 0); tzBurst('star', 420, 290, 8); return true; }
+  }
+  return false;
+}
+function tzRoomTool(x, y, now) {
+  if (TZ.tool === 'call') { TZ.callT = 8; TZ.callX = tzClamp(x, 20, 780); tzBurst('star', x, y, 6); for (const c of TZ.list) if (c.room === TZ.cur) { c.sleeping = false; c.goalT = 0; } }
+  else if (TZ.partyCool <= 0) { sndFx('joy', 0); TZ.partyCool = 6; tzBurst('conf', x, Math.min(y, 120), 60); for (const c of TZ.list) if (c.room === TZ.cur) { c.danceUntil = now + 4000; c.needs.fun = Math.min(100, c.needs.fun + 12); c.sleeping = false; } }
+}
+
+/* ---------- drawing ---------- */
+function tzRect(col, x, y, w, h) { b.fillStyle = col; b.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); }
+function tzSky(top, bot, bands) {
+  for (let i = 0; i < bands; i++) tzRect(i % 2 ? top : bot, 0, i * (TZ_FLOOR / bands), BW, TZ_FLOOR / bands + 1);
+}
+function tzSun(now, x0, y0, w) {
+  const sun = tzClamp((TZ.hour - 6) / 14, 0, 1);
+  if (TZ.night < 0.5) {
+    const sx = x0 + sun * w, sy = y0 + 40 - Math.sin(sun * Math.PI) * 40;
+    tzRect('#ffe58a', sx - 9, sy - 9, 18, 18); tzRect('#fff6c0', sx - 6, sy - 6, 12, 12);
+    const cl = (now / 300) % 900 - 100;
+    tzRect('#ffffff', cl, 50, 40, 9); tzRect('#ffffff', cl + 8, 43, 22, 9);
+    tzRect('#ffffff', (cl * 0.6 + 400) % 900 - 60, 90, 34, 8);
+  } else {
+    tzRect('#f4f1d0', 640, 40, 20, 20); tzRect('#26305e', 646, 38, 16, 16);
+    for (let i = 0; i < 24; i++) tzRect('#ffffff', (i * 97 + 31) % 800, (i * 53 + 11) % 200, 1 + (i % 2), 1 + (i % 2));
+  }
+}
+function tzRoomDraw(r, now) {
+  const B = b, night = TZ.night, nb = night > 0.5;
+  B.imageSmoothingEnabled = false;
+  if (r === 1) {
+    tzSky(nb ? '#26305e' : '#a9dcfb', nb ? '#2d3a70' : '#b8e4fc', 8); tzSun(now, 80, 20, 560);
+    tzRect(nb ? '#2e5a46' : '#8fd08a', 0, 210, BW, 120);
+    for (let i = 0; i < 6; i++) { tzRect(nb ? '#264c3a' : '#7cc47a', i * 150 - 20, 190 + (i % 2) * 8, 120, 40); }
+    tzRect(nb ? '#3f7a58' : '#6dbb6a', 0, TZ_FLOOR, BW, BH - TZ_FLOOR);
+    for (let x = 0; x < BW; x += 14) tzRect(nb ? '#356b4c' : '#5aa85a', x + (x % 28 ? 3 : 0), TZ_FLOOR + 6 + (x * 7 % 40), 3, 5);
+    for (let x = 30; x < BW; x += 52) { tzRect('#f2e4c8', x, 262, 8, 68); tzRect('#e0cca4', x, 262, 8, 4); }
+    tzRect('#f2e4c8', 0, 280, BW, 6); tzRect('#f2e4c8', 0, 304, BW, 6);
+    /* tree with branch ledge */
+    tzRect('#8a5a30', 640, 150, 26, 180); tzRect('#a8743e', 640, 150, 8, 180);
+    tzRect(nb ? '#2c6a44' : '#4faa58', 540, 90, 220, 90); tzRect(nb ? '#3a7a52' : '#63c06a', 560, 80, 180, 40);
+    tzRect('#8a5a30', 560, 270, 180, 7); tzRect('#b07a44', 560, 270, 180, 2);
+    /* sun patch, moss bed, birdbath */
+    if (!nb) { B.fillStyle = 'rgba(255,240,150,.35)'; B.beginPath(); B.ellipse(380, TZ_FLOOR - 2, 50, 8, 0, 0, 6.3); B.fill(); }
+    tzRect('#3f8a4c', 70, TZ_FLOOR - 10, 80, 10); tzRect('#5fae6a', 76, TZ_FLOOR - 14, 68, 6);
+    tzRect('#b9b3a6', 696, TZ_FLOOR - 26, 8, 26); tzRect('#cfc8bd', 680, TZ_FLOOR - 32, 40, 8); tzRect('#7cc0f0', 684, TZ_FLOOR - 34, 32, 4);
+    for (const p of TZ.garden) tzGardenPlant(p, now);
+  } else if (r === 2) {
+    tzSky(nb ? '#26305e' : '#a9dcfb', nb ? '#2d3a70' : '#b8e4fc', 8); tzSun(now, 80, 20, 560);
+    tzRect(nb ? '#2e5a46' : '#8fd08a', 0, 230, BW, 100);
+    tzRect(nb ? '#3f7a58' : '#6dbb6a', 0, TZ_FLOOR, BW, BH - TZ_FLOOR);
+    /* berry bush */
+    tzRect(nb ? '#2c6a44' : '#4faa58', 40, TZ_FLOOR - 40, 80, 40); tzRect(nb ? '#3a7a52' : '#63c06a', 50, TZ_FLOOR - 46, 60, 14);
+    for (let i = 0; i < 7; i++) tzRect('#e0486a', 48 + i * 10, TZ_FLOOR - 34 + (i * 7 % 22), 4, 4);
+    tzRect('#5fae6a', 130, TZ_FLOOR - 10, 60, 10);
+    /* dock */
+    tzRect('#9a6a3a', 560, 290, 200, 7); tzRect('#b98a52', 560, 290, 200, 2); tzRect('#7a4f28', 575, 297, 6, 33); tzRect('#7a4f28', 735, 297, 6, 33);
+    tzRect('#b9b3a6', 620, 276, 60, 14); tzRect('#cfc8bd', 626, 272, 48, 6);
+    /* reeds */
+    for (let i = 0; i < 8; i++) { tzRect('#4f8a3c', 222 + i * 6, TZ_FLOOR - 24 - (i % 3) * 7, 2, 28); tzRect('#7a5230', 221 + i * 6, TZ_FLOOR - 30 - (i % 3) * 7, 4, 8); }
+  } else if (r === 3) {
+    tzRect('#1b1730', 0, 0, BW, BH); for (let y = 0; y < TZ_FLOOR; y += 24) tzRect('#211c3a', 0, y, BW, 12);
+    for (let x = 0; x < BW; x += 36) { const h = 20 + (x * 13 % 50); tzRect('#2a2447', x, 0, 22, h); tzRect('#352d58', x + 4, h, 14, 8); tzRect('#2a2447', x + 8, h + 8, 6, 10); }
+    tzRect('#2b2543', 0, TZ_FLOOR, BW, BH - TZ_FLOOR); tzRect('#3a3260', 0, TZ_FLOOR, BW, 3);
+    /* crystal ledge */
+    tzRect('#4a4070', 300, 270, 180, 10); tzRect('#5c5190', 300, 270, 180, 3);
+    /* mushrooms, fire, pool, moss */
+    for (let i = 0; i < 4; i++) { const mx = 120 + i * 22; tzRect('#e8e0d0', mx, TZ_FLOOR - 14 - i % 2 * 6, 4, 14 + i % 2 * 6); tzRect(i % 2 ? '#d86a9a' : '#6ab8d8', mx - 6, TZ_FLOOR - 18 - i % 2 * 6, 16, 6); }
+    tzRect('#4a4a58', 600, TZ_FLOOR - 8, 64, 8); tzRect('#3a8fc8', 606, TZ_FLOOR - 10, 52, 4);
+    tzRect('#3f6a4c', 690, TZ_FLOOR - 10, 70, 10); tzRect('#5a8a68', 696, TZ_FLOOR - 14, 58, 6);
+    tzRect('#5a5a68', 376, TZ_FLOOR - 6, 50, 6);
+  } else if (r === 4) {
+    for (let x = 0; x < BW; x += 40) tzRect((x / 40) % 2 ? '#d9b98a' : '#d0ad7c', x, 0, 40, TZ_FLOOR);
+    tzRect('#b98e5c', 0, 300, BW, 22);
+    tzRect('#9a6f42', 0, TZ_FLOOR, BW, BH - TZ_FLOOR); for (let x = 0; x < BW; x += 60) tzRect('#855a30', x, TZ_FLOOR + 6, 2, BH);
+    tzRect('#b98e5c', 0, TZ_FLOOR, BW, 3);
+    /* window and pegboard */
+    tzRect('#fff4e2', 330, 40, 100, 80); tzRect(nb ? '#26305e' : '#a9dcfb', 336, 46, 88, 68); tzRect('#fff4e2', 378, 46, 4, 68);
+    tzRect('#7a5a38', 40, 50, 160, 90); for (let i = 0; i < 6; i++) { tzRect(['#c8c8d0', '#e0486a', '#4a9ae0', '#e8b020', '#6fd36f', '#c060c8'][i], 55 + i * 24, 62 + (i % 2) * 20, 8, 30); }
+    /* shelf ledge */
+    tzRect('#8a5a30', 520, 280, 180, 7); tzRect('#b07a44', 520, 280, 180, 2); tzRect('#7a4f28', 530, 287, 5, 12); tzRect('#7a4f28', 685, 287, 5, 12);
+    tzRect('#e0486a', 560, 262, 18, 18); tzRect('#4a9ae0', 590, 266, 14, 14); tzRect('#e8b020', 640, 264, 20, 16);
+    /* food dispenser, tap, radiator, trampoline, bed */
+    tzRect('#9ccff2', 92, TZ_FLOOR - 52, 36, 52); tzRect('#c98f5a', 98, TZ_FLOOR - 46, 24, 20); tzRect('#6a8ab0', 98, TZ_FLOOR - 10, 24, 10);
+    tzRect('#b9b3a6', 186, TZ_FLOOR - 56, 6, 56); tzRect('#b9b3a6', 186, TZ_FLOOR - 56, 22, 6); tzRect('#7cc0f0', 204, TZ_FLOOR - 50, 3, 8);
+    tzRect('#c0c0c8', 280, TZ_FLOOR - 28, 40, 28); for (let i = 0; i < 5; i++) tzRect('#9a9aa6', 284 + i * 7, TZ_FLOOR - 24, 3, 20);
+    tzRect('#3a3a48', 570, TZ_FLOOR - 12, 60, 4); tzRect('#e0486a', 570, TZ_FLOOR - 16, 60, 4); tzRect('#3a3a48', 574, TZ_FLOOR - 12, 4, 12); tzRect('#3a3a48', 622, TZ_FLOOR - 12, 4, 12);
+    tzRect('#ffb7cf', 706, TZ_FLOOR - 12, 68, 12); tzRect('#ffd2e0', 710, TZ_FLOOR - 15, 40, 3);
+    /* learning machine */
+    const blink = (now / 300 | 0) % 2;
+    tzRect(OUTLINE, 388, 252, 64, 78); tzRect('#7a8ad8', 390, 254, 60, 74); tzRect('#a8b4f0', 390, 254, 60, 6);
+    tzRect('#15191d', 398, 266, 44, 26); tzRect(blink ? '#6fd36f' : '#3fa03f', 402, 270, 36, 18);
+    const gx = 420 + Math.cos(now / 400) * 6, gy = 307 + Math.sin(now / 400) * 6;
+    tzRect('#ffd84a', gx - 3, gy - 3, 6, 6); tzRect('#ffd84a', 400, 300, 4, 4); tzRect('#e0486a', 436, 300, 4, 4);
+  }
+  /* doors */
+  for (const d of tzDoors()) {
+    const x = d.dir > 0 ? 770 : 6;
+    tzRect(OUTLINE, x - 1, TZ_FLOOR - 62, 26, 63); tzRect('#7a5a38', x, TZ_FLOOR - 60, 24, 60); tzRect('#9a7448', x + 3, TZ_FLOOR - 56, 18, 52); tzRect('#e8c84a', x + (d.dir > 0 ? 4 : 17), TZ_FLOOR - 30, 3, 3);
+  }
+}
+/* drawn after the pets: water, glow */
+function tzRoomOver(r, now) {
+  const B = b;
+  if (r === 2) {
+    const ph = now / 400;
+    B.fillStyle = TZ.night > 0.5 ? 'rgba(40,70,140,.62)' : 'rgba(90,170,230,.55)';
+    B.fillRect(230, 318, 290, BH - 318);
+    B.fillStyle = 'rgba(255,255,255,.45)';
+    for (let i = 0; i < 12; i++) B.fillRect(236 + ((i * 53 + Math.floor(ph * 8)) % 270), 320 + (i % 3) * 3, 10, 1);
+    /* fish */
+    const scare = TZ.fishScare && TZ.clock - TZ.fishScare < 1.5;
+    for (let i = 0; i < 4; i++) {
+      const fx = 250 + ((now / (scare ? 12 : 40) + i * 90) % 250), fy = 345 + (i * 13 % 30) + Math.sin(now / 500 + i) * 3, f = i % 2 ? 1 : 0;
+      B.fillStyle = i % 2 ? '#ff9a3a' : '#ffd84a'; B.fillRect(fx, fy, 12, 5); B.fillRect(fx - 4, fy - 1 + (Math.floor(now / 150) % 2), 4, 4);
+      B.fillStyle = '#15191d'; B.fillRect(fx + 9, fy + 1, 1, 1);
+    }
+    /* lily pads */
+    B.fillStyle = '#4faa58'; B.fillRect(300, 316, 14, 4); B.fillRect(440, 317, 12, 3); B.fillStyle = '#ff9fc4'; B.fillRect(305, 313, 4, 4);
+  } else if (r === 3) {
+    const pulse = 0.5 + 0.5 * Math.sin(now / 600);
+    const gem = (x, y, h, col, glow) => {
+      B.fillStyle = glow; for (let k = 3; k > 0; k--) { B.beginPath(); B.arc(x, y - h / 2, (16 + pulse * 6) * k / 3 * 1.6, 0, 6.3); B.fill(); }
+      B.fillStyle = col; B.fillRect(x - 3, y - h, 7, h); B.fillRect(x - 1, y - h - 4, 3, 4); B.fillStyle = 'rgba(255,255,255,.7)'; B.fillRect(x - 2, y - h + 2, 2, 5);
+    };
+    gem(330, 270, 22, '#6ae0f0', 'rgba(100,220,240,.12)'); gem(390, 270, 30, '#e070f0', 'rgba(220,110,240,.12)'); gem(450, 270, 20, '#6ae0f0', 'rgba(100,220,240,.12)');
+    gem(60, TZ_FLOOR, 26, '#e070f0', 'rgba(220,110,240,.10)'); gem(760, TZ_FLOOR - 10, 30, '#6ae0f0', 'rgba(100,220,240,.10)');
+    /* fire */
+    const fl = Math.floor(now / 120) % 3;
+    B.fillStyle = 'rgba(255,170,70,.06)'; for (let k = 4; k > 0; k--) { B.beginPath(); B.arc(400, TZ_FLOOR - 14, (70 + pulse * 6) * k / 4, 0, 6.3); B.fill(); }
+    B.fillStyle = '#e8602a'; B.fillRect(388, TZ_FLOOR - 18 - fl * 2, 24, 12 + fl * 2); B.fillStyle = '#ffb02a'; B.fillRect(393, TZ_FLOOR - 15 - fl, 14, 9 + fl); B.fillStyle = '#fff07a'; B.fillRect(397, TZ_FLOOR - 11, 6, 5);
+    /* drip */
+    const dy = (now / 6) % 120;
+    B.fillStyle = '#6ab8f0'; B.fillRect(630, 150 + dy, 3, 5);
+    B.fillStyle = 'rgba(20,16,40,.28)'; B.fillRect(0, 0, BW, BH);
+  } else if (r === 1) {
+    for (const q of TZ.bf) {
+      const w = Math.floor(now / 110) % 2;
+      B.fillStyle = '#ff9fc4'; B.fillRect(q.x - 4, q.y - (w ? 3 : 1), 4, 4); B.fillRect(q.x + 1, q.y - (w ? 3 : 1), 4, 4);
+      B.fillStyle = '#15191d'; B.fillRect(q.x, q.y, 1, 4);
+    }
+  }
+  /* door labels */
+  const names = tr('tz.rooms');
+  for (const d of tzDoors()) {
+    B.font = '8px Silkscreen, monospace'; B.textAlign = d.dir > 0 ? 'right' : 'left'; B.textBaseline = 'alphabetic';
+    B.fillStyle = 'rgba(40,30,60,.8)'; B.fillText(names[d.to], d.dir > 0 ? 792 : 8, TZ_FLOOR - 66);
+    B.textAlign = 'start';
+  }
+}
+function tzGardenPlant(p, now) {
+  const B = b, g = p.g, h = 8 + g * 38, x = p.x, y = TZ_FLOOR;
+  tzRect('#7a5230', x - 14, y - 6, 28, 6);
+  tzRect('#4f9a3c', x - 1, y - h, 3, h - 4);
+  if (g > 0.3) { tzRect('#63c06a', x - 10, y - h * 0.6, 10, 5); tzRect('#63c06a', x + 2, y - h * 0.75, 10, 5); }
+  if (g >= 1) {
+    for (let i = 0; i < 3; i++) { tzDisc(x - 9 + i * 9, y - h - 2 + (i % 2) * 4, 4, OUTLINE); tzDisc(x - 9 + i * 9, y - h - 2 + (i % 2) * 4, 3, ['#e8483a', '#ff9a3a', '#e8483a'][i]); }
+  } else if (g > 0.6) { tzRect('#ff9fc4', x - 4, y - h - 4, 8, 6); tzRect('#fff07a', x - 1, y - h - 2, 3, 3); }
+  else if (g > 0.15) tzRect('#7fcf8c', x - 3, y - h - 3, 7, 5);
 }
 </script>
 <script>'use strict';

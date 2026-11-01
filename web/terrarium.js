@@ -45,7 +45,7 @@ function tzResolve(m) {
 
 /* ---------- levels (shelves) and path finding ---------- */
 function tzBuildLevels() {
-  TZ.lv = TZ_BASE.concat(TZ.extra);
+  TZ.lv = TZ.cur > 0 ? TZ_ROOMS[TZ.cur].lv.slice() : TZ_BASE.concat(TZ.extra);
   const n = TZ.lv.length;
   TZ.reach = new Array(n).fill(false);
   TZ.reach[0] = true;
@@ -104,6 +104,7 @@ function tzMake(r, st) {
     hp: st && st.hp !== undefined ? st.hp : 100, stress: st && st.stress || 0, love: st && st.love || 0, breedCool: st && st.breedCool || 0,
     acc: st && st.acc || 0, skill: st && st.skill || 0, obey: st && st.obey || 0, vocab: st && st.vocab || {},
     x: st && st.x !== undefined ? tzClamp(st.x, 30, 770) : tzRnd(80, 720), y: TZ_FLOOR, vx: 0, vy: 0, face: 1, lvl: 0, ground: true, held: false,
+    room: st && st.room > 0 && st.room < 5 ? st.room | 0 : 0, dest: 0, stay: 0, swim: false,
     goal: null, goalT: 0, sleeping: false, bubble: null, bubbleUntil: 0, nextBubble: 0, heartUntil: 0, laughUntil: 0, danceUntil: 0, hopT: 0, moving: false, kick: 0, act: 0,
     px: 0, py: 0, pt: 0, stuck: 0, arrived: false
   };
@@ -187,6 +188,7 @@ async function tzReconcile() {
   }
   if (P) {
     if (P.room) Object.assign(TZ.room, P.room);
+    tzRestoreRooms(P);
     TZ.graves = Array.isArray(P.graves) ? P.graves.slice(-12) : [];
     if (P.savedAt) { const away = (Date.now() - P.savedAt) / 1000; if (away > 5) tzCatchUp(Math.min(away, 86400 * 3)); }
     TZ.persisted = null;
@@ -199,9 +201,9 @@ async function tzReconcile() {
 /* ---------- persistence ---------- */
 function tzSerialize() {
   return JSON.stringify({
-    v: 2, savedAt: Date.now(), room: TZ.room, graves: TZ.graves, extra: TZ.extra,
+    v: 2, savedAt: Date.now(), garden: TZ.garden, room: TZ.room, graves: TZ.graves, extra: TZ.extra,
     eggs: TZ.eggs.map(e => ({ id: e.id, x: e.x, left: e.left })),
-    list: TZ.list.map(c => ({ id: c.id, age: c.age, needs: c.needs, hp: c.hp, stress: c.stress, love: c.love, breedCool: c.breedCool, x: c.x, y: c.y, lvl: c.lvl, acc: c.acc, skill: c.skill, obey: c.obey, vocab: c.vocab, wi: c.wi }))
+    list: TZ.list.map(c => ({ id: c.id, age: c.age, needs: c.needs, hp: c.hp, stress: c.stress, love: c.love, breedCool: c.breedCool, x: c.x, y: c.y, lvl: c.lvl, acc: c.acc, skill: c.skill, obey: c.obey, vocab: c.vocab, wi: c.wi, room: c.room }))
   });
 }
 async function tzSave() {
@@ -227,6 +229,7 @@ function tzCatchUp(sec) {
     tzGeom(c);
   }
   for (const e of TZ.eggs) e.left -= sec;
+  tzGardenCatchUp(sec);
   TZ.room.food = Math.max(0, TZ.room.food - sec * 0.01);
   TZ.room.water = Math.max(0, TZ.room.water - sec * 0.01);
   tzHatch();
@@ -267,6 +270,28 @@ function tzFrame() {
   tzStep(ms / 1000);
   if (now - TZ.saveAt > 10000) tzSave();
 }
+function tzNeeds(c, dt, lightOn, alone) {
+  const n = c.needs, sl = c.sleeping, nt = c.room >= 3 ? 0 : TZ.night;
+  lightOn = tzLightOn(c);
+  c.age += dt;
+  if (c.stay > 0) c.stay -= dt;
+  n.food -= TZ_RATE.food * dt * (sl ? 0.4 : 1);
+  n.water -= TZ_RATE.water * dt * (sl ? 0.4 : 1);
+  n.warmth -= TZ_RATE.warmth * dt * (1 + nt);
+  if (lightOn) n.light = Math.min(100, n.light + 0.3 * dt); else n.light -= TZ_RATE.light * dt;
+  n.fun -= TZ_RATE.fun * dt * (sl ? 0 : 1);
+  n.rest += (sl ? 1.3 : -TZ_RATE.rest) * dt;
+  const near = TZ.list.some(o => o !== c && o.room === c.room && Math.abs(o.x - c.x) < 80 && Math.abs(o.y - c.y) < 70);
+  if (near) n.social += 1.2 * dt; else n.social -= TZ_RATE.social * (0.15 + 1.7 * c.soc) * (alone ? 1.6 : 1) * dt * (sl ? 0.3 : 1);
+  for (const q of TZ_NEEDS) n[q] = tzClamp(n[q], 0, 100);
+  const min = Math.min(n.food, n.water, n.warmth, n.light, n.fun, n.rest, n.social);
+  const w = n.social === min && min < 25 ? 0.5 : 1;
+  if (min < 25) c.stress = Math.min(100, c.stress + (25 - min) / 25 * 0.6 * dt * w); else if (min > 50) c.stress = Math.max(0, c.stress - 0.8 * dt);
+  if (n.food <= 0 || n.water <= 0 || n.warmth <= 0) { c.hp -= 0.4 * dt; c.cause = n.water <= 0 ? 'thirst' : n.food <= 0 ? 'hunger' : 'cold'; }
+  else if (c.stress > 80) { c.hp -= 0.1 * dt; c.cause = n.social < 15 ? 'lonely' : 'stress'; }
+  else if (tzMood(c) > 55) c.hp = Math.min(100, c.hp + 0.15 * dt);
+  c.breedCool = Math.max(0, c.breedCool - dt);
+}
 function tzStep(dt) {
   const k = Math.min(4, dt * 60);
   tzDay();
@@ -277,30 +302,15 @@ function tzStep(dt) {
   const lightOn = TZ.night < 0.5 || TZ.room.light, alone = tzAlone();
   for (const c of TZ.list) {
     if (c.held) continue;
-    const n = c.needs, sl = c.sleeping;
-    c.age += dt;
-    n.food -= TZ_RATE.food * dt * (sl ? 0.4 : 1);
-    n.water -= TZ_RATE.water * dt * (sl ? 0.4 : 1);
-    n.warmth -= TZ_RATE.warmth * dt * (1 + TZ.night);
-    if (lightOn) n.light = Math.min(100, n.light + 0.3 * dt); else n.light -= TZ_RATE.light * dt;
-    n.fun -= TZ_RATE.fun * dt * (sl ? 0 : 1);
-    n.rest += (sl ? 1.3 : -TZ_RATE.rest) * dt;
-    const near = TZ.list.some(o => o !== c && Math.abs(o.x - c.x) < 80 && Math.abs(o.y - c.y) < 70);
-    if (near) n.social += 1.2 * dt; else n.social -= TZ_RATE.social * (0.15 + 1.7 * c.soc) * (alone ? 1.6 : 1) * dt * (sl ? 0.3 : 1);
-    for (const q of TZ_NEEDS) n[q] = tzClamp(n[q], 0, 100);
-    const min = Math.min(n.food, n.water, n.warmth, n.light, n.fun, n.rest, n.social);
-    const w = n.social === min && min < 25 ? 0.5 : 1;
-    if (min < 25) c.stress = Math.min(100, c.stress + (25 - min) / 25 * 0.6 * dt * w); else if (min > 50) c.stress = Math.max(0, c.stress - 0.8 * dt);
-    if (n.food <= 0 || n.water <= 0 || n.warmth <= 0) { c.hp -= 0.4 * dt; c.cause = n.water <= 0 ? 'thirst' : n.food <= 0 ? 'hunger' : 'cold'; }
-    else if (c.stress > 80) { c.hp -= 0.1 * dt; c.cause = n.social < 15 ? 'lonely' : 'stress'; }
-    else if (tzMood(c) > 55) c.hp = Math.min(100, c.hp + 0.15 * dt);
-    c.breedCool = Math.max(0, c.breedCool - dt);
+    tzNeeds(c, dt, lightOn, alone);
+    if (c.room !== TZ.cur) { tzAway(c, dt); continue; }
     tzAI(c, dt, k);
     tzPhys(c, k);
     tzWatch(c, dt);
     if (c.age / TZ.GROW < 1 && ((c.age / TZ.GROW) * 20 | 0) !== (((c.age - dt) / TZ.GROW) * 20 | 0)) tzGeom(c);
   }
-  tzItems(k, dt);
+  if (TZ.cur === 0) tzItems(k, dt);
+  tzRoomsStep(dt);
   tzParts(k);
   for (const e of TZ.eggs) { e.left -= dt; e.vy += 0.25 * k; e.y = Math.min(TZ_FLOOR, e.y + e.vy * k); if (e.y >= TZ_FLOOR) e.vy = 0; }
   tzHatch();
@@ -349,12 +359,12 @@ async function tzBreeding() {
   const ad = TZ.list.filter(c => tzGrowth(c) >= TZ.ADULT && !c.sleeping && c.hp > 60 && !c.held);
   for (const c of ad) {
     let near = null;
-    for (const o of ad) if (o !== c && Math.abs(o.x - c.x) < 80 && Math.abs(o.y - c.y) < 60 && tzMood(c) > 60 && tzMood(o) > 60) { near = o; break; }
+    for (const o of ad) if (o !== c && o.room === c.room && Math.abs(o.x - c.x) < 80 && Math.abs(o.y - c.y) < 60 && tzMood(c) > 60 && tzMood(o) > 60) { near = o; break; }
     if (near) c.love = Math.min(100, c.love + 4); else c.love = Math.max(0, c.love - 1);
   }
   for (const c of ad) {
     if (c.love < 100 || c.breedCool > 0) continue;
-    const o = ad.find(q => q !== c && q.love >= 100 && q.breedCool <= 0 && Math.abs(q.x - c.x) < 80);
+    const o = ad.find(q => q !== c && q.room === c.room && q.love >= 100 && q.breedCool <= 0 && Math.abs(q.x - c.x) < 80);
     if (!o) continue;
     TZ.pending = true;
     const r = await tzCall({ type: 'tbreed', a: c.id, b: o.id });
@@ -376,6 +386,8 @@ async function tzBreeding() {
 /* ---------- behaviour ---------- */
 function tzSpot(x, lvl) { const L = TZ.lv[lvl] || TZ.lv[0]; return tzClamp(x, Math.max(L.x0, 0) + 12, Math.min(L.x1, 800) - 12); }
 function tzChoose(c) {
+  if (TZ.cur > 0) return tzChooseR(c);
+  { const tg = c.needs && Math.min(c.needs.food, c.needs.water, c.needs.warmth) > 30 ? tzTripGoal(c) : null; if (tg) return tg; }
   const n = c.needs, room = TZ.room, night = TZ.night, ps = TZ.reach;
   if (TZ.callT > 0 && c.obey + 0.3 > Math.random()) return { type: 'call', x: TZ.callX, lvl: TZ.callLvl, t: 6 };
   const tre = TZ.items.filter(i => i.type === 'treat' && i.ground).sort((a, b) => Math.abs(a.x - c.x) - Math.abs(b.x - c.x))[0];
@@ -401,6 +413,7 @@ function tzChoose(c) {
   }
   if (c.skill > 0.4 && n.food < 75 && ps[2]) opt.push([100 - n.food + 5, { type: 'puzzle', x: TZ_OBJ.puzzle, lvl: 2, t: 20 }]);
   if (opt.length) { opt.sort((a, b) => b[0] - a[0]); return opt[0][1]; }
+  if (Math.random() < 0.2 && Math.min(n.food, n.water, n.rest) > 50) { c.dest = 1 + ((Math.random() * 4) | 0); c.stay = tzRnd(60, 140); const tg = tzTripGoal(c); if (tg) return tg; }
   const cand = TZ.lv.map((L, i) => i).filter(i => TZ.reach[i]);
   const lv = Math.random() < 0.55 ? 0 : cand[(Math.random() * cand.length) | 0], L = TZ.lv[lv];
   return { type: 'wander', x: lv === 0 ? tzRnd(40, 760) : tzRnd(L.x0 + 15, L.x1 - 15), lvl: lv, t: tzRnd(3, 8) };
@@ -419,6 +432,8 @@ function tzAI(c, dt, k) {
   if (!g0 || c.goalT <= 0 || (g0.item && !TZ.items.includes(g0.item))) { c.goal = tzChoose(c); c.goalT = c.goal.t || 5; c.act = 0; }
   const g = c.goal;
   if (g.item) { g.x = g.item.x; g.lvl = tzLevelOf(g.item.y + (g.type === 'bubble' ? 30 : 0)); }
+  if (g.bf) g.x = g.bf.x;
+  c.swim = false;
   const arrived = tzGo(c, g.x, g.lvl, k);
   c.arrived = arrived || g.type === 'wander' && false;
   c.moving = !arrived || c.fly;
@@ -457,6 +472,7 @@ function tzAI(c, dt, k) {
       }
       break;
     }
+    default: tzUseR(c, g, dt); break;
   }
   c.kick -= dt;
 }
@@ -804,14 +820,14 @@ function tzSide(c, sel, now) {
 function tzRender() {
   sndAmbient('terra', TZ.night);
   const now = Date.now(), B = b;
-  tzRoom(now);
-  for (const e of TZ.eggs) {
+  if (TZ.cur) tzRoomDraw(TZ.cur, now); else tzRoom(now);
+  for (const e of TZ.cur ? [] : TZ.eggs) {
     const wob = e.left < 12 ? Math.sin(now / 60) * 1.5 : 0;
     B.fillStyle = OUTLINE; B.fillRect(e.x - 6 + wob, e.y - 17, 12, 17); B.fillRect(e.x - 4 + wob, e.y - 19, 8, 2);
     B.fillStyle = '#fff3d6'; B.fillRect(e.x - 5 + wob, e.y - 16, 10, 15); B.fillRect(e.x - 3 + wob, e.y - 18, 6, 2);
     B.fillStyle = `hsl(${(e.rec[5] || 0)},70%,80%)`; B.fillRect(e.x - 5 + wob, e.y - 9, 10, 3); B.fillRect(e.x - 2 + wob, e.y - 14, 3, 2);
   }
-  for (const i of TZ.items) {
+  for (const i of TZ.cur ? [] : TZ.items) {
     if (i.type === 'ball') { tzDisc(i.x, i.y, 6, OUTLINE); tzDisc(i.x, i.y, 5, '#ff9db8'); B.fillStyle = '#ffffff'; B.fillRect(Math.round(i.x) - 5, Math.round(i.y), 10, 2); tzDisc(i.x - 2, i.y - 3, 1, '#ffe0ea'); }
     else if (i.type === 'sbub') { tzDisc(i.x, i.y, 8, 'rgba(160,215,255,.55)'); tzDisc(i.x, i.y, 6, 'rgba(235,248,255,.5)'); B.fillStyle = 'rgba(255,255,255,.95)'; B.fillRect(Math.round(i.x) - 4, Math.round(i.y) - 4, 2, 2); }
     else if (i.type === 'plush') {
@@ -820,8 +836,9 @@ function tzRender() {
       B.fillStyle = '#ff8fae'; B.fillRect(Math.round(i.x) - 1, Math.round(i.y) + 1, 2, 2);
     } else { tzDisc(i.x, i.y, 5, OUTLINE); tzDisc(i.x, i.y, 4, '#e0a868'); B.fillStyle = '#8a5a30'; B.fillRect(Math.round(i.x) - 2, Math.round(i.y) - 1, 1, 1); B.fillRect(Math.round(i.x) + 1, Math.round(i.y), 1, 1); B.fillRect(Math.round(i.x) - 1, Math.round(i.y) + 2, 1, 1); }
   }
-  const order = TZ.list.slice().sort((p, q) => p.y - q.y);
-  for (const c of order) tzSide(c, c.id === TZ.sel, now);
+  const order = TZ.list.filter(c => c.room === TZ.cur).sort((p, q) => p.y - q.y);
+  for (const c of order) { const oy = c.y; if (c.swim) c.y += 7 + Math.sin(now / 300 + c.id) * 1.5; tzSide(c, c.id === TZ.sel, now); c.y = oy; }
+  if (TZ.cur) tzRoomOver(TZ.cur, now);
   for (const c of order) {
     const top = Math.round(c.y - c.half * 2 - 8);
     let key = null, word = null;
@@ -846,8 +863,8 @@ function tzRender() {
     else if (p.type === 'heart') { B.fillStyle = p.col; const x = Math.round(p.x), y = Math.round(p.y); B.fillRect(x - 2, y, 2, 2); B.fillRect(x + 1, y, 2, 2); B.fillRect(x - 2, y + 1, 5, 2); B.fillRect(x - 1, y + 3, 3, 1); }
     else { B.fillStyle = p.col; const x = Math.round(p.x), y = Math.round(p.y); B.fillRect(x, y - 1, 1, 3); B.fillRect(x - 1, y, 3, 1); }
   }
-  TZ.graves.slice(-4).forEach((q, i) => { const gx = 770 - i * 22; B.fillStyle = OUTLINE; B.fillRect(gx - 7, TZ_FLOOR - 17, 14, 17); B.fillStyle = '#cfc8d6'; B.fillRect(gx - 6, TZ_FLOOR - 16, 12, 16); B.fillStyle = '#9a93a3'; B.fillRect(gx - 1, TZ_FLOOR - 13, 2, 8); B.fillRect(gx - 3, TZ_FLOOR - 10, 6, 2); });
-  if (TZ.night > 0.05) { B.fillStyle = `rgba(20,24,70,${(TZ.room.light ? 0.12 : 0.36) * TZ.night})`; B.fillRect(0, 0, BW, BH); }
+  if (!TZ.cur) TZ.graves.slice(-4).forEach((q, i) => { const gx = 770 - i * 22; B.fillStyle = OUTLINE; B.fillRect(gx - 7, TZ_FLOOR - 17, 14, 17); B.fillStyle = '#cfc8d6'; B.fillRect(gx - 6, TZ_FLOOR - 16, 12, 16); B.fillStyle = '#9a93a3'; B.fillRect(gx - 1, TZ_FLOOR - 13, 2, 8); B.fillRect(gx - 3, TZ_FLOOR - 10, 6, 2); });
+  if (TZ.night > 0.05 && TZ.cur < 3) { B.fillStyle = `rgba(20,24,70,${(TZ.cur ? 0.3 : TZ.room.light ? 0.12 : 0.36) * TZ.night})`; B.fillRect(0, 0, BW, BH); }
   const tc = tzEl('terra').getContext('2d');
   tc.imageSmoothingEnabled = false;
   tc.drawImage(bufCanvas, 0, 0, BW * S, BH * S);
@@ -876,6 +893,7 @@ function tzXY(e) {
 function tzHit(x, y) {
   let hit = null, hd = 1e9;
   for (const c of TZ.list) {
+    if (c.room !== TZ.cur) continue;
     const d = Math.hypot(x - c.x, y - (c.y - c.half));
     if (d < c.half + c.halfW * 0.4 + 6 && d < hd) { hd = d; hit = c; }
   }
@@ -898,6 +916,7 @@ function tzDown(e) {
     tzPanel(true);
     return;
   }
+  if (TZ.cur) { if (!tzRoomClick(x, y) && (TZ.tool === 'call' || TZ.tool === 'party')) tzRoomTool(x, y, now); tzPanel(true); return; }
   const near = (ox, oy, w, h) => x >= ox - w && x <= ox + w && y >= oy - h && y <= oy + h;
   const bub = TZ.items.find(i => i.type === 'sbub' && Math.hypot(i.x - x, i.y - y) < 12);
   if (bub) { tzPop(bub, null); return; }
@@ -977,6 +996,7 @@ function tzInit() {
   };
   tzEl('tzRelease').onclick = () => { if (TZ.sel) tzRelease(TZ.sel); };
   window.addEventListener('beforeunload', () => { tzSave(); });
+  tzEl('tzRoom').addEventListener('click', e => { const bt = e.target.closest('[data-troom]'); if (bt) tzViewRoom(+bt.dataset.troom); });
   tzBuildLevels();
   tzLoad().then(() => { TZ.loaded = true; });
 }
@@ -1013,6 +1033,6 @@ function tzPanel(force) {
   const gr = TZ.graves.slice().reverse().map(q => `<tr><td class="l">${esc(q.name)} <span class="muted">${esc(t('tz.gen'))} ${q.gen}</span></td><td>${esc(tr('causes')[q.cause] || q.cause)}</td></tr>`).join('');
   setHtml(tzEl('tzGraves'), gr ? `<table>${gr}</table>` : `<div class="muted">-</div>`);
   const rm = TZ.room, yes = `<span class="yes">${esc(t('sel.yes'))}</span>`, no = `<span class="no">${esc(t('sel.no'))}</span>`;
-  setHtml(tzEl('tzRoom'), '<table>' + row(t('tz.bowlFood'), barHtml(rm.food / 100, '#c98f5a')) + row(t('tz.bowlWater'), barHtml(rm.water / 100, '#7cc0f0')) +
+  setHtml(tzEl('tzRoom'), tzNavHtml() + '<table>' + row(t('tz.bowlFood'), barHtml(rm.food / 100, '#c98f5a')) + row(t('tz.bowlWater'), barHtml(rm.water / 100, '#7cc0f0')) +
     row(t('tz.lamp'), rm.lamp ? yes : no) + row(t('tz.light'), rm.light ? yes : no) + row(t('tz.levels'), TZ.lv.length - 1) + '</table>');
 }
