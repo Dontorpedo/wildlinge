@@ -1118,6 +1118,20 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
         c.gut = 0.0;
     }
 
+    // friendly contact: calm kin nuzzle each other
+    if !c.asleep && c.fear < 0.15 && c.health > 40.0 {
+        if let Some(oth) = &other {
+            if let Some(oi) = oth.idx {
+                let oc = &w.creatures[oi];
+                if !oc.dead && !oc.asleep && oth.md < 0.35 && oth.d < size + oth.size + 12.0 && c.id < oc.id && w.rng.chance(0.006) {
+                    let (mx, my) = ((c.x + oc.x) * 0.5, (c.y + oc.y) * 0.5);
+                    w.body_bubble(mx, my, "b.nuzzle");
+                    c.d[3] = (c.d[3] - 0.05).max(0.0);
+                }
+            }
+        }
+    }
+
     // attacking
     if o[2] > 0.0 && meat_eff > 0.3 {
         if let Some(oth) = &other {
@@ -1130,6 +1144,8 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
                         let oc = &mut w.creatures[oi];
                         oc.health -= dmg;
                         oc.stress[0] += dmg;
+                        let (hx, hy) = (oc.x, oc.y);
+                        w.bubbles.push(Bubble { x: hx, y: hy, text: "b.hit".to_string(), kind: 2 });
                         let ra = (c.y - oc.y).atan2(c.x - oc.x) - oc.dir;
                         oc.stress[4] += ra.cos();
                         oc.stress[5] += ra.sin();
@@ -1269,6 +1285,11 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
             }
         });
         let mut child = new_child(w, c, mate);
+        if let Some(mi) = mate {
+            let (mx, my) = (w.creatures[mi].x, w.creatures[mi].y);
+            w.body_bubble((c.x + mx) * 0.5, (c.y + my) * 0.5, "b.love");
+        }
+        w.body_bubble(c.x, c.y, "b.born");
         let give = c.energy * 0.4;
         c.energy -= give + c.energy * 0.1;
         child.energy = give.min(child.max_e());

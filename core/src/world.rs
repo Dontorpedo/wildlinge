@@ -940,6 +940,7 @@ impl World {
         }
         c.dead = true;
         c.cause = cause.to_string();
+        self.bubbles.push(Bubble { x: c.x, y: c.y, text: format!("b.death|{}|{}", c.id, cause), kind: 2 });
         *self.deaths.entry(cause.to_string()).or_insert(0) += 1;
         let s = c.size();
         self.add_food(c.x, c.y, s * s * 1.2 + c.energy * 0.5, true, 2);

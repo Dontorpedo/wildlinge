@@ -98,7 +98,8 @@ function sndSay(text, pan, mood) {
 function sndFx(kind, pan) {
   if (!SND.on || !SND.ctx || SND.ctx.state !== 'running') return;
   const c = SND.ctx, now = c.currentTime;
-  if (SND.cool[kind] && now - SND.cool[kind] < 0.25) return;
+  const cd = kind === 'hit' ? 0.12 : kind === 'death' || kind === 'love' || kind === 'born' ? 0.35 : 0.25;
+  if (SND.cool[kind] && now - SND.cool[kind] < cd) return;
   SND.cool[kind] = now;
   const p = pan || 0;
   switch (kind) {
@@ -109,6 +110,11 @@ function sndFx(kind, pan) {
     case 'gut': sndSyl(now, { f0: 130, f1: 90, dur: 0.3, amp: 0.12, f: [300, 500], pan: p, type: 'sawtooth' }); break;
     case 'need': sndSyl(now, { f0: 440, f1: 330, dur: 0.14, amp: 0.09, f: [800, 1500], pan: p, type: 'triangle' }); sndSyl(now + 0.17, { f0: 440, f1: 300, dur: 0.16, amp: 0.09, f: [800, 1500], pan: p, type: 'triangle' }); break;
     case 'chime': { const f = 523.25 * Math.pow(2, SND_PENT[(Math.random() * 5) | 0] / 12 + (Math.random() < 0.4 ? 1 : 0)); sndNote(now, f, 1.8, 0.08, 'sine'); break; }
+    case 'love': [659.25, 783.99, 987.77, 1318.5].forEach((f, i) => sndNote(now + i * 0.13, f, 1.1, 0.07, 'triangle')); sndSyl(now, { f0: 520, f1: 760, dur: 0.18, amp: 0.07, f: [900, 2200], pan: p, type: 'triangle' }); break;
+    case 'nuzzle': sndSyl(now, { f0: 340, f1: 420, dur: 0.22, amp: 0.07, f: [500, 1100], pan: p, type: 'triangle' }); sndSyl(now + 0.2, { f0: 400, f1: 470, dur: 0.2, amp: 0.06, f: [500, 1100], pan: p, type: 'triangle' }); break;
+    case 'born': [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => sndNote(now + i * 0.07, f, 0.9, 0.06, 'sine')); break;
+    case 'hit': sndSyl(now, { f0: 220, f1: 90, dur: 0.12, amp: 0.15, f: [300, 900], pan: p, type: 'square' }); break;
+    case 'death': [440, 392, 329.63, 261.63].forEach((f, i) => sndNote(now + i * 0.28, f, 1.6, 0.06, 'sine')); sndSyl(now, { f0: 330, f1: 200, dur: 0.5, amp: 0.05, f: [450, 800], pan: p, type: 'triangle' }); break;
     case 'pop': sndSyl(now, { f0: 900, f1: 1800, dur: 0.05, amp: 0.12, f: [1200, 3000], pan: p, type: 'sine' }); break;
     case 'tick': sndSyl(now, { f0: 1000, f1: 1000, dur: 0.03, amp: 0.05, f: [1500, 2500], pan: p, type: 'sine' }); break;
   }

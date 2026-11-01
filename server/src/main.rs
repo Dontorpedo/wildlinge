@@ -15,7 +15,7 @@ use wildlinge_core::api;
 use wildlinge_core::world::World;
 
 const KRAFT_MAX: f32 = 100.0;
-const KRAFT_REGEN: f32 = 0.8;
+const KRAFT_REGEN: f32 = 1.6;
 const MAX_CLIENTS: usize = 80;
 const MAX_STORES: usize = 4000;
 const MIN_WILD: usize = 200;

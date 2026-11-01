@@ -337,7 +337,9 @@ function tzHatch() {
     const c = tzMake({ id: e.id, name: e.name, gen: e.gen, rec: e.rec, growth: 0, children: 0, learn: e.learn, cur: e.cur, soc: e.soc }, { age: 0, x: e.x });
     c.heartUntil = Date.now() + 2500;
     TZ.list.push(c);
-    tzBurst('star', c.x, c.y - c.half, 10);
+    tzBurst('star', c.x, c.y - c.half, 14);
+    tzBurst('heart', c.x, c.y - c.half * 2, 4);
+    sndFx('born', (c.x - 400) / 400);
     toast(t('tz.hatched', c.name));
   }
   TZ.eggs = keep;
@@ -347,6 +349,9 @@ async function tzDeaths() {
     if (c.hp > 0) continue;
     TZ.list = TZ.list.filter(q => q.id !== c.id);
     if (TZ.sel === c.id) TZ.sel = 0;
+    TZ.parts.push({ type: 'ghost', x: c.x, y: c.y - c.half * 2, vx: 0, vy: -0.35, life: 150, col: '#f2f6ff' });
+    tzBurst('star', c.x, c.y - c.half, 6);
+    sndFx('death', (c.x - 400) / 400);
     TZ.graves.push({ name: c.name, gen: c.gen, cause: c.cause || 'stress', age: Math.round(c.age) });
     if (TZ.graves.length > 12) TZ.graves.shift();
     toast(t('tz.died', c.name, tr('causes')[c.cause] || c.cause));
@@ -360,7 +365,7 @@ async function tzBreeding() {
   for (const c of ad) {
     let near = null;
     for (const o of ad) if (o !== c && o.room === c.room && Math.abs(o.x - c.x) < 80 && Math.abs(o.y - c.y) < 60 && tzMood(c) > 60 && tzMood(o) > 60) { near = o; break; }
-    if (near) c.love = Math.min(100, c.love + 4); else c.love = Math.max(0, c.love - 1);
+    if (near) { c.love = Math.min(100, c.love + 4); if (Math.random() < 0.12) { tzBurst('heart', (c.x + near.x) / 2, c.y - c.half * 2, 2); sndFx('nuzzle', (c.x - 400) / 400); } } else c.love = Math.max(0, c.love - 1);
   }
   for (const c of ad) {
     if (c.love < 100 || c.breedCool > 0) continue;
@@ -375,7 +380,9 @@ async function tzBreeding() {
       TZ.eggs.push({ id: r.id, name: r.name, gen: r.gen, rec: Array.from(r.rec), learn: r.learn, cur: r.cur, soc: r.soc, x: (c.x + o.x) / 2, y: Math.min(c.y, o.y) - 20, vy: 0, left: 90 });
       c.kids++; o.kids++;
       c.heartUntil = o.heartUntil = Date.now() + 2500;
-      tzBurst('heart', (c.x + o.x) / 2, c.y - c.half * 2, 6);
+      tzBurst('heart', (c.x + o.x) / 2, c.y - c.half * 2, 12);
+      tzBurst('star', (c.x + o.x) / 2, c.y - c.half * 2, 8);
+      sndFx('love', (c.x - 400) / 400);
       toast(t('tz.egg'));
       tzSave();
     }
@@ -860,6 +867,7 @@ function tzRender() {
   }
   for (const p of TZ.parts) {
     if (p.type === 'conf') { B.fillStyle = p.col; B.fillRect(Math.round(p.x), Math.round(p.y), 2, 2); }
+    else if (p.type === 'ghost') { const x = Math.round(p.x + Math.sin(p.life * 0.15) * 3), y = Math.round(p.y); B.globalAlpha = Math.min(1, p.life / 60); B.fillStyle = OUTLINE; B.fillRect(x - 6, y - 7, 12, 15); B.fillStyle = p.col; B.fillRect(x - 5, y - 6, 10, 12); B.fillRect(x - 5, y + 6, 3, 3); B.fillRect(x - 1, y + 6, 3, 3); B.fillRect(x + 3, y + 6, 3, 3); B.fillStyle = '#34405a'; B.fillRect(x - 3, y - 3, 2, 3); B.fillRect(x + 1, y - 3, 2, 3); B.globalAlpha = 1; }
     else if (p.type === 'heart') { B.fillStyle = p.col; const x = Math.round(p.x), y = Math.round(p.y); B.fillRect(x - 2, y, 2, 2); B.fillRect(x + 1, y, 2, 2); B.fillRect(x - 2, y + 1, 5, 2); B.fillRect(x - 1, y + 3, 3, 1); }
     else { B.fillStyle = p.col; const x = Math.round(p.x), y = Math.round(p.y); B.fillRect(x, y - 1, 1, 3); B.fillRect(x - 1, y, 3, 1); }
   }

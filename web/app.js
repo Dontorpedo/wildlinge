@@ -24,7 +24,7 @@ const cam = { x: WORLD_W / 2, y: WORLD_H / 2, zi: 4 };
 let carryId = 0, carryWait = false, serverMode = false, srvWs = null, srvChain = Promise.resolve(), srvMs = 125, srvAt = 0, srvRetry = 0;
 let sendHost = () => {}, worker = null, mode = 'worker', labWorker = null;
 let viewMode = 'wild';
-let relIds = new Set(), frame = null, panel = null, tool = 'select', running = true, selId = 0, activeTab = 'world';
+let kraftV = 100, lastAct = null, ptrB = null, relIds = new Set(), frame = null, panel = null, tool = 'select', running = true, selId = 0, activeTab = 'world';
 let showSoil = false, showScent = false, showSense = false, showBubbles = true, showMeaning = true, follow = false;
 let mapInfo = null, terrainSummer = null, terrainWinter = null, miniBase = null;
 let bubbles = [], animT = 0, lastView = '', toastTimer = null, centered = false, gotInit = false, welcomeOk = false;
@@ -134,6 +134,9 @@ function initToolIcons() {
   }
 }
 initToolIcons();
+const TOOL_COST = { stroke: 3, scold: 5, say: 4, teach: 8, food: 15, mirror: 30, fertilize: 20, shelter: 25, wall: 25, carry: '10+' };
+function markCosts() { for (const bt of document.querySelectorAll('#tools button[data-tool]')) { const c = TOOL_COST[bt.dataset.tool]; if (c !== undefined) bt.dataset.cost = c; } }
+markCosts();
 
 /* ---------- static texts ---------- */
 function applyI18n() {
@@ -235,10 +238,22 @@ function render() {
     if (big && e > 16 && sf > 0.35 && ((fd[i] * 13 + fd[i + 1] * 7) | 0) % 3 === 0) { b.fillStyle = pc[2]; b.fillRect(px, py - 1, 1, 1); }
   }
   for (const m of meta.mirrors || []) {
-    const px = rp((m[0] - ox) / wpp), py0 = rp((m[1] - 50 - oy) / wpp), h = Math.max(3, rp(100 / wpp));
-    b.fillStyle = OUTLINE; b.fillRect(px - 2, py0 - 1, 4, h + 2);
-    b.fillStyle = '#c9d6e3'; b.fillRect(px - 1, py0, 2, h);
-    b.fillStyle = '#ffffff'; b.fillRect(px - 1, py0 + 1, 1, Math.max(1, h >> 2));
+    const px = rp((m[0] - ox) / wpp), pyb = rp((m[1] + 8 - oy) / wpp), w = Math.max(9, rp(40 / wpp)) | 1, h = Math.max(14, rp(64 / wpp));
+    if (px < -w || pyb < -h || px > BW + w || pyb > BH + h * 2) continue;
+    const top = pyb - h, cx = px, rx = w / 2, ry = h / 2, cyy = top + ry;
+    b.fillStyle = 'rgba(0,0,0,.28)'; b.fillRect(px - rx, pyb - 1, w, 2);
+    b.fillStyle = OUTLINE; b.fillRect(px - 2, pyb - Math.max(3, h * 0.12), 4, Math.max(3, h * 0.12));
+    b.fillStyle = '#8a6a38'; b.fillRect(px - 1, pyb - Math.max(3, h * 0.12), 2, Math.max(3, h * 0.12));
+    for (let yy = 0; yy < h * 0.88; yy++) {
+      const dy = (yy - ry * 0.88) / (ry * 0.88), half = Math.sqrt(Math.max(0, 1 - dy * dy)) * rx;
+      if (half < 1) continue;
+      const hw = Math.round(half);
+      b.fillStyle = OUTLINE; b.fillRect(cx - hw - 1, top + yy, hw * 2 + 2, 1);
+      b.fillStyle = '#d9b25a'; b.fillRect(cx - hw, top + yy, hw * 2, 1);
+      if (hw > 2) { b.fillStyle = yy < h * 0.4 ? '#c9ecfa' : '#9fd0ea'; b.fillRect(cx - hw + 1, top + yy, hw * 2 - 2, 1); }
+    }
+    const gl = ((animT * 0.6) % 60) / 60;
+    b.fillStyle = '#ffffff'; for (let k = 0; k < Math.max(2, h * 0.25); k++) { const gx = cx - rx * 0.5 + k + gl * rx * 0.8, gy = top + h * 0.15 + k * 2; if (gx < cx + rx - 1) b.fillRect(gx, gy, 1, 2); }
   }
   gst.showSense = showSense;
   const ordered = [];
@@ -247,6 +262,7 @@ function render() {
   crHits.length = 0;
   for (const o of ordered) drawCreature(cs, o, false, wpp, ox, oy, gst);
   if (selO >= 0) drawCreature(cs, selO, true, wpp, ox, oy, gst);
+  drawGhostBodies(ox, oy, wpp);
   if (relIds.size) {
     for (let o = 0; o + CS_STRIDE <= cs.length; o += CS_STRIDE) if (relIds.has(cs[o])) {
       const mx = rp((cs[o + 1] - ox) / wpp), my = rp((cs[o + 2] - oy) / wpp) - clamp(rp(cs[o + 4] / wpp * 1.8), 1, 26) - 8 - (Math.sin(animT * 0.1) > 0 ? 1 : 0);
@@ -262,6 +278,8 @@ function render() {
   if (showSoil && frame && frame.meta && frame.meta.sl) drawSoil(frame.meta.sl, ox, oy, wpp);
   if (showScent && frame && frame.meta && frame.meta.sc) drawScent(frame.meta.sc, ox, oy, wpp);
   if (frame && frame.meta && frame.meta.stc) drawStructs(frame.meta.stc, ox, oy, wpp);
+  drawPfx(ox, oy, wpp);
+  drawCarry(cs, ox, oy, wpp);
   if (frame && frame.meta && frame.meta.fx) drawFx(frame.meta.fx, ox, oy, wpp);
   drawBubbles(ox, oy, wpp);
   drawHover();
@@ -340,6 +358,173 @@ function drawStructs(st, ox, oy, wpp) {
       ctx.fillStyle = '#8a6a38'; ctx.fillRect(x - w, y - h * 0.7, w * 2, u * 1.6); ctx.fillRect(x - w, y - h * 0.3, w * 2, u * 1.6);
     }
     ctx.globalAlpha = 1;
+  }
+}
+function actFeedback(o) {
+  if (!o || !lastAct) return;
+  const k = o.k, a = lastAct;
+  if (k === 't.food') { pfx.push({ type: 'drop', x: a.x, y: a.y, at: performance.now(), seed: Math.random() * 6.28 }); sndFx('pop', 0); }
+  else if (k === 't.say' || k === 't.teach') {
+    const w = (a.tokens || []).join(' ');
+    if (w) { bubbles.push({ x: a.x, y: a.y, text: w, kind: 1, until: performance.now() + 2600 }); sndSay(w, 0, 0); }
+    pfx.push({ type: 'wave', x: a.x, y: a.y, at: performance.now(), seed: 0 });
+  } else if (k === 't.mirror') { pfx.push({ type: 'glint', x: a.x, y: a.y - 20, at: performance.now(), seed: Math.random() * 6.28 }); sndFx('chime', 0); }
+  else if (k === 't.built' || k === 't.fert') { pfx.push({ type: k === 't.built' ? 'born' : 'glint', x: a.x, y: a.y, at: performance.now(), seed: Math.random() * 6.28 }); sndFx('pop', 0); }
+}
+/* ---------- relationship and death effects: hearts, sparkles, hits, ghosts ---------- */
+const PFX_KEYS = /^b\.(love|born|nuzzle|hit|death)/;
+let pfx = [];
+function addPfx(q, old, silent) {
+  const now = performance.now(), parts = String(q.text).split('|'), type = parts[0].slice(2);
+  if (pfx.length > 140) pfx.splice(0, 40);
+  const e = { type, x: q.x, y: q.y, at: now, seed: Math.random() * 6.28 };
+  if (type === 'death') {
+    const id = +parts[1]; e.cause = parts[2] || '';
+    const cs = old && old.cs;
+    if (cs) for (let o = 0; o + CS_STRIDE <= cs.length; o += CS_STRIDE) if (cs[o] === id) { e.rec = Float32Array.from(cs.subarray(o, o + CS_STRIDE)); break; }
+  }
+  pfx.push(e);
+  if (viewMode !== 'terra' && !silent) {
+    const hw = BW * ZOOMS[cam.zi] / 2, dx = (q.x - cam.x) / hw;
+    if (Math.abs(dx) < 1.1 && Math.abs(q.y - cam.y) < hw * 0.6) sndFx(type, Math.max(-1, Math.min(1, dx)));
+  }
+}
+const PFX_LIFE = { drop: 4200, wave: 1400, glint: 1600, love: 2600, born: 1800, nuzzle: 1500, hit: 500, death: 7000 };
+function heartPath(g, x, y, r) {
+  g.beginPath();
+  g.moveTo(x, y + r * 0.9);
+  g.bezierCurveTo(x - r * 1.5, y - r * 0.1, x - r * 0.7, y - r * 1.2, x, y - r * 0.4);
+  g.bezierCurveTo(x + r * 0.7, y - r * 1.2, x + r * 1.5, y - r * 0.1, x, y + r * 0.9);
+  g.closePath();
+}
+function drawGhostBodies(ox, oy, wpp) {
+  const now = performance.now();
+  for (const e of pfx) {
+    if (e.type !== 'death' || !e.rec) continue;
+    const age = now - e.at;
+    if (age > 1800) continue;
+    const k = age / 1800, rec = e.rec.slice();
+    rec[2] -= k * 14 * wpp; rec[12] = 0;
+    b.globalAlpha = Math.max(0, 0.85 * (1 - k));
+    const n = crHits.length;
+    drawCreature(rec, 0, false, wpp, ox, oy, gst);
+    crHits.length = n;
+    b.globalAlpha = 1;
+  }
+}
+function drawPfx(ox, oy, wpp) {
+  const now = performance.now();
+  pfx = pfx.filter(e => now - e.at < (PFX_LIFE[e.type] || 2000));
+  for (const e of pfx) {
+    const age = now - e.at, life = PFX_LIFE[e.type], k = age / life;
+    const x = (e.x - ox) / wpp * S, y = (e.y - oy) / wpp * S;
+    if (x < -80 || y < -80 || x > VIEW_W + 80 || y > VIEW_H + 80) continue;
+    const u = Math.max(1.8, 2 / wpp * S), a = Math.max(0, 1 - k);
+    if (e.type === 'drop') {
+      const fall = Math.min(1, age / 450), glow = age > 450 ? 0.5 + 0.5 * Math.sin(age / 180) : 0, fade = age > 3200 ? (4200 - age) / 1000 : 1;
+      ctx.globalAlpha = Math.max(0, fade) * 0.55 * glow; ctx.strokeStyle = '#ffe28a'; ctx.lineWidth = Math.max(2, u);
+      ctx.beginPath(); ctx.arc(x, y, 22 * u, 0, 6.283); ctx.stroke();
+      ctx.globalAlpha = Math.max(0, fade);
+      for (let j = 0; j < 8; j++) {
+        const ang = e.seed + j * 0.785, rr = (j % 2 ? 9 : 15) * u, fx = x + Math.cos(ang) * rr, fy = y + Math.sin(ang) * rr * 0.7 - (1 - fall) * (60 + j * 4) * u - (age > 450 ? Math.abs(Math.sin(age / 90 - j)) * Math.max(0, 1 - (age - 450) / 700) * 5 * u : 0);
+        ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(fx, y + Math.sin(ang) * rr * 0.7 + 2 * u, 3 * u, 1.2 * u, 0, 0, 6.283); ctx.fill();
+        ctx.fillStyle = '#e8453c'; ctx.strokeStyle = '#4a0f0c'; ctx.lineWidth = Math.max(1, u * 0.6);
+        ctx.beginPath(); ctx.arc(fx, fy, 3.4 * u, 0, 6.283); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#5cc24a'; ctx.fillRect(fx - 0.5 * u, fy - 5.2 * u, 2.4 * u, 2 * u);
+        ctx.fillStyle = '#ffd0c8'; ctx.fillRect(fx - 1.6 * u, fy - 1.8 * u, 1.2 * u, 1.2 * u);
+      }
+      ctx.globalAlpha = 1;
+    } else if (e.type === 'wave') {
+      for (let j = 0; j < 3; j++) {
+        const kk = Math.max(0, Math.min(1, (age - j * 220) / 900)); if (kk <= 0 || kk >= 1) continue;
+        ctx.globalAlpha = 0.7 * (1 - kk); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(2, u);
+        ctx.beginPath(); ctx.arc(x, y, (6 + kk * 40) * u, 0, 6.283); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    } else if (e.type === 'glint') {
+      for (let j = 0; j < 6; j++) {
+        const ang = e.seed + j * 1.047, kk = Math.min(1, age / 1200), rr = (6 + kk * 22) * u;
+        ctx.globalAlpha = 1 - kk; ctx.fillStyle = '#e8f6ff';
+        const cx = x + Math.cos(ang) * rr, cy = y + Math.sin(ang) * rr, q = 3 * u * (1 - kk * 0.5);
+        ctx.fillRect(cx - q, cy - 0.5 * u, q * 2, u); ctx.fillRect(cx - 0.5 * u, cy - q, u, q * 2);
+      }
+      ctx.globalAlpha = 1;
+    } else if (e.type === 'love' || e.type === 'nuzzle') {
+      const n = e.type === 'love' ? 7 : 3;
+      for (let j = 0; j < n; j++) {
+        const kk = Math.max(0, Math.min(1, (age - j * (e.type === 'love' ? 160 : 220)) / (life * 0.7)));
+        if (kk <= 0 || kk >= 1) continue;
+        const hx = x + Math.sin(e.seed + j * 2.3 + kk * 5) * 10 * u * (1 + kk), hy = y - kk * 34 * u - 6 * u;
+        const r = (e.type === 'love' ? 5.5 : 3.8) * u * (0.8 + 0.4 * Math.sin(kk * 9 + j));
+        ctx.globalAlpha = Math.min(1, (1 - kk) * 1.6);
+        ctx.fillStyle = j % 3 === 0 ? '#ff5d8f' : j % 3 === 1 ? '#ff8fb1' : '#ffc2d6';
+        ctx.strokeStyle = 'rgba(120,20,50,.7)'; ctx.lineWidth = Math.max(1, u * 0.6);
+        heartPath(ctx, hx, hy, r); ctx.fill(); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    } else if (e.type === 'born') {
+      for (let j = 0; j < 8; j++) {
+        const ang = e.seed + j * 0.785, rr = (4 + k * 26) * u;
+        ctx.globalAlpha = a;
+        ctx.fillStyle = j % 2 ? '#fff6a0' : '#ffd84a';
+        const q = Math.max(2, 2.4 * u * (1 - k * 0.5));
+        ctx.save(); ctx.translate(x + Math.cos(ang) * rr, y + Math.sin(ang) * rr * 0.8 - k * 8 * u); ctx.rotate(Math.PI / 4); ctx.fillRect(-q, -q, q * 2, q * 2); ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    } else if (e.type === 'hit') {
+      ctx.globalAlpha = a; ctx.strokeStyle = '#fff2a0'; ctx.lineWidth = Math.max(2, u);
+      for (let j = 0; j < 6; j++) { const ang = e.seed + j * 1.047, r0 = (3 + k * 5) * u, r1 = (8 + k * 12) * u; ctx.beginPath(); ctx.moveTo(x + Math.cos(ang) * r0, y + Math.sin(ang) * r0); ctx.lineTo(x + Math.cos(ang) * r1, y + Math.sin(ang) * r1); ctx.stroke(); }
+      ctx.globalAlpha = 1;
+    } else if (e.type === 'death') {
+      const eaten = e.cause === 'eaten';
+      /* soul: small translucent wisp that rises and sways */
+      const sk = Math.min(1, age / 3400);
+      if (sk < 1 && !eaten) {
+        const sx = x + Math.sin(sk * 9 + e.seed) * 6 * u, sy = y - 8 * u - sk * 46 * u, r = 6 * u;
+        ctx.globalAlpha = 0.8 * (1 - sk);
+        ctx.fillStyle = '#f2f6ff';
+        ctx.beginPath(); ctx.arc(sx, sy, r, Math.PI, 0); ctx.lineTo(sx + r, sy + r * 1.3);
+        ctx.lineTo(sx + r * 0.5, sy + r * 0.8); ctx.lineTo(sx, sy + r * 1.3); ctx.lineTo(sx - r * 0.5, sy + r * 0.8); ctx.lineTo(sx - r, sy + r * 1.3); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#34405a'; ctx.fillRect(sx - r * 0.5, sy - r * 0.2, r * 0.3, r * 0.4); ctx.fillRect(sx + r * 0.2, sy - r * 0.2, r * 0.3, r * 0.4);
+        ctx.globalAlpha = 1;
+      }
+      if (eaten) {
+        for (let j = 0; j < 7; j++) {
+          const kk = Math.min(1, age / 1200), ang = e.seed + j * 0.9;
+          ctx.globalAlpha = 1 - kk; ctx.fillStyle = j % 2 ? '#f2e6d0' : '#c9b79a';
+          ctx.beginPath(); ctx.arc(x + Math.cos(ang) * kk * 16 * u, y + Math.sin(ang) * kk * 10 * u - kk * 6 * u, 3 * u * (1 - kk * 0.4), 0, 6.283); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      } else {
+        /* grave marker stays a few seconds */
+        const ga = age < 1400 ? age / 1400 : Math.min(1, (life - age) / 1600);
+        ctx.globalAlpha = Math.max(0, ga) * 0.95;
+        const gw = 7 * u, gh = 10 * u, gx = x, gy = y + 4 * u;
+        ctx.fillStyle = '#9aa3ab'; ctx.strokeStyle = '#2b3036'; ctx.lineWidth = Math.max(1.5, u * 0.7);
+        ctx.beginPath(); ctx.moveTo(gx - gw, gy); ctx.lineTo(gx - gw, gy - gh * 0.7); ctx.quadraticCurveTo(gx, gy - gh * 1.5, gx + gw, gy - gh * 0.7); ctx.lineTo(gx + gw, gy); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = '#4c555d'; ctx.lineWidth = Math.max(1.5, u * 0.8);
+        ctx.beginPath(); ctx.moveTo(gx, gy - gh * 0.95); ctx.lineTo(gx, gy - gh * 0.35); ctx.moveTo(gx - gw * 0.45, gy - gh * 0.72); ctx.lineTo(gx + gw * 0.45, gy - gh * 0.72); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+}
+function drawCarry(cs, ox, oy, wpp) {
+  if (!carryId && !carryWait) return;
+  const now = performance.now(), pul = 0.5 + 0.5 * Math.sin(now / 160);
+  if (carryId) for (let o = 0; o + CS_STRIDE <= cs.length; o += CS_STRIDE) if (cs[o] === carryId) {
+    const x = (cs[o + 1] - ox) / wpp * S, y = (cs[o + 2] - oy) / wpp * S, r = Math.max(14, cs[o + 4] / wpp * S * 1.6);
+    ctx.strokeStyle = `rgba(255,216,74,${0.6 + 0.4 * pul})`; ctx.lineWidth = 3; ctx.setLineDash([6, 4]);
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.stroke();
+    if (ptrB) {
+      const px = ptrB[0] * S, py = ptrB[1] * S;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(px, py); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(255,216,74,.25)'; ctx.beginPath(); ctx.arc(px, py, 16 + 4 * pul, 0, 6.283); ctx.fill();
+      ctx.strokeStyle = '#ffd84a'; ctx.beginPath(); ctx.arc(px, py, 16 + 4 * pul, 0, 6.283); ctx.stroke();
+      ctx.fillStyle = '#ffd84a'; ctx.fillRect(px - 1, py - 8, 2, 16); ctx.fillRect(px - 8, py - 1, 16, 2);
+    }
+    ctx.setLineDash([]);
+    break;
   }
 }
 function drawFx(fx, ox, oy, wpp) {
@@ -847,8 +1032,15 @@ function receive(m) {
     }
     case 'frame': {
       if (serverMode) prepInterp(m);
+      const oldFrame = frame;
       frame = m;
+      for (const q of m.meta.bub || []) if (q.kind === 2 && typeof q.text === 'string') {
+        if (PFX_KEYS.test(q.text)) addPfx(q, oldFrame);
+        else if (q.text === 'b.like') addPfx({ x: q.x, y: q.y, text: 'b.nuzzle' }, null, true);
+        else if (q.text === 'b.ouch') addPfx({ x: q.x, y: q.y, text: 'b.hit' }, null, true);
+      }
       if (showBubbles) { let nt = 0; for (const q of m.meta.bub || []) {
+        if (q.kind === 2 && PFX_KEYS.test(String(q.text))) continue;
         if (q.kind === 3) { if (nt >= 4) continue; nt++; bubbles.push({ x: q.x, y: q.y, text: tThought(q.text), kind: 3, until: performance.now() + 2600 }); continue; }
         bubbles.push({ x: q.x, y: q.y, text: q.kind === 2 ? tBody(q.text) : q.text, kind: q.kind, until: performance.now() + (q.kind === 2 ? 1100 : 1600) });
       } }
@@ -864,13 +1056,13 @@ function receive(m) {
       renderPanel(panel); break;
     case 'sel':
       selId = m.id; selAt = performance.now(); selMiss = 0;
-      if (carryWait) { carryWait = false; if (m.id) { carryId = m.id; toast(t('t.carryPick')); } else toast(t('t.miss')); break; }
+      if (carryWait) { carryWait = false; if (m.id) { carryId = m.id; toast(t('t.carryPick')); $('help').textContent = t('t.carryPick'); } else toast(t('t.miss')); break; }
       if (m.id) setTab('creature');
       break;
     case 'kraft': showKraft(m); break;
     case 'persist': persist(m); break;
     case 'tres': tzResolve(m); break;
-    case 'toast': toast(tToast(m.o)); break;
+    case 'toast': toast(tToast(m.o)); actFeedback(m.o); break;
     case 'progress': $('clock').textContent = t('app.away', m.pct); break;
     case 'error': toast(t(m.k, m.msg)); break;
     case 'fatal': $('clock').textContent = m.msg; break;
@@ -980,7 +1172,7 @@ function trySrv() {
     const tm = setTimeout(() => { if (!opened) { try { ws.close(); } catch (e) { /* ignore */ } fin(false); } }, 3500);
     ws.onopen = () => {
       opened = true; clearTimeout(tm);
-      srvWs = ws; sendHost = srvSend; serverMode = true;
+      srvWs = ws; sendHost = srvSend; serverMode = true; document.body.classList.add('srv');
       ws.send(JSON.stringify({ type: 'hello', token: srvToken() }));
       for (const id of ['btnExport', 'btnImport', 'btnReset', 'btnRun', 'speed']) { const el = $(id); const l = el && (el.closest('label') || el); if (l) l.style.display = 'none'; }
       $('saveState').textContent = t('srv.state');
@@ -1000,6 +1192,9 @@ function showKraft(m) {
   const el = $('kraft');
   el.style.display = 'inline';
   el.textContent = t('srv.kraft', Math.round(m.v), Math.round(m.max), m.online);
+  kraftV = m.v;
+  const w = $('kraftWrap'); if (w) { w.style.display = 'flex'; $('kraftFill').style.width = Math.max(0, Math.min(100, m.v / m.max * 100)) + '%'; $('kraftNum').textContent = Math.round(m.v) + ' / ' + Math.round(m.max); }
+  for (const bt of document.querySelectorAll('#tools button[data-cost]')) bt.classList.toggle('poor', m.v < parseFloat(bt.dataset.cost));
 }
 function prepInterp(m) {
   const now = performance.now();
@@ -1079,6 +1274,7 @@ function setTab(name) {
 let drag = null;
 cv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false }; cv.setPointerCapture(e.pointerId); });
 cv.addEventListener('pointermove', e => {
+  ptrB = evBuf(e);
   if (!drag) {
     if (tool === 'select' && e.pointerType !== 'touch') { const [bx, by] = evBuf(e); hoverId = pickHit(bx, by); cv.style.cursor = hoverId ? 'pointer' : ''; }
     return;
@@ -1104,11 +1300,12 @@ cv.addEventListener('pointerup', e => {
     sendHost({ type: 'pick', x, y, r }); return;
   }
   if (tool === 'carry') {
-    if (!carryId) { carryWait = true; sendHost({ type: 'pick', x, y, r }); } else { sendHost({ type: 'move', id: carryId, x, y }); carryId = 0; }
+    if (!carryId) { carryWait = true; sendHost({ type: 'pick', x, y, r }); } else { sendHost({ type: 'move', id: carryId, x, y }); carryId = 0; $('help').textContent = t('help.keys'); }
     return;
   }
   const tokens = tokensFromInput();
   if ((tool === 'say' || tool === 'teach') && !tokens.length) { toast(t('app.wordFirst')); $('wordIn').focus(); return; }
+  lastAct = { tool, x, y, tokens };
   sendHost({ type: 'action', tool, x, y, r, tokens });
 });
 cv.addEventListener('wheel', e => { e.preventDefault(); const [x, y] = screenToWorld(e); zoomAt(e.deltaY < 0 ? 1 : -1, x, y); }, { passive: false });

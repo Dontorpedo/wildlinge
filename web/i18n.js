@@ -21,7 +21,7 @@ const I18N = {
 
     'tool.carry': 'Carry', 't.carryPick': 'Plimplom picked up. Click where to put it down.', 't.moved': 'Put down', 't.moveFar': 'Too far for your guardian power', 't.moveWater': 'It cannot be put into water', 't.kraft': 'Not enough guardian power, wait a moment',
     'd.carried': 'Was picked up and carried elsewhere',
-    'srv.down': 'Server not reachable, retrying ...', 'srv.state': 'Shared world on the server', 'srv.lost': 'Connection lost, reconnecting ...', 'srv.kraft': 'Guardian power {0}/{1} | {2} online',
+    'srv.down': 'Server not reachable, retrying ...', 'srv.state': 'Shared world on the server', 'srv.lost': 'Connection lost, reconnecting ...', 'srv.power': 'Guardian power', 'srv.powerHint': 'Each action costs power (small number on the button). It refills over time.', 'srv.kraft': 'Guardian power {0}/{1} | {2} online',
     'sel.fe': 'Free energy (lower = better)',
     'tab.terra': 'Terrarium', 'mode.wild': 'Wilderness', 'mode.terra': 'Terrarium',
     'tz.tool.select': 'Select / move',
@@ -313,7 +313,7 @@ const I18N = {
 
     'tool.carry': 'Tragen', 't.carryPick': 'Plimplom aufgehoben. Klicken Sie dorthin, wo er abgelegt werden soll.', 't.moved': 'Abgelegt', 't.moveFar': 'Zu weit für Ihre Hüterkraft', 't.moveWater': 'Im Wasser kann nichts abgelegt werden', 't.kraft': 'Zu wenig Hüterkraft, bitte kurz warten',
     'd.carried': 'Wurde aufgehoben und woanders abgelegt',
-    'srv.down': 'Server nicht erreichbar, neuer Versuch ...', 'srv.state': 'Gemeinsame Welt auf dem Server', 'srv.lost': 'Verbindung verloren, verbinde neu ...', 'srv.kraft': 'Hüterkraft {0}/{1} | {2} online',
+    'srv.down': 'Server nicht erreichbar, neuer Versuch ...', 'srv.state': 'Gemeinsame Welt auf dem Server', 'srv.lost': 'Verbindung verloren, verbinde neu ...', 'srv.power': 'Hüterkraft', 'srv.powerHint': 'Jede Aktion kostet Kraft (kleine Zahl am Button). Sie füllt sich mit der Zeit wieder auf.', 'srv.kraft': 'Hüterkraft {0}/{1} | {2} online',
     'sel.fe': 'Freie Energie (niedriger = besser)',
     'tab.terra': 'Terrarium', 'mode.wild': 'Wildnis', 'mode.terra': 'Terrarium',
     'tz.tool.select': 'Auswählen / bewegen',

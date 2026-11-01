@@ -58,6 +58,12 @@ select{background:#10151a;color:var(--fg);border:1px solid #34404c;border-radius
 #hudAdopt.cta{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(180deg,#4f7a3c,#3b5c2d);border-color:#6fcf6a;color:#fff;font-weight:600}
 #hudAdopt.cta:hover{background:linear-gradient(180deg,#5c8c46,#456b34)}
 #hudAdopt .ic{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#kraftWrap{align-items:center;gap:8px;margin-top:8px;font:400 10px var(--pix)}
+.kbar{flex:0 0 180px;height:9px;border-radius:5px;background:#222b34;border:1px solid #303c47;overflow:hidden}
+.kbar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#d8a24a,#ffe28a)}
+#tools button[data-cost]::after{content:attr(data-cost);position:absolute;top:3px;right:5px;font:400 8px var(--pix);color:#ffe28a;opacity:.0}
+body.srv #tools button[data-cost]::after{opacity:.85}
+#tools button.poor{opacity:.45}
 #tools .sep,#ttools .sep{width:1px;align-self:stretch;background:#2b3641;margin:2px 3px}
 #selHud{margin-top:10px;background:linear-gradient(180deg,#1a2129,#161c23);border:1px solid #232d37;border-radius:12px;padding:10px 12px}
 .hudgrid{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:14px;align-items:start}
@@ -185,6 +191,7 @@ ul.tree{margin:2px 0 6px 0;padding-left:14px;list-style:none;border-left:1px sol
   <canvas id="world" width="1600" height="800"></canvas>
   <canvas id="terra" width="1600" height="800"></canvas>
   <div id="toast"></div>
+  <div id="kraftWrap" style="display:none"><span data-i18n="srv.power"></span><div class="kbar"><i id="kraftFill"></i></div><span id="kraftNum"></span><span class="muted" data-i18n="srv.powerHint"></span></div>
   <div id="tools">
     <button data-tool="select" class="on" title="1" data-i18n="tool.select"></button>
     <button data-tool="stroke" title="2" data-i18n="tool.stroke"></button>
