@@ -213,6 +213,7 @@ function render() {
   ctx.drawImage(bufCanvas, 0, 0, BW * S, BH * S);
   if (showSoil && frame && frame.meta && frame.meta.sl) drawSoil(frame.meta.sl, ox, oy, wpp);
   if (showScent && frame && frame.meta && frame.meta.sc) drawScent(frame.meta.sc, ox, oy, wpp);
+  if (frame && frame.meta && frame.meta.stc) drawStructs(frame.meta.stc, ox, oy, wpp);
   if (frame && frame.meta && frame.meta.fx) drawFx(frame.meta.fx, ox, oy, wpp);
   drawBubbles(ox, oy, wpp);
   drawHover();
@@ -268,6 +269,30 @@ function selThought(s) {
   if (!s.thought) return t('hud.noThought');
   const a = s.thought.split('|');
   return tThought(a[0] + '|' + s.name + '|' + (a[1] || '')) + ' (' + t('hud.ago', Math.round(s.thoughtAgo / 60)) + ')';
+}
+function drawStructs(st, ox, oy, wpp) {
+  const u = Math.max(1, 1 / wpp * S);
+  for (let k = 0; k + 3 < st.length; k += 4) {
+    const x = (st[k] - ox) / wpp * S, y = (st[k + 1] - oy) / wpp * S, kind = st[k + 2] | 0, hp = st[k + 3];
+    if (x < -60 || y < -60 || x > VIEW_W + 60 || y > VIEW_H + 60) continue;
+    const a = hp < 200 ? 0.5 + 0.3 * Math.sin(animT * 0.2) : 1;
+    ctx.globalAlpha = a;
+    if (kind === 0) {
+      const w = 13 * u, h = 10 * u;
+      ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(x, y + 1, w * 1.1, w * 0.35, 0, 0, 6.283); ctx.fill();
+      ctx.fillStyle = '#9a7240'; ctx.strokeStyle = '#2a1a0c'; ctx.lineWidth = Math.max(1.5, u * 0.8);
+      ctx.beginPath(); ctx.moveTo(x - w, y); ctx.quadraticCurveTo(x, y - h * 2.1, x + w, y); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#6e4e26'; ctx.lineWidth = Math.max(1, u * 0.5);
+      for (let j = -1; j <= 1; j++) { ctx.beginPath(); ctx.moveTo(x + j * w * 0.5, y); ctx.lineTo(x + j * w * 0.2, y - h * 1.1); ctx.stroke(); }
+      ctx.fillStyle = '#1c1208'; ctx.beginPath(); ctx.ellipse(x, y - h * 0.15, w * 0.28, h * 0.4, 0, 0, 6.283); ctx.fill();
+    } else {
+      const w = 15 * u, h = 11 * u;
+      ctx.strokeStyle = '#2a1a0c'; ctx.fillStyle = '#b08a50'; ctx.lineWidth = Math.max(1.5, u * 0.8);
+      for (let j = -2; j <= 2; j++) { const px = x + j * w * 0.5; ctx.fillRect(px - u, y - h, 2 * u, h); ctx.strokeRect(px - u, y - h, 2 * u, h); }
+      ctx.fillStyle = '#8a6a38'; ctx.fillRect(x - w, y - h * 0.7, w * 2, u * 1.6); ctx.fillRect(x - w, y - h * 0.3, w * 2, u * 1.6);
+    }
+    ctx.globalAlpha = 1;
+  }
 }
 function drawFx(fx, ox, oy, wpp) {
   const col = ['255,90,90', '90,230,110', '100,150,255'];
@@ -398,7 +423,7 @@ function renderWorld(p) {
     row(t('st.cycle'), `${st.dets} / ${st.fert}`) +
     (st.react && st.react[0] >= 20 ? row(t('st.react'), `${Math.round(100 * st.react[1] / st.react[0])}% / ${st.react[2] ? Math.round(100 * st.react[3] / st.react[2]) : 0}%`) + row(t('st.react2'), st.react[0]) : '') +
     (st.speaker ? row(t('st.speaker'), `<a class="w" data-id="${st.speaker.id}">${esc(st.speaker.name)}</a> (${esc(tr('spkWhy')[st.speaker.why] || '')})`) + (st.speaker.last ? row(t('st.speakerLast'), esc(st.speaker.last)) : '') : '') +
-    (st.novel ? row(t('st.plant'), Math.round(st.novel.sp)) + row(t('st.novel'), `${st.novel.div} (${st.novel.masks})`) + row(t('st.use'), useBars(st.novel.use, [0, 1, 2], ['A', 'B', 'C'], ['#ff5a5a', '#5ae66e', '#6496ff'])) + row(t('st.use2'), useBars(st.novel.use, [3, 4, 5], [t('io.dig'), t('io.build'), t('io.sig')], ['#8a6238', '#ffd84a', '#ffec8c'])) : '') +
+    (st.novel ? row(t('st.plant'), Math.round(st.novel.sp)) + row(t('st.struct'), st.novel.st) + row(t('st.clim'), (st.novel.clim >= 0 ? '+' : '') + st.novel.clim.toFixed(1)) + row(t('st.novel'), `${st.novel.div} (${st.novel.masks})`) + row(t('st.use'), useBars(st.novel.use, [0, 1, 2], ['A', 'B', 'C'], ['#ff5a5a', '#5ae66e', '#6496ff'])) + row(t('st.use2'), useBars(st.novel.use, [3, 4, 5], [t('io.dig'), t('io.build'), t('io.sig')], ['#8a6238', '#ffd84a', '#ffec8c'])) : '') +
     (st.tri && st.tri[1] >= 20 ? row(t('st.tri'), `${st.tri[0]}`) + row(t('st.tri2'), `${Math.round(100 * st.tri[2] / st.tri[1])}%`) : '') +
     (st.cache ? row(t('st.cache'), `${st.cache[0]} | ${st.cache[3]}`) + row(t('st.cache2'), `${st.cache[1]} / ${st.cache[2]}`) : '') +
     (st.acts ? tr('acts').map((n, k) => (st.acts[k] ? row(t('st.acts') + ': ' + n, `${st.acts[k]} (${Math.round(100 * st.acts[k] / Math.max(1, st.acts.reduce((p, q) => p + q, 0)))}%)`) : '')).join('') : '') +
@@ -1045,8 +1070,10 @@ window.addEventListener('keydown', e => {
   if (e.key === 'n' || e.key === 'N') { selCycle(1); return; }
   if (e.key === 'p' || e.key === 'P') { selCycle(-1); return; }
   if (e.key === 'Escape') { setSel(0); return; }
-  const step = 60 * ZOOMS[cam.zi], tools = ['select', 'stroke', 'scold', 'teach', 'say', 'food', 'mirror', 'carry'];
-  if (e.key >= '1' && e.key <= '8') setTool(tools[+e.key - 1]);
+  const step = 60 * ZOOMS[cam.zi], tools = ['select', 'stroke', 'scold', 'teach', 'say', 'food', 'mirror', 'carry', 'fertilize', 'shelter'];
+  if (e.key >= '1' && e.key <= '9') setTool(tools[+e.key - 1]);
+  else if (e.key === '0') setTool('shelter');
+  else if (e.key === 'w' || e.key === 'W') setTool('wall');
   else if (e.key === 'ArrowLeft') cam.x -= step;
   else if (e.key === 'ArrowRight') cam.x += step;
   else if (e.key === 'ArrowUp') cam.y -= step;

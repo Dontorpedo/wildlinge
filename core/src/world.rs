@@ -24,6 +24,16 @@ pub struct Food {
 }
 
 #[derive(Clone, Serialize, Deserialize, Default)]
+pub struct Struct {
+    pub x: f32,
+    pub y: f32,
+    pub kind: u8,
+    pub hp: u16,
+    #[serde(default)]
+    pub own: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Cache {
     pub x: f32,
     pub y: f32,
@@ -312,9 +322,15 @@ pub struct World {
     #[serde(default)]
     pub soil: crate::field::Soil,
     #[serde(default)]
+    pub structs: Vec<Struct>,
+    #[serde(default)]
+    pub clim: f32,
+    #[serde(default)]
     pub use_frac: [f32; 6],
     #[serde(default)]
     pub beh_div: u32,
+    #[serde(default)]
+    pub builds: u32,
     #[serde(default)]
     pub seen_masks: Vec<u8>,
     pub mirrors: Vec<[f32; 2]>,
@@ -544,7 +560,43 @@ impl World {
         (WORLD_W / 2.0, WORLD_H / 2.0)
     }
 
+    pub fn rebuild_structs(&mut self) {
+        let n = self.soil.gw * self.soil.gh;
+        self.soil.st = vec![0; n];
+        for q in &self.structs {
+            let i = self.soil.idx(q.x, q.y);
+            self.soil.st[i] |= 1 << q.kind.min(1);
+        }
+    }
+
+    /// kind 0 shelter, 1 barrier. Returns 0 ok, 1 too many, 2 occupied, 3 water.
+    pub fn build_at(&mut self, x: f32, y: f32, kind: u8, own: bool) -> u8 {
+        if self.structs.len() >= STRUCT_MAX || (own && self.structs.iter().filter(|q| q.own).count() >= STRUCT_OWN_MAX) {
+            return 1;
+        }
+        if BIOMES[self.bio_at(x, y)].water > 0 {
+            return 3;
+        }
+        if self.structs.iter().any(|q| (q.x - x).hypot(q.y - y) < 30.0) {
+            return 2;
+        }
+        self.structs.push(Struct { x, y, kind, hp: if kind == 0 { 1600 } else { 1000 }, own });
+        self.rebuild_structs();
+        0
+    }
+
     pub fn update_season(&mut self) {
+        self.clim = 3.5 * (TAU * self.t as f32 / (YEAR_LEN as f32 * 5.0)).sin();
+        if self.t % 20 == 0 {
+            let before = self.structs.len();
+            for q in self.structs.iter_mut() {
+                q.hp = q.hp.saturating_sub(1);
+            }
+            self.structs.retain(|q| q.hp > 0);
+            if before != self.structs.len() || self.soil.st.len() != self.soil.gw * self.soil.gh {
+                self.rebuild_structs();
+            }
+        }
         self.sf = 0.5 + 0.5 * (TAU * self.t as f32 / YEAR_LEN as f32).sin();
         self.frozen = self.sf < 0.12;
         let light = 0.5 - 0.5 * (TAU * ((self.t % DAY_LEN) as f32 / DAY_LEN as f32)).cos();
@@ -679,6 +731,9 @@ impl World {
         }
         if self.use_frac[3] >= 0.10 {
             self.achieve("dig");
+        }
+        if self.builds >= 10 {
+            self.achieve("build");
         }
         if self.use_frac[5] >= 0.10 {
             self.achieve("signal");

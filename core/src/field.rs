@@ -72,6 +72,8 @@ pub struct Soil {
     pub dug: Vec<u8>,
     #[serde(default)]
     pub n: u32,
+    #[serde(default)]
+    pub st: Vec<u8>,
 }
 
 impl Default for Soil {
@@ -84,7 +86,7 @@ impl Soil {
     pub fn new() -> Soil {
         let gw = (WORLD_W / PH_CELL) as usize;
         let gh = (WORLD_H / PH_CELL) as usize;
-        Soil { gw, gh, fert: vec![0; gw * gh], dug: vec![0; gw * gh], n: 0 }
+        Soil { gw, gh, fert: vec![0; gw * gh], dug: vec![0; gw * gh], n: 0, st: vec![0; gw * gh] }
     }
     #[inline]
     pub fn idx(&self, x: f32, y: f32) -> usize {
@@ -99,6 +101,10 @@ impl Soil {
     #[inline]
     pub fn dug_at(&self, x: f32, y: f32) -> f32 {
         self.dug.get(self.idx(x, y)).copied().unwrap_or(0) as f32 / 255.0
+    }
+    #[inline]
+    pub fn st_at(&self, x: f32, y: f32) -> u8 {
+        self.st.get(self.idx(x, y)).copied().unwrap_or(0)
     }
     pub fn dig(&mut self, x: f32, y: f32) {
         let i = self.idx(x, y);

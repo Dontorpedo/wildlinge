@@ -499,9 +499,10 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
 
     // temperature, body shape matters: long thin bodies lose heat, compact ones keep it
     let shp = c.g.shape;
-    let temp = btemp + (w.sf - 0.5) * 24.0 - if frozen { 2.0 } else { 0.0 } - w.night * 3.0 - if w.wev == 2 { 12.0 } else { 0.0 };
+    let temp = btemp + w.clim + (w.sf - 0.5) * 24.0 - if frozen { 2.0 } else { 0.0 } - w.night * 3.0 - if w.wev == 2 { 12.0 } else { 0.0 };
     let burrow = w.soil.dug_at(c.x, c.y);
-    let temp = temp + (18.0 - temp) * (burrow * 1.5).min(0.6);
+    let shel = if w.soil.st_at(c.x, c.y) & 1 != 0 { 0.6 } else { 0.0 };
+    let temp = temp + (18.0 - temp) * ((burrow * 1.5).min(0.6) + shel).min(0.8);
     let felt = temp + c.ab.ab[A_INSUL] * 14.0 + c.ab.ab[A_STORAGE] * 4.0 + size * 0.3 - shp[S_ELONG] * 3.0 - (shp[S_SEG].floor() - 1.0) * 1.0;
     c.cold = clamp((10.0 - felt) / 20.0, 0.0, 1.0);
     c.hot = clamp((felt - 27.0) / 18.0, 0.0, 1.0);
@@ -717,6 +718,8 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
             inp[10] = o.display.min(1.0);
             inp[86] = o.sig;
         }
+        inp[84] = (w.soil.st_at(c.x, c.y) & 1) as f32;
+        inp[85] = ((w.soil.st_at(c.x, c.y) >> 1) & 1) as f32;
         inp[82] = w.soil.fert_at(c.x, c.y);
         inp[83] = w.soil.dug_at(c.x, c.y);
         let ahead = &BIOMES[w.bio_at(c.x + c.dir.cos() * 40.0, c.y + c.dir.sin() * 40.0)];
@@ -845,6 +848,14 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
     }
     if o[14] > 0.5 {
         c.use_n[4] += 1;
+        if !c.fly && c.energy > 8.0 && (c.fxt[4] == 0 || w.t.saturating_sub(c.fxt[4]) > 400) {
+            let kind = if o[14] > 0.8 { 1 } else { 0 };
+            if w.build_at(c.x, c.y, kind, false) == 0 {
+                c.energy -= 5.0;
+                c.fxt[4] = w.t;
+                w.builds += 1;
+            }
+        }
     }
     if o[15].abs() > 0.4 {
         c.use_n[5] += 1;
@@ -922,7 +933,7 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
     } else if wet {
         (c.land_loc * 0.5).max(c.water_loc)
     } else {
-        c.land_loc * bslow
+        c.land_loc * bslow * if w.soil.st_at(c.x, c.y) & 2 != 0 { 0.55 } else { 1.0 }
     };
     let shape_speed = 1.0 + 0.15 * shp[S_ELONG] - 0.08 * shp[S_BOX];
     let ms = (c.g.tr[T_SPEED] * loc.min(1.9) * (1.0 + 0.4 * c.horm[0]) * shape_speed).max(0.05);

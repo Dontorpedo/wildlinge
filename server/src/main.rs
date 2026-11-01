@@ -291,6 +291,9 @@ impl Sim {
                     "teach" => 8.0,
                     "food" => 15.0,
                     "mirror" => 30.0,
+                    "fertilize" => 20.0,
+                    "shelter" => 25.0,
+                    "wall" => 25.0,
                     _ => return,
                 };
                 if !self.pay(&token, cost) {

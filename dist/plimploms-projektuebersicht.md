@@ -26,13 +26,25 @@ Ein Browser-Spiel mit künstlichem Leben ("artificial life"). Kreaturen ("Wildli
 - Der Kern ist deterministisch (eigener Zufallsgenerator mit Seed). Spielstände haben eine Versionsnummer (aktuell 8). Alte Weltstände werden verworfen, Terrarium-Kreaturen älterer Versionen werden per Genom-Migration übernommen (`Genome.gv`, `migrate_id`, Test `core/tests/migrate.rs`).
 - Server-Konfiguration über Umgebungsvariablen (`WL_BIND`, `WL_DATA`, `WL_SEED`, `WL_RATE`, `WL_ORIGIN`). Besucherzähler als CSV-Dateien.
 
+## 3a. Offene Welt (Stand 1.11.2026)
+
+Ziel: Fähigkeiten, die nicht vorprogrammiert sind, sollen entstehen können. Umsetzung:
+- Reservierte Ausgabekanäle: Duft A/B/C (Duftfeld, 40er Raster, diffundiert und verblasst), Graben, Bauen, Signal. Ohne Wirkung wären sie Rauschen; deshalb haben alle jetzt eine Folge. Neuheitszähler: Verhaltenskombinationen, die mindestens 3 Tiere über einen Tag nutzen, werden als neue Fähigkeit im Ereignislog gemeldet.
+- Boden: Graben kostet Energie, erhöht Fruchtbarkeit und Grabtiefe der Zelle (Erosion baut beides langsam ab). Gegrabene Zellen glätten die gefühlte Temperatur. Fruchtbarkeit erhöht Pflanzenwachstum und Energiewert.
+- Pflanzengen Samenstreuung: wird vererbt und mutiert, weite Streuung erschließt neue Flächen, liefert aber weniger Energie.
+- Bauwerke: Unterschlupf (dämpft Temperaturextreme in der Zelle) und Barriere (verlangsamt Bodenbewohner). Maximal 240 im Land, 40 davon von Hütern. Sie verfallen nach einigen Tagen. Tiere bauen mit Energiekosten und Wartezeit.
+- Klimadrift: Temperaturversatz von bis zu 3,5 Grad über einen Zyklus von fünf Jahren.
+- Hüterwerkzeuge: Düngen (20), Unterschlupf (25), Barriere (25 Hüterkraft).
+- Darstellung: Overlays für Duft und Boden, Effekte in der Welt (Duftwolken, Erdbrocken, Signalringe, Funken), Bauwerke als Sprites, Nutzungsbalken in der Statistik.
+- Offen und ungeprüft: Ob daraus über längere Laufzeit tatsächlich neue Verhaltensweisen entstehen, ist nicht belegt. Im Test (30000 Schritte) bauten die Tiere zufällig 41 Bauwerke, gezielte Nutzung ist nicht nachgewiesen.
+
 ## 3. Simulation im Detail
 
 **Welt:** Rasterkarte mit Biomen (Tief-/Flachwasser, Wiese, Wald, Wüste, Gebirge), Pflanzen, Fleisch, Detritus (Abfall), Jahreszeiten. Tageslänge 2400 Schritte, Jahr 36000 Schritte. Maximal 550 Kreaturen. Mindestpopulation Pflanzenfresser 40, Fleischfresser 12 (Konstanten `MIN_HERB`, `MIN_CARN`; bei Unterschreitung greift ein Nachschub-Mechanismus, siehe Abschnitt 9).
 
 **Genom:** Körperform-Gene (Länge, Kantigkeit, Segmente, Kopfgröße, Schwanztyp), Farbton, Größe, Geschwindigkeit, Sinnesreichweite, Ernährungsanteil (Pflanze/Fleisch), Lebensdauer, Lernrate, Mutationsrate, bis zu 8 Körperteile. Teiletypen mit Fähigkeiten: Bein, Flosse, Flügel, Waffe, Panzer, Sinnesorgan, Speicher, Isolierung, Signal, Knospe (undifferenziert). Teile können per Mutation dupliziert, verloren oder umgewandelt werden; die Ereignisse werden protokolliert.
 
-**Gehirn:** Neuronales Netz mit evolvierter Topologie (NEAT-artig), bis zu 48 versteckte Neuronen, 73 Eingänge und 10 Ausgänge. Eingänge: Umwelt (Bedrohung, Futter, Beute, Verwandte, Fremde, Wasser, Neues), Körperzustand (Hunger, Schmerz, Kälte), Vorratslager (Richtung, Nähe, Füllstand) und weitere. Ausgänge: Bewegung, Drehung, Sprechen, Fressen, Paarung, Vorratsablage und -abruf. Zusätzlich Triebe/Hormone (Hunger, Sicherheit, Wärme, Gemeinschaft, Fortpflanzung, Neugier, Ansehen) und Lernen zu Lebzeiten.
+**Gehirn:** Neuronales Netz mit evolvierter Topologie (NEAT-artig), bis zu 48 versteckte Neuronen, 89 Eingänge und 16 Ausgänge (Altgenome mit 69/73 Eingängen werden migriert). Eingänge: Umwelt (Bedrohung, Futter, Beute, Verwandte, Fremde, Wasser, Neues), Körperzustand (Hunger, Schmerz, Kälte), Vorratslager (Richtung, Nähe, Füllstand) und weitere. Ausgänge: Bewegung, Drehung, Sprechen, Fressen, Paarung, Vorratsablage und -abruf. Zusätzlich Triebe/Hormone (Hunger, Sicherheit, Wärme, Gemeinschaft, Fortpflanzung, Neugier, Ansehen) und Lernen zu Lebzeiten.
 
 **Sprache:** Jede Kreatur hat ein Lexikon (maximal 28 Wörter). Wörter sind zufällig aus Silben gebildet und werden an Bedeutungsfelder (Kategorien und Richtungen) gebunden. Kreaturen rufen Wörter, andere in Hörreichweite hören sie und lernen Verknüpfungen. Daraus können Alarmrufe, Futterrufe und gruppenspezifische Dialekte entstehen.
 - Rufe bestehen aus bis zu drei Token: Kategoriewort, Richtungswort (Reihenfolge je Tier/Gruppe unterschiedlich, lernbar) und Intensitätswort (drei Stufen). Das Intensitätswort ist neu und wird nur angehängt, wenn Kategorie und Richtung schon vorhanden sind.

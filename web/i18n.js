@@ -96,7 +96,7 @@ const I18N = {
     'btn.labStop': 'Cancel', 'btn.ok': 'Let\'s go', 'btn.continue': 'Continue', 'btn.labCsv': 'Results as CSV',
     'ph.words': 'words, e.g. kalu sefi', 'ph.name': 'New name',
     'tool.select': 'Select', 'tool.stroke': 'Stroke', 'tool.scold': 'Scold', 'tool.teach': 'Show and name',
-    'tool.say': 'Say', 'tool.food': 'Food', 'tool.mirror': 'Mirror',
+    'tool.fertilize': 'Fertilize', 'tool.shelter': 'Shelter', 'tool.wall': 'Barrier', 't.fert': 'Soil fertilized', 't.built': 'Built', 't.buildMax': 'Too many structures (yours: 40)', 't.buildOcc': 'Too close to another structure', 'opt.struct': 'Structures', 'st.clim': 'Climate drift (degrees)', 'st.struct': 'Structures in the world', 'tool.say': 'Say', 'tool.food': 'Food', 'tool.mirror': 'Mirror',
     'help.keys': 'Drag: move map | Wheel or + / -: zoom | Keys 1 to 7: tool | Arrow keys: move',
     'opt.speed': 'Speed', 'opt.follow': 'Camera follows selection', 'opt.sense': 'Show sensing radius',
     'opt.title': 'Settings', 'opt.scent': 'Show scent trails (A red, B green, C blue)', 'opt.soil': 'Show soil (green fertile, brown dug)', 'st.plant': 'Plant seed spread (average, 0-255)', 'opt.sound': 'Sound', 'opt.bubbles': 'Speech bubbles and body events', 'opt.meaning': 'Show meanings (simulator knowledge)',
@@ -232,7 +232,7 @@ const I18N = {
       swim: 'A species lives in water (avg. swimming over 0.4)', fly: 'A creature can fly', species3: 'Three species live at the same time',
       boss: 'First boss elected', mirror: 'A creature recognises itself in the mirror',
       understand: 'Communication: over 50 % of utterances understood', sentence: 'First two-word sentence understood',
-      scent: 'Scent marks: over 10 % of the population lay scent trails', signal: 'Visible signals: over 10 % of the population use them', dig: 'Digging: over 10 % of the population dig the ground',
+      scent: 'Scent marks: over 10 % of the population lay scent trails', signal: 'Visible signals: over 10 % of the population use them', build: 'Building: at least 10 structures built by Plimploms', dig: 'Digging: over 10 % of the population dig the ground',
       grammar: 'Fixed word order: over 80 % of a species use the same', culture: 'Culture: a word survives three generations',
       taught: 'A word of yours is used by creatures', answer: 'First answer to your words'
     },
@@ -251,7 +251,7 @@ const I18N = {
       surprise: 'surprise', cert: 'certainty', compass: 'compass', horm: ['adrenaline', 'endorphin', 'cortisol'], night: 'night',
       dir: ['sin', 'cos', 'near', 'size', 'similar', 'weapon', 'display', 'loud'] },
     io: { out: ['turn', 'speed', 'attack', 'speak', 'say where', 'memory 1', 'memory 2', 'memory 3', 'memory 4', 'cache', 'scent A', 'scent B', 'scent C', 'dig', 'build', 'signal'] },
-    ioNew: { scent: 'scent', here: 'here', left: 'left', right: 'right', cache: 'food store', soil: 'soil fertility', dug: 'dug ground', struct: 'structure here', carry: 'carrying', sig: 'signal of the other', season: 'season' },
+    ioNew: { scent: 'scent', here: 'here', left: 'left', right: 'right', cache: 'food store', soil: 'soil fertility', dug: 'dug ground', struct: 'shelter here', carry: 'barrier here', sig: 'signal of the other', season: 'season' },
 
     't.stroke': '{0} was stroked', 't.scold': '{0} was scolded', 't.miss': 'No creature hit', 't.say': 'Said "{0}"',
     't.teach': '{0} creatures linked "{1}" to what you showed', 't.teachMiss': 'Nothing hit or nobody within hearing range',
@@ -388,7 +388,7 @@ const I18N = {
     'btn.labStop': 'Abbrechen', 'btn.ok': 'Los geht\'s', 'btn.continue': 'Weiter', 'btn.labCsv': 'Ergebnisse als CSV',
     'ph.words': 'Wörter, z. B. kalu sefi', 'ph.name': 'Neuer Name',
     'tool.select': 'Auswählen', 'tool.stroke': 'Streicheln', 'tool.scold': 'Tadeln', 'tool.teach': 'Zeigen und benennen',
-    'tool.say': 'Sagen', 'tool.food': 'Futter', 'tool.mirror': 'Spiegel',
+    'tool.fertilize': 'Düngen', 'tool.shelter': 'Unterschlupf', 'tool.wall': 'Barriere', 't.fert': 'Boden gedüngt', 't.built': 'Gebaut', 't.buildMax': 'Zu viele Bauwerke (eigene: 40)', 't.buildOcc': 'Zu nah an einem anderen Bauwerk', 'opt.struct': 'Bauwerke', 'st.clim': 'Klimadrift (Grad)', 'st.struct': 'Bauwerke in der Welt', 'tool.say': 'Sagen', 'tool.food': 'Futter', 'tool.mirror': 'Spiegel',
     'help.keys': 'Ziehen: Karte verschieben | Mausrad oder + / -: Zoom | Tasten 1 bis 7: Werkzeug | Pfeiltasten: bewegen',
     'opt.speed': 'Tempo', 'opt.follow': 'Kamera folgt Auswahl', 'opt.sense': 'Sichtradius anzeigen',
     'opt.title': 'Einstellungen', 'opt.scent': 'Duftspuren anzeigen (A rot, B grün, C blau)', 'opt.soil': 'Boden anzeigen (grün fruchtbar, braun gegraben)', 'st.plant': 'Samenstreuung der Pflanzen (Mittel, 0-255)', 'opt.sound': 'Klang', 'opt.bubbles': 'Sprechblasen und Körperereignisse', 'opt.meaning': 'Bedeutungen anzeigen (Simulator-Wissen)',
@@ -524,7 +524,7 @@ const I18N = {
       swim: 'Eine Art lebt im Wasser (Ø Schwimmen über 0,4)', fly: 'Eine Kreatur kann fliegen', species3: 'Drei Arten leben gleichzeitig',
       boss: 'Erster Boss gewählt', mirror: 'Eine Kreatur erkennt sich im Spiegel',
       understand: 'Verständigung: über 50 % der Äußerungen richtig verstanden', sentence: 'Erster Zwei-Wort-Satz richtig verstanden',
-      scent: 'Duftspuren: über 10 % der Population legen Duftmarken', signal: 'Sichtbare Signale: über 10 % der Population nutzen sie', dig: 'Graben: über 10 % der Population graben im Boden',
+      scent: 'Duftspuren: über 10 % der Population legen Duftmarken', signal: 'Sichtbare Signale: über 10 % der Population nutzen sie', build: 'Bauen: mindestens 10 Bauwerke von Plimploms errichtet', dig: 'Graben: über 10 % der Population graben im Boden',
       grammar: 'Feste Wortstellung: über 80 % einer Art nutzen dieselbe', culture: 'Kultur: ein Wort überdauert drei Generationen',
       taught: 'Ein Wort von Ihnen wird von Kreaturen verwendet', answer: 'Erste Antwort auf Ihre Worte'
     },
@@ -543,7 +543,7 @@ const I18N = {
       surprise: 'Überraschung', cert: 'Gewissheit', compass: 'Kompass', horm: ['Adrenalin', 'Endorphin', 'Cortisol'], night: 'Nacht',
       dir: ['sin', 'cos', 'nah', 'Größe', 'ähnlich', 'Waffe', 'Signal', 'laut'] },
     io: { out: ['drehen', 'Tempo', 'angreifen', 'sprechen', 'Ort nennen', 'Gedächtnis 1', 'Gedächtnis 2', 'Gedächtnis 3', 'Gedächtnis 4', 'Vorrat', 'Duft A', 'Duft B', 'Duft C', 'graben', 'bauen', 'Signal'] },
-    ioNew: { scent: 'Duft', here: 'hier', left: 'links', right: 'rechts', cache: 'Vorrat', soil: 'Bodenfruchtbarkeit', dug: 'aufgegrabener Boden', struct: 'Bauwerk hier', carry: 'trägt', sig: 'Signal des anderen', season: 'Jahreszeit' },
+    ioNew: { scent: 'Duft', here: 'hier', left: 'links', right: 'rechts', cache: 'Vorrat', soil: 'Bodenfruchtbarkeit', dug: 'aufgegrabener Boden', struct: 'Unterschlupf hier', carry: 'Barriere hier', sig: 'Signal des anderen', season: 'Jahreszeit' },
 
     't.stroke': '{0} wurde gestreichelt', 't.scold': '{0} wurde getadelt', 't.miss': 'Keine Kreatur getroffen', 't.say': '"{0}" gesagt',
     't.teach': '{0} Kreaturen haben "{1}" mit dem Gezeigten verknüpft', 't.teachMiss': 'Nichts getroffen oder niemand in Hörweite',

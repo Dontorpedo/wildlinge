@@ -3,6 +3,8 @@
 pub const WORLD_W: f32 = 4000.0;
 pub const WORLD_H: f32 = 2400.0;
 pub const PLANT_MAX: usize = 5000;
+pub const STRUCT_MAX: usize = 240;
+pub const STRUCT_OWN_MAX: usize = 40;
 pub const PLANT_TRIES: usize = 40;
 pub const MEAT_DECAY: u32 = 1500;
 pub const DET_DECAY: u32 = 1800;

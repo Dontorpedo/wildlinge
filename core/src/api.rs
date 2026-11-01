@@ -109,6 +109,12 @@ pub fn frame(w: &mut World, x0: f32, y0: f32, x1: f32, y1: f32, wpp: f32, sel: u
             }
         }
     }
+    let mut stc: Vec<f32> = Vec::new();
+    for q in &w.structs {
+        if q.x > x0 - 40.0 && q.x < x1 + 40.0 && q.y > y0 - 40.0 && q.y < y1 + 40.0 {
+            stc.extend_from_slice(&[q.x, q.y, q.kind as f32, q.hp as f32]);
+        }
+    }
     let mut sl: Vec<u32> = Vec::new();
     {
         let f = &w.soil;
@@ -129,7 +135,7 @@ pub fn frame(w: &mut World, x0: f32, y0: f32, x1: f32, y1: f32, wpp: f32, sel: u
             }
         }
     }
-    json!({"t": w.t, "sc": sc, "sl": sl, "fx": fx, "sf": w.sf, "night": w.night, "frozen": w.frozen, "mirrors": w.mirrors, "bub": bub, "sel": sel_found}).to_string()
+    json!({"t": w.t, "sc": sc, "sl": sl, "fx": fx, "stc": stc, "cl": w.clim, "sf": w.sf, "night": w.night, "frozen": w.frozen, "mirrors": w.mirrors, "bub": bub, "sel": sel_found}).to_string()
 }
 
 pub const TERRA_MAX: usize = 8;
@@ -421,7 +427,7 @@ pub fn panel(w: &World, sel: u32) -> String {
             "react": [w.rx_n, w.rx_hit, w.rc_n, w.rc_hit],
             "speaker": w.id_idx_get(w.spk_id).map(|i| json!({"id": cs[i].id, "name": cs[i].name, "why": w.spk_why, "since": World::day_of(w.spk_since), "last": w.spk_log.last().map(|x| x.1.clone())})),
             "tri": [w.tri_say, w.tri_n, w.tri_ok],
-            "novel": {"sp": plant_sp, "use": w.use_frac, "div": w.beh_div, "masks": w.seen_masks.len()},
+            "novel": {"sp": plant_sp, "st": w.structs.len(), "clim": w.clim, "use": w.use_frac, "div": w.beh_div, "masks": w.seen_masks.len()},
             "acts": (0..9usize).map(|k| cs.iter().filter(|c| c.actv as usize == k).count()).collect::<Vec<_>>()},
         "hist": &w.hist[w.hist.len().saturating_sub(170)..],
         "lang": {"what": what, "where": whr, "map": lang_map(w),
@@ -569,6 +575,29 @@ pub fn command(w: &mut World, v: &Value) -> Value {
                 "food" => {
                     w.drop_food(x, y);
                     json!({"k": "t.food", "p": []})
+                }
+                "fertilize" => {
+                    let i0 = w.soil.idx(x, y);
+                    let gw = w.soil.gw as i32;
+                    for dy in -1..=1i32 {
+                        for dx in -1..=1i32 {
+                            let (cx, cy) = ((i0 as i32 % gw) + dx, (i0 as i32 / gw) + dy);
+                            if cx >= 0 && cy >= 0 && cx < gw && cy < w.soil.gh as i32 {
+                                let i = (cy * gw + cx) as usize;
+                                w.soil.fert[i] = w.soil.fert[i].saturating_add(110);
+                            }
+                        }
+                    }
+                    json!({"k": "t.fert", "p": []})
+                }
+                "shelter" | "wall" => {
+                    let r = w.build_at(x, y, if tool == "wall" { 1 } else { 0 }, true);
+                    match r {
+                        0 => json!({"k": "t.built", "p": []}),
+                        1 => json!({"k": "t.buildMax", "p": []}),
+                        2 => json!({"k": "t.buildOcc", "p": []}),
+                        _ => json!({"k": "t.moveWater", "p": []}),
+                    }
                 }
                 "mirror" => {
                     let r = w.toggle_mirror(x, y);

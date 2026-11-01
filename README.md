@@ -11,6 +11,7 @@ An open experiment in artificial life that runs entirely in your browser. Nobody
 - **Self-perception:** a forward model learned by motor babbling, recognition of own gut events, a mirror test.
 - **Language:** open meanings as prototype categories, separate words for "what" and "where", emergent word order, prestige of bosses.
 - **Society:** species by morphological distance, bosses elected from six aspects.
+- **Open world:** reserved brain channels (three scent channels, dig, build, signal) with an observable novelty counter; soil layer (fertility, burrows); plants with an inherited seed-spread gene; structures (shelter, barrier) built by creatures or placed by guardians; slow climate drift.
 - **Science:** Gaussian approximation of integrated information (Phi), Lempel-Ziv complexity, MODES and Bedau activity for open-ended evolution, language entropy, mutual information and topographic similarity, controlled experiments with Welch t-tests, exports to CSV, Newick and PyPhi.
 
 ## Build
@@ -49,6 +50,8 @@ Plimploms ist ein offenes Experiment zu künstlichem Leben, das komplett im Brow
 **Bauen:** `npm ci`, dann `bash tools/build.sh`. Ergebnis ist die einzelne Datei `dist/wildlinge.html`. Voraussetzungen: Node 20+ und Rust nightly mit dem Ziel `wasm32-unknown-unknown`.
 
 **Speichern:** Die Welt liegt im Browser (IndexedDB). Beim nächsten Besuch wird die Abwesenheit nachsimuliert. Es wird nichts an einen Server gesendet.
+
+**Offene Welt:** Reservierte Gehirnkanäle (Duft A/B/C, Graben, Bauen, Signal) mit Neuheitszähler, Bodenschicht (Fruchtbarkeit, Baue), Pflanzen mit vererbtem Samenstreuungs-Gen, Bauwerke (Unterschlupf, Barriere) sowie langsame Klimadrift. Hüter können düngen und Bauwerke setzen.
 
 **Forschung:** Die Oberfläche bietet Messreihen als CSV, den Stammbaum als Newick, ein Labor für kontrollierte Experimente (mit und ohne eine Fähigkeit, Welch-Test) und den Export für PyPhi.
 
