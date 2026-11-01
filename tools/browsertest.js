@@ -16,6 +16,7 @@ async function main() {
   await page.click('#welcomeOk');
   await page.waitForTimeout(4000);
   await shot('world');
+  await page.evaluate(() => { document.getElementById('opts').open = true; });
   await page.fill('#speed', '20');
   await page.dispatchEvent('#speed', 'input');
   await page.waitForTimeout(6000);

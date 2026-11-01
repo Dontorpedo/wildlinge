@@ -1274,5 +1274,7 @@ fn think(w: &mut World, c: &mut Creature) {
     } else {
         key
     };
+    c.thought = format!("{}|{}", k, extra);
+    c.thought_age = c.age;
     w.bubbles.push(crate::world::Bubble { x: c.x, y: c.y, text: format!("{}|{}|{}", k, c.name, extra), kind: 3 });
 }

@@ -434,6 +434,7 @@ fn sel_json(w: &World, i: usize) -> Value {
     let lz = metrics::lz_complexity(s);
     let sp_boss_since = sp.map(|q| q.boss_since).unwrap_or(0);
     json!({
+        "thought": s.thought, "thoughtAgo": s.age.saturating_sub(s.thought_age), "sick": s.sick, "isSpk": w.spk_id == s.id, "px": s.x, "py": s.y, "cold": s.cold, "hot": s.hot,
         "id": s.id, "name": s.name, "adopted": s.adopted, "sp": sp.map(|q| q.name.clone()), "carn": s.carn(), "phase": s.phase(), "gen": s.gen,
         "age": s.age, "life": g.tr[T_LIFE].round(), "energy": s.energy, "maxE": s.max_e(), "health": s.health, "biome": w.bio_at(s.x, s.y),
         "asleep": s.asleep, "dream": s.last_dream, "goal": s.goal, "D": s.d, "dw": g.dw, "wb": s.wellbeing, "reward": s.reward_avg,

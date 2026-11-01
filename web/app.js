@@ -206,6 +206,72 @@ function render() {
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(bufCanvas, 0, 0, BW * S, BH * S);
   drawBubbles(ox, oy, wpp);
+  drawHover();
+}
+let hoverId = 0, cycleList = null;
+function evBuf(e) { const rc = cv.getBoundingClientRect(); return [(e.clientX - rc.left) * VIEW_W / rc.width / S, (e.clientY - rc.top) * VIEW_H / rc.height / S]; }
+function pickHit(bx, by) {
+  let hit = 0, bd = Infinity;
+  for (const h of crHits) {
+    if (bx < h[1] - 5 || bx > h[3] + 5 || by < h[2] - 5 || by > h[4] + 5) continue;
+    const d = Math.hypot(bx - (h[1] + h[3]) / 2, by - (h[2] + h[4]) / 2);
+    if (d < bd) { bd = d; hit = h[0]; }
+  }
+  if (!hit) for (const h of crHits) { const d = Math.hypot(bx - (h[1] + h[3]) / 2, by - (h[2] + h[4]) / 2); if (d < 18 && d < bd) { bd = d; hit = h[0]; } }
+  return hit;
+}
+function setSel(id, cycle) {
+  selId = id; selAt = performance.now(); selMiss = 0;
+  if (!cycle) cycleList = null;
+  sendHost({ type: 'select', id });
+  if (!id) $('hudBody').style.display = 'none', $('hudEmpty').style.display = '';
+}
+function selCycle(dir) {
+  if (!frame) return;
+  const cs = frame.cs;
+  if (!cycleList) {
+    cycleList = [];
+    for (let o = 0; o + CS_STRIDE <= cs.length; o += CS_STRIDE) cycleList.push([cs[o], Math.hypot(cs[o + 1] - cam.x, cs[o + 2] - cam.y)]);
+    cycleList.sort((p, q) => p[1] - q[1]);
+  }
+  if (!cycleList.length) return;
+  let i = cycleList.findIndex(a => a[0] === selId);
+  i = i < 0 ? (dir > 0 ? 0 : cycleList.length - 1) : (i + dir + cycleList.length) % cycleList.length;
+  const id = cycleList[i][0];
+  for (let o = 0; o + CS_STRIDE <= cs.length; o += CS_STRIDE) if (cs[o] === id) { cam.x = cs[o + 1]; cam.y = cs[o + 2]; break; }
+  setSel(id, true);
+}
+function updateHud(sel) {
+  const hud = $('selHud');
+  hud.style.display = viewMode === 'terra' ? 'none' : '';
+  $('hudEmpty').style.display = sel ? 'none' : '';
+  $('hudBody').style.display = sel ? '' : 'none';
+  if (!sel) return;
+  $('hudName').textContent = sel.name;
+  setHtml($('hudChips'), selChips(sel));
+  setHtml($('hudVit'), vitRows(sel));
+  $('hudAct').textContent = (tr('acts')[sel.act] || '-') + (tr('goals')[sel.goal] ? ' | ' + tr('goals')[sel.goal] : '');
+  $('hudFollow').classList.toggle('on', follow);
+  $('hudThought').textContent = selThought(sel);
+  drawBrain(sel.brain, 'hudBrain');
+}
+function selThought(s) {
+  if (!s.thought) return t('hud.noThought');
+  const a = s.thought.split('|');
+  return tThought(a[0] + '|' + s.name + '|' + (a[1] || '')) + ' (' + t('hud.ago', Math.round(s.thoughtAgo / 60)) + ')';
+}
+function drawHover() {
+  if (!hoverId || hoverId === selId) return;
+  const h = crHits.find(q => q[0] === hoverId);
+  if (!h) return;
+  const x0 = (h[1] - 3) * S, y0 = (h[2] - 3) * S, x1 = (h[3] + 3) * S, y1 = (h[4] + 3) * S, L = 6 * S;
+  ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x0, y0 + L); ctx.lineTo(x0, y0); ctx.lineTo(x0 + L, y0);
+  ctx.moveTo(x1 - L, y0); ctx.lineTo(x1, y0); ctx.lineTo(x1, y0 + L);
+  ctx.moveTo(x0, y1 - L); ctx.lineTo(x0, y1); ctx.lineTo(x0 + L, y1);
+  ctx.moveTo(x1 - L, y1); ctx.lineTo(x1, y1); ctx.lineTo(x1, y1 - L);
+  ctx.stroke();
 }
 function drawBubbles(ox, oy, wpp) {
   const now = performance.now();
@@ -243,6 +309,7 @@ function renderPanel(p) {
   if (activeTab === 'research') renderResearch(p);
   drawChart(p.hist);
   drawMini(p.mini);
+  updateHud(p.sel);
   const ad = p.sel;
   $('selHead').style.display = ad ? 'block' : 'none';
   if (ad) {
@@ -350,35 +417,60 @@ function ancHtml(n) {
   const ps = (n.p || []).map(ancHtml).join('');
   return `<li>${famLink(n)}${ps ? `<ul>${ps}</ul>` : ''}</li>`;
 }
+const selOpen = new Set((() => { try { return JSON.parse(localStorage.getItem('plimploms-selsec') || '["sel.facts","sel.drives"]'); } catch (e) { return ['sel.facts', 'sel.drives']; } })());
+const secStart = key => `<details data-sec="${key}"${selOpen.has(key) ? ' open' : ''}><summary>${esc(t(key))}</summary>`;
+const secNext = key => '</details>' + secStart(key);
+const chipH = (txt, cls) => `<span class="chip${cls ? ' ' + cls : ''}">${esc(txt)}</span>`;
+function selChips(s) {
+  return chipH(s.sp || '-') + chipH(t(s.carn ? 'sel.carn' : 'sel.herb')) + chipH(`${tPhase(s.phase)} G${s.gen}`) +
+    (s.isBoss ? chipH(t('sel.chipBoss'), 'gold') : '') + (s.isSpk ? chipH(t('sel.chipSpk'), 'blue') : '') + (s.sick ? chipH(t('sel.chipSick'), 'red') : '') +
+    (s.asleep ? chipH(t('sel.chipSleep')) : '') + (s.adopted ? chipH(t('sel.chipMine'), 'green') : '');
+}
+function vitRows(s) {
+  const L = tr('sel.v');
+  const r = (k, v, col, txt) => `<div class="vit"><span class="k">${esc(L[k])}</span>${barHtml(v, col)}<span class="v">${txt}</span></div>`;
+  return r('health', s.health / 100, s.health > 50 ? '#6fd36f' : s.health > 25 ? '#e5c14a' : '#e05a4a', Math.round(s.health)) +
+    r('energy', s.energy / Math.max(1e-3, s.maxE), '#e8b04a', Math.round(100 * s.energy / Math.max(1e-3, s.maxE))) +
+    r('wb', s.wb, '#9fd8ff', Math.round(s.wb * 100)) + r('fear', Math.min(1, s.fear), '#e0645a', Math.round(Math.min(1, s.fear) * 100)) +
+    r('tired', s.tired, '#8f8fe8', Math.round(s.tired * 100));
+}
+function selHeader(s) {
+  const acts = tr('acts')[s.act] || '-', goal = tr('goals')[s.goal] || '';
+  const head = `<div class="selcard"><div class="chips">${selChips(s)}</div><div class="hudvit">${vitRows(s)}</div><div class="muted">${esc(acts)}${goal ? ' | ' + esc(goal) : ''}</div></div>`;
+  return head;
+}
 function renderSel(s) {
   const el = $('info');
   if (!s) { setHtml(el, `<div class="muted">${esc(t('sel.none'))}</div>`); return; }
   const ls = s.lastSaid, dr = tr('drives');
   const mutEnc = (s.mutation || []).map(([k, p]) => k + ':' + p).join('|');
   const focus = s.focus >= 0 ? tr('features')[s.focus] : '-';
-  setHtml(el,
-    '<table>' +
+  setHtml(el, selHeader(s) + secStart('sel.facts') + '<table>' +
     row(t('sel.spType'), `${esc(s.sp)} / ${esc(t(s.carn ? 'sel.carn' : 'sel.herb'))}`) +
     row(t('sel.phaseGen'), `${esc(tPhase(s.phase))} / ${s.gen}`) +
     row(t('sel.age'), esc(t('sel.ageOf', s.age, s.life))) +
     row(t('sel.energy'), `${esc(t('sel.of', s.energy.toFixed(0), s.maxE.toFixed(0)))} / ${s.health.toFixed(0)}`) +
     row(t('sel.place'), esc(tBiome(s.biome))) +
     row(t('sel.nowDoing'), esc(tr('acts')[s.act] || '-')) +
+    row(t('sel.thought'), esc(selThought(s))) +
+    row(t('sel.sick'), s.sick ? esc(t('sel.sickYes', Math.round(s.sick / 60))) : '-') +
+    row(t('sel.temp'), `${s.cold.toFixed(2)} / ${s.hot.toFixed(2)}`) +
+    row(t('sel.pos'), `${Math.round(s.px)} / ${Math.round(s.py)}`) +
     row(t('sel.state'), s.asleep ? esc(s.dream >= 0 ? t('sel.dreams', tr('features')[s.dream]) : t('sel.sleeps')) : esc(t('sel.awake'))) +
-    '</table>' + sub(esc(t('sel.acts'))) + '<table>' +
+    '</table>' + secNext('sel.acts') + '<table>' +
     (() => { const ac = s.actc || [], tot = Math.max(1, ac.reduce((p, q) => p + q, 0)); return tr('acts').map((n, k) => `<tr><td>${esc(n)}</td><td>${barHtml(ac[k] / tot, '#8fb8e8')}</td></tr>`).join(''); })() +
-    '</table>' + sub(esc(t('sel.drives'))) + '<table>' +
+    '</table>' + secNext('sel.drives') + '<table>' +
     `<tr class="goal"><td>${esc(t('sel.goal'))}</td><td>${esc(tr('goals')[s.goal] || '')}</td></tr>` +
     dr.map((n, i) => `<tr><td>${esc(n)} <span class="muted">(${s.dw[i].toFixed(2)})</span></td><td>${barHtml(s.D[i], DRIVE_COL[i])}</td></tr>`).join('') +
     row(t('sel.wbReward'), `${pct(s.wb)} / ${s.reward.toFixed(3)}`) +
-    '</table>' + sub(esc(t('sel.chem'))) + '<table>' +
+    '</table>' + secNext('sel.chem') + '<table>' +
     `<tr><td>${esc(t('sel.adr'))}</td><td>${barHtml(s.horm[0], '#e0645a')}</td></tr>` +
     `<tr><td>${esc(t('sel.endo'))}</td><td>${barHtml(s.horm[1], '#ff9ec7')}</td></tr>` +
     `<tr><td>${esc(t('sel.cort'))}</td><td>${barHtml(s.horm[2], '#e5c14a')}</td></tr>` +
     `<tr><td>${esc(t('sel.tired'))}</td><td>${barHtml(s.tired, '#8f8fe8')}</td></tr>` +
-    '</table>' + sub(esc(t('sel.criteria'))) + '<table>' +
+    '</table>' + secNext('sel.criteria') + '<table>' +
     tr('life').map((n, i) => row(esc(n), yn(s.lifeC[i]))).join('') + tr('mind').map((n, i) => row(esc(n), yn(s.mindC[i]))).join('') +
-    '</table>' + sub(esc(t('sel.brainSelf'))) + '<table>' +
+    '</table>' + secNext('sel.brainSelf') + '<table>' +
     row(t('sel.neurons'), `${s.hidden} / ${s.conns} / ${s.plast.toFixed(4)}`) +
     row(t('sel.learned'), s.learned.toFixed(2)) +
     row(t('sel.cert'), `${pct(s.cert)} / ${s.surprise.toFixed(2)}`) +
@@ -387,7 +479,7 @@ function renderSel(s) {
     row(t('sel.mirror'), s.selfRecog ? esc(t('sel.mirrorYes')) : s.mirrorT ? esc(t('sel.mirrorT', s.mirrorT)) : '-') +
     row(t('sel.phi'), (+s.phi).toFixed(4)) +
     row(t('sel.lz'), (+s.lz).toFixed(3)) +
-    '</table>' + sub(esc(t('sel.body'))) + '<table>' +
+    '</table>' + secNext('sel.body') + '<table>' +
     row(t('sel.shape'), esc(tShape(s.shape))) +
     lookRows(s.look) +
     row(t('sel.parts'), esc(s.parts.map(([k, n]) => `${tKind(k)}${n > 1 ? ' x' + n : ''}`).join(', ')) || '-') +
@@ -397,7 +489,7 @@ function renderSel(s) {
     row(t('sel.speedSense'), `${s.speed.toFixed(2)} / ${s.sense.toFixed(0)} / ${s.diet.toFixed(2)}`) +
     row(t('sel.mut'), esc(mutEnc ? tMutList(mutEnc) : '-')) +
     row(t('sel.kids'), `${s.children} / ${s.kills}`) +
-    '</table>' + sub(esc(t('sel.mind'))) + '<table>' +
+    '</table>' + secNext('sel.mind') + '<table>' +
     row(t('sel.fear'), `${s.fear.toFixed(2)} / ${esc(focus)}`) +
     row(t('sel.fe'), s.fe.toFixed(2)) +
     row(t('sel.protos'), `${s.protos} / 10`) +
@@ -407,24 +499,24 @@ function renderSel(s) {
     row(t('sel.understands'), s.heardN ? `${pct(s.understood / s.heardN)} (${esc(t('sel.heardN', s.heardN))})` : '-') +
     row(t('sel.order'), esc(s.order === 0 ? t('sp.ordWW') : t('sp.ordRW'))) +
     `<tr><td colspan="2" class="muted l">${s.vocab.length ? s.vocab.map(([w, v]) => `<a class="w" data-w="${esc(w)}">${esc(w)}</a> = ${esc(describeVec(v))}`).join(', ') : esc(t('sel.vocab0'))}</td></tr>` +
-    '</table>' + sub(esc(t('sel.family'))) + '<table>' +
+    '</table>' + secNext('sel.family') + '<table>' +
     row(t('sel.parents'), s.parents.filter(Boolean).length ? s.parents.map(famLink).filter(Boolean).join(', ') : esc(t('sel.immigrant'))) +
     row(t('sel.children'), s.kids.length ? s.kids.map(famLink).join(', ') : '-') +
     row(t('sel.desc'), s.descN || 0) +
-    '</table>' + ((s.anc || []).some(Boolean) ? sub(esc(t('sel.anc'))) + `<ul class="tree">${(s.anc || []).map(ancHtml).join('')}</ul>` : '') + sub(esc(t('sel.role'))) + '<table>' +
+    '</table>' + ((s.anc || []).some(Boolean) ? secNext('sel.anc') + `<ul class="tree">${(s.anc || []).map(ancHtml).join('')}</ul>` : '') + secNext('sel.role') + '<table>' +
     row(t('sel.role'), s.isBoss ? esc(t('sel.bossSince', Math.max(1, Math.round((s.t - s.bossSince) / DAY_LEN)))) : esc(t('sel.member'))) +
     s.boss.parts.map((v, i) => row(esc(t('sel.bossPts', tr('boss.aspects')[i])), Math.round(v * 100))).join('') +
     row(t('sel.bossTotal'), Math.round(s.boss.total * 100)) +
-    '</table>' + sub(esc(t('sel.diary'))) +
-    (s.diary.length ? '<table>' + s.diary.map(([d2, k, par]) => `<tr><td class="l muted" style="white-space:nowrap;padding-right:8px">${esc(tDay(d2))}</td><td class="l">${esc(tDiary(k, par))}</td></tr>`).join('') + '</table>' : `<div class="muted">${esc(t('sel.diary0'))}</div>`));
+    '</table>' + secNext('sel.diary') +
+    (s.diary.length ? '<table>' + s.diary.map(([d2, k, par]) => `<tr><td class="l muted" style="white-space:nowrap;padding-right:8px">${esc(tDay(d2))}</td><td class="l">${esc(tDiary(k, par))}</td></tr>`).join('') + '</table>' : `<div class="muted">${esc(t('sel.diary0'))}</div>`) + '</details>');
   drawBrain(s.brain);
 }
 
 /* ---------- brain graph ---------- */
-function drawBrain(g) {
-  const c = $('brain'), x = c.getContext('2d'), W = c.width, H = c.height;
+function drawBrain(g, cid) {
+  const c = $(cid || 'brain'), x = c.getContext('2d'), W = c.width, H = c.height, main = !cid;
   x.clearRect(0, 0, W, H);
-  brainPts = [];
+  if (main) brainPts = [];
   if (!g) return;
   const ins = g.nodes.filter(n => n.k === 'in'), outs = g.nodes.filter(n => n.k === 'out'), hid = g.nodes.filter(n => n.k === 'hid').sort((p, q) => p.d - q.d || p.i - q.i);
   const pos = new Map();
@@ -447,10 +539,10 @@ function drawBrain(g) {
     x.fillStyle = n.v >= 0 ? `rgb(${60 + 140 * v | 0},${110 + 100 * v | 0},${70 + 40 * v | 0})` : `rgb(${110 + 110 * v | 0},${70 + 20 * v | 0},${70 + 20 * v | 0})`;
     x.beginPath(); x.arc(p[0], p[1], r, 0, TAU); x.fill();
     x.strokeStyle = '#0f1317'; x.stroke();
-    brainPts.push([p[0], p[1], n]);
+    if (main) brainPts.push([p[0], p[1], n]);
   }
   x.fillStyle = '#8a96a3';
-  x.font = '11px system-ui, sans-serif';
+  x.font = (main ? 11 : 16) + 'px system-ui, sans-serif';
   x.textAlign = 'right';
   for (const n of outs) { const p = pos.get(n.i); x.fillText(inName(n.i), p[0] - 8, p[1] + 4); }
 }
@@ -832,6 +924,7 @@ function setTool(name) {
 }
 function setTab(name) {
   activeTab = name;
+  { const sd = document.getElementById('side'); if (sd) sd.scrollTop = 0; }
   for (const bt of document.querySelectorAll('#tabs button')) bt.classList.toggle('on', bt.dataset.tab === name);
   for (const pg of document.querySelectorAll('.page')) pg.classList.toggle('on', pg.id === 'page-' + name);
   if (name === 'research') { lastSeriesAt = 0; phyloSig = ''; upl = null; uplSet = ''; }
@@ -841,7 +934,10 @@ function setTab(name) {
 let drag = null;
 cv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false }; cv.setPointerCapture(e.pointerId); });
 cv.addEventListener('pointermove', e => {
-  if (!drag) return;
+  if (!drag) {
+    if (tool === 'select' && e.pointerType !== 'touch') { const [bx, by] = evBuf(e); hoverId = pickHit(bx, by); cv.style.cursor = hoverId ? 'pointer' : ''; }
+    return;
+  }
   const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
   if (Math.abs(dx) + Math.abs(dy) > 5) { drag.moved = true; cv.classList.add('drag'); if (follow) { follow = false; $('follow').checked = false; } }
   if (drag.moved) {
@@ -849,6 +945,7 @@ cv.addEventListener('pointermove', e => {
     cam.x = drag.cx - dx * k; cam.y = drag.cy - dy * k;
   }
 });
+cv.addEventListener('pointerleave', () => { hoverId = 0; cv.style.cursor = ''; });
 cv.addEventListener('pointerup', e => {
   const wasDrag = drag && drag.moved;
   drag = null;
@@ -857,14 +954,8 @@ cv.addEventListener('pointerup', e => {
   const [x, y] = screenToWorld(e), r = 8 * ZOOMS[cam.zi];
   if (tool === 'select') {
     /* pick what is drawn under the pointer (sprites are larger than the body and drawn at interpolated positions) */
-    const rc = cv.getBoundingClientRect(), bx = (e.clientX - rc.left) * VIEW_W / rc.width / S, by = (e.clientY - rc.top) * VIEW_H / rc.height / S;
-    let hit = 0, bd = Infinity;
-    for (const h of crHits) {
-      if (bx < h[1] - 2 || bx > h[3] + 2 || by < h[2] - 2 || by > h[4] + 2) continue;
-      const d = Math.hypot(bx - (h[1] + h[3]) / 2, by - (h[2] + h[4]) / 2);
-      if (d < bd) { bd = d; hit = h[0]; }
-    }
-    if (hit) { selId = hit; selAt = performance.now(); selMiss = 0; sendHost({ type: 'select', id: hit }); setTab('creature'); return; }
+    const [bx, by] = evBuf(e), hit = pickHit(bx, by);
+    if (hit) { setSel(hit); return; }
     sendHost({ type: 'pick', x, y, r }); return;
   }
   if (tool === 'carry') {
@@ -879,6 +970,9 @@ cv.addEventListener('wheel', e => { e.preventDefault(); const [x, y] = screenToW
 window.addEventListener('keydown', e => {
   const ae = document.activeElement;
   if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT')) return;
+  if (e.key === 'n' || e.key === 'N') { selCycle(1); return; }
+  if (e.key === 'p' || e.key === 'P') { selCycle(-1); return; }
+  if (e.key === 'Escape') { setSel(0); return; }
   const step = 60 * ZOOMS[cam.zi], tools = ['select', 'stroke', 'scold', 'teach', 'say', 'food', 'mirror', 'carry'];
   if (e.key >= '1' && e.key <= '8') setTool(tools[+e.key - 1]);
   else if (e.key === 'ArrowLeft') cam.x -= step;
@@ -928,6 +1022,11 @@ document.addEventListener('change', e => {
   const k = e.target.dataset && e.target.dataset.knock;
   if (k) sendHost({ type: 'knock', key: k, v: e.target.checked });
 });
+$('hudDetails').onclick = () => setTab('creature');
+$('hudFollow').onclick = () => { follow = !follow; $('follow').checked = follow; $('hudFollow').classList.toggle('on', follow); };
+$('hudPrev').onclick = () => selCycle(-1);
+$('hudNext').onclick = () => selCycle(1);
+$('hudClear').onclick = () => setSel(0);
 $('btnAdopt').onclick = () => { if (panel && panel.sel) tzAdopt(panel.sel.id); };
 $('btnRename').onclick = () => { const n = $('renameIn').value; if (panel && panel.sel && n.trim()) { sendHost({ type: 'adopt', id: panel.sel.id, name: n }); $('renameIn').value = ''; } };
 $('btnPyphi').onclick = () => { if (selId) sendHost({ type: 'pyphi' }); };
@@ -956,6 +1055,29 @@ $('showSense').onchange = e => { showSense = e.target.checked; };
 $('styleSel').value = crStyle;
 $('styleSel').onchange = e => { crSetStyle(e.target.value); };
 sndUiInit();
+$('info').addEventListener('toggle', e => {
+  const d = e.target;
+  if (!d.dataset || !d.dataset.sec) return;
+  if (d.open) selOpen.add(d.dataset.sec); else selOpen.delete(d.dataset.sec);
+  try { localStorage.setItem('plimploms-selsec', JSON.stringify([...selOpen])); } catch (err) { /* storage blocked */ }
+}, true);
+(function initBoxes() {
+  const closedDef = new Set(['box.goals', 'box.stats', 'box.lang', 'box.species', 'box.log', 'box.brain', 'box.phylo', 'tz.memorial', 'tab.terra']);
+  let st = {};
+  try { st = JSON.parse(localStorage.getItem('plimploms-boxes') || '{}') || {}; } catch (e) { st = {}; }
+  document.querySelectorAll('.page .box').forEach(bx => {
+    const h = bx.querySelector(':scope>b'), pg = bx.parentElement.id;
+    if (!h || !h.dataset.i18n) return;
+    const id = pg + ':' + h.dataset.i18n;
+    h.classList.add('fold');
+    const closed = id in st ? !!st[id] : closedDef.has(h.dataset.i18n) && pg !== 'page-about';
+    bx.classList.toggle('closed', closed);
+    h.addEventListener('click', () => {
+      bx.classList.toggle('closed'); st[id] = bx.classList.contains('closed') ? 1 : 0;
+      try { localStorage.setItem('plimploms-boxes', JSON.stringify(st)); } catch (e) { /* storage blocked */ }
+    });
+  });
+})();
 $('showBubbles').onchange = e => { showBubbles = e.target.checked; if (!showBubbles) bubbles = []; };
 $('showMeaning').onchange = e => { showMeaning = e.target.checked; if (panel) renderPanel(panel); };
 $('chartSet').onchange = () => { upl = null; drawSeries(); };
