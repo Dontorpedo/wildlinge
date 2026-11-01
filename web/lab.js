@@ -36,7 +36,7 @@ function tzLabDisc(c, k) {
   L.disc[k] = { ts: Date.now(), pet: c.name };
   L.log.push({ ts: Date.now(), k, pet: c.name });
   if (L.log.length > 40) L.log.shift();
-  toast(t('lab.disc.' + k, c.name));
+  tzNews('lab.disc.' + k, c.name);
   sndFx('chime', 0);
   tzAlbumNote(c.id, 'disc', t('lab.name.' + k));
 }

@@ -104,7 +104,7 @@ function tzChooseR(c) {
       else opt.push([100 - n.fun, { type: 'tramp', x: 600, lvl: 0, t: 12 }]);
     }
   }
-    { const pls = TZ.list.filter(o => o !== c && o.room === c.room && !o.sleeping && !o.held); if (pls.length && n.fun < 80 && Math.random() < 0.4) { const o = pls[(Math.random() * pls.length) | 0]; opt.push([100 - n.fun + 6, { type: 'play', with: o, x: o.x, lvl: o.lvl, t: 11 }]); } }
+    { const pls = TZ.list.filter(o => o !== c && o.room === c.room && !o.sleeping && !o.held); if (pls.length && n.fun < 70 && TZ.clock - (c.playAt || -999) > 120 && Math.random() < 0.15) { const o = pls[(Math.random() * pls.length) | 0]; c.playAt = o.playAt = TZ.clock; opt.push([100 - n.fun + 6, { type: 'play', with: o, x: o.x, lvl: o.lvl, t: 11 }]); } }
   if (n.social < 55) {
     const others = TZ.list.filter(o => o !== c && o.room === c.room);
     if (others.length) { const o = others.sort((a, b) => Math.abs(a.x - c.x) - Math.abs(b.x - c.x))[0]; opt.push([100 - n.social, { type: 'social', x: o.x + tzRnd(-20, 20), lvl: o.lvl, t: 8 }]); }
@@ -135,7 +135,7 @@ function tzUseR(c, g, dt) {
     case 'machine': {
       c.act += dt;
       if (c.act > 1.6) {
-        c.act = 0; c.skill = Math.min(1, c.skill + 0.035 * (c.learn / 0.06)); if (c.skill >= 0.95 && !c.skilled) { c.skilled = true; tzAlbumNote(c.id, 'skilled'); } c.obey = Math.min(1, c.obey + 0.01); n.fun = mx(n.fun + 7);
+        c.act = 0; const s0 = c.skill; c.skill = Math.min(1, c.skill + 0.035 * (c.learn / 0.06)); for (const m of [0.25, 0.5, 0.75]) if (s0 < m && c.skill >= m) tzNews('tz.n.skill', c.name, Math.round(m * 100)); if (c.skill >= 0.95 && !c.skilled) { c.skilled = true; tzAlbumNote(c.id, 'skilled'); tzNews('tz.n.skilled', c.name); } c.obey = Math.min(1, c.obey + 0.01); n.fun = mx(n.fun + 7);
         tzBurst('star', 420, 290, 4); sndFx('tick', (420 - 400) / 400);
       }
       break;
@@ -176,9 +176,10 @@ function tzAway(c, dt) {
     c.away = 0;
     const want = c.stay > 0 ? (c.dest || 0) : 0;
     if (want !== c.room) {
-      c.room += want > c.room ? 1 : -1;
+      const mv = want > c.room ? 1 : -1;
+      c.room += mv;
       c.x = tzRnd(60, 740);
-      if (c.room === TZ.cur) tzPlaceArrive(c, want > c.room - 1 ? 1 : -1);
+      if (c.room === TZ.cur) tzPlaceArrive(c, mv);
     }
   }
 }

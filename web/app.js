@@ -1558,7 +1558,7 @@ $('modeWild').onclick = () => setViewMode('wild');
 $('modeTerra').onclick = () => setViewMode('terra');
 document.addEventListener('click', e => {
   const a = e.target.closest('a.w');
-  if (a && a.dataset.tz) { e.preventDefault(); TZ.sel = +a.dataset.tz; tzPanel(true); }
+  if (a && a.dataset.tz) { e.preventDefault(); const pc = tzFind(+a.dataset.tz); if (pc && pc.room !== TZ.cur && !pc.away) tzViewRoom(pc.room); TZ.sel = +a.dataset.tz; tzPanel(true); }
 });
 window.addEventListener('keydown', e => {
   if (viewMode !== 'terra') return;

@@ -2,6 +2,7 @@
 /* Terrarium: side-view care room for adopted Plimploms.
    Genomes, brains and language live in the WebAssembly world (world.terra); needs, positions and objects live here. */
 const TZ = {
+  news: [],
   MAX: 8, GROW: 600, ADULT: 0.98, list: [], eggs: [], items: [], parts: [], graves: [], sel: 0, tool: 'select',
   room: { food: 70, water: 70, lamp: true, light: false, music: 0 }, extra: [], lv: [], reach: [],
   last: 0, ready: false, saveAt: 0, persisted: null, night: 0, hour: 12, pending: false, clock: 0, breedT: 0, drag: null, partyCool: 0, callT: 0, callX: 0, callLvl: 0, wordMem: ''
@@ -147,6 +148,13 @@ function tzGeom(c) {
 function tzMood(c) { const n = c.needs; return (n.food + n.water + n.warmth + n.light + n.fun + n.rest + n.social) / 7; }
 function tzFind(id) { return TZ.list.find(c => c.id === id); }
 function tzAlone() { return TZ.list.length <= 1; }
+
+function tzNews(key, ...args) {
+  const msg = t(key, ...args);
+  toast(msg);
+  TZ.news.unshift({ ts: Date.now(), msg });
+  if (TZ.news.length > 8) TZ.news.pop();
+}
 
 /* ---------- adopt, release, reconcile ---------- */
 async function tzAdopt(id) {
@@ -311,6 +319,7 @@ function tzStep(dt) {
     tzAI(c, dt, k);
     tzPhys(c, k);
     tzWatch(c, dt);
+    { const gg = tzGrowth(c); if (gg >= TZ.ADULT && c.wasYoung) { c.wasYoung = false; tzNews('tz.n.adult', c.name); } else if (gg < TZ.ADULT) c.wasYoung = true; }
     if (c.age / TZ.GROW < 1 && ((c.age / TZ.GROW) * 20 | 0) !== (((c.age - dt) / TZ.GROW) * 20 | 0)) tzGeom(c);
   }
   if (TZ.follow && TZ.sel) { const f = tzFind(TZ.sel); if (f && !f.away && f.room !== TZ.cur) tzViewRoom(f.room); }
@@ -347,7 +356,7 @@ function tzHatch() {
     tzBurst('star', c.x, c.y - c.half, 14);
     tzBurst('heart', c.x, c.y - c.half * 2, 4);
     sndFx('born', (c.x - 400) / 400);
-    toast(t('tz.hatched', c.name));
+    tzNews('tz.hatched', c.name);
   }
   TZ.eggs = keep;
 }
@@ -362,7 +371,7 @@ async function tzDeaths() {
     sndFx('death', (c.x - 400) / 400);
     TZ.graves.push({ name: c.name, gen: c.gen, cause: c.cause || 'stress', age: Math.round(c.age) });
     if (TZ.graves.length > 12) TZ.graves.shift();
-    toast(t('tz.died', c.name, tr('causes')[c.cause] || c.cause));
+    tzNews('tz.died', c.name, tr('causes')[c.cause] || c.cause);
     await tzCall({ type: 'tdie', id: c.id, cause: c.cause || 'stress' });
     tzSave();
   }
@@ -392,7 +401,7 @@ async function tzBreeding() {
       tzBurst('heart', (c.x + o.x) / 2, c.y - c.half * 2, 12);
       tzBurst('star', (c.x + o.x) / 2, c.y - c.half * 2, 8);
       sndFx('love', (c.x - 400) / 400);
-      toast(t('tz.egg'));
+      tzNews('tz.n.pair', c.name, o.name);
       tzSave();
     }
     return;
@@ -419,7 +428,7 @@ function tzChoose(c) {
     if (others.length) { const o = others.sort((a, b) => Math.abs(a.x - c.x) - Math.abs(b.x - c.x))[0]; opt.push([100 - n.social, { type: 'social', x: o.x + tzRnd(-20, 20), lvl: o.lvl, t: 8 }]); }
     else if (pl) opt.push([90 - n.social, { type: 'plush', item: pl, x: pl.x, lvl: tzLevelOf(pl.y), t: 20 }]);
   }
-    { const pls = TZ.list.filter(o => o !== c && o.room === c.room && !o.sleeping && !o.held); if (pls.length && n.fun < 80 && Math.random() < 0.4) { const o = pls[(Math.random() * pls.length) | 0]; opt.push([100 - n.fun + 6, { type: 'play', with: o, x: o.x, lvl: o.lvl, t: 11 }]); } }
+    { const pls = TZ.list.filter(o => o !== c && o.room === c.room && !o.sleeping && !o.held); if (pls.length && n.fun < 70 && TZ.clock - (c.playAt || -999) > 120 && Math.random() < 0.15) { const o = pls[(Math.random() * pls.length) | 0]; c.playAt = o.playAt = TZ.clock; opt.push([100 - n.fun + 6, { type: 'play', with: o, x: o.x, lvl: o.lvl, t: 11 }]); } }
   if (n.fun < 65) {
     const bub = TZ.items.find(i => i.type === 'sbub');
     const ball = TZ.items.find(i => i.type === 'ball');
@@ -990,7 +999,7 @@ async function tzTeach(c) {
   if (!w) { toast(t('app.wordFirst')); inp.focus(); return; }
   const mv = tzEl('tzMean').value, need = mv && TZ_FEAT[mv] !== undefined ? mv : TZ_GOALNEED[c.goal && c.goal.type] || 'fun', feat = TZ_FEAT[need] === undefined ? 9 : TZ_FEAT[need];
   const r = await tzCall({ type: 'tteach', id: c.id, word: w, feat });
-  if (r.ok) { c.vocab[need] = w; c.words = r.words || c.words; c.heartUntil = Date.now() + 1500; tzAlbumNote(c.id, 'teach', w, need); toast(t('tz.taught', c.name, w, tr('tz.needs')[need])); tzSave(); } else toast(t('tz.noTeach'));
+  if (r.ok) { c.vocab[need] = w; c.words = r.words || c.words; c.heartUntil = Date.now() + 1500; tzAlbumNote(c.id, 'teach', w, need); tzNews('tz.taught', c.name, w, tr('tz.needs')[need]); tzSave(); } else toast(t('tz.noTeach'));
 }
 function tzSetTool(name) {
   TZ.tool = name;
@@ -1033,6 +1042,27 @@ async function tzReconcileNames() {
 }
 
 /* ---------- side panel ---------- */
+function tzStatus(c) {
+  const g = c.goal, ty = g ? (g.type === 'use' ? 'use_' + g.need : g.type) : 'wander', L = tr('tz.needs');
+  const room = (tr('tz.rooms') || [])[c.room] || '';
+  let act = c.sleeping ? t('tz.act.sleep') : c.away ? t('tz.act.away') : (t('tz.act.' + ty) !== 'tz.act.' + ty ? t('tz.act.' + ty) : t('tz.act.wander'));
+  if (g && g.type === 'door') act = t('tz.act.door', (tr('tz.rooms') || [])[Math.max(0, Math.min(5, c.room + g.dir))] || '');
+  if (g && g.type === 'play' && g.with) act = t('tz.act.play', g.with.name);
+  let low = null, lv = 28;
+  for (const q of TZ_NEEDS) if (c.needs[q] < lv) { lv = c.needs[q]; low = q; }
+  const f = [];
+  if (c.sleeping) f.push(t('tz.fe.sleep'));
+  if (low) f.push(t('tz.fe.' + low));
+  if (c.stress > 60) f.push(t('tz.fe.stress'));
+  if (c.love >= 100) f.push(t('tz.fe.love'));
+  if (!f.length) f.push(tzMood(c) > 72 ? t('tz.fe.good') : t('tz.fe.ok'));
+  let th;
+  if (c.sleeping) th = t('tz.th.sleep');
+  else if (low) th = t('tz.th.need', L[low]);
+  else if (g && g.type === 'play' && g.with) th = t('tz.th.play', g.with.name);
+  else th = t('tz.th.' + ty) !== 'tz.th.' + ty ? t('tz.th.' + ty) : t('tz.th.wander');
+  return { act, feel: f.join(', '), think: th, where: room };
+}
 function tzPanel(force) {
   const now = Date.now();
   if (!force && TZ.panelAt && now - TZ.panelAt < 400) return;
@@ -1047,12 +1077,13 @@ function tzPanel(force) {
   const alone = TZ.list.length === 1 ? `<div class="muted" style="margin-bottom:6px">${esc(t('tz.alone'))}</div>` : '';
   setHtml(tzEl('tzList'), TZ.list.length ? alone + TZ.list.map(card).join('') : `<div class="muted">${esc(t('tz.none'))}</div>`);
   const eg = TZ.eggs.length ? `<div class="muted">${esc(t('tz.eggs', TZ.eggs.length, Math.max(0, Math.ceil(Math.min(...TZ.eggs.map(e => e.left))))))}</div>` : '';
-  setHtml(tzEl('tzEggs'), eg);
+  setHtml(tzEl('tzEggs'), eg + (TZ.news.length ? '<div class="muted" style="margin-top:6px">' + TZ.news.map(q => esc(new Date(q.ts).toLocaleTimeString().slice(0, 5) + ' ' + q.msg)).join('<br>') + '</div>' : ''));
   tzEl('tzSelHead').style.display = sel ? 'block' : 'none';
   if (sel) {
     const g = tzGrowth(sel), voc = Object.entries(sel.vocab).map(([k, w]) => `${esc(w)} (${esc(L[k])})`).join(', ');
     tzEl('tzSelName').textContent = sel.name;
-    setHtml(tzEl('tzInfo'), '<table>' +
+    const stt = tzStatus(sel);
+    setHtml(tzEl('tzInfo'), '<table>' + row(t('tz.st.do'), esc(stt.act)) + row(t('tz.st.feel'), esc(stt.feel)) + row(t('tz.st.think'), esc(stt.think)) + row(t('tz.st.where'), esc(stt.where)) +
       row(t('tz.growth'), pct(g)) + row(t('tz.mood'), pct(tzMood(sel) / 100)) + row(t('tz.stress'), pct(sel.stress / 100)) + row(t('tz.love'), pct(sel.love / 100)) +
       row(t('tz.skill'), pct(sel.skill)) + row(t('tz.obey'), pct(sel.obey)) + row(t('tz.acc'), esc(t('tz.accs.' + TZ_ACC[sel.acc]))) +
       row(t('tz.gen'), sel.gen) + row(t('tz.kids'), sel.kids) + row(t('tz.words'), sel.words) + row(t('tz.vocab'), voc || '-') + '</table>');
