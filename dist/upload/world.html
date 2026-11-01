@@ -2625,7 +2625,7 @@ let crStyle = 'sprites';
 try { const sv = localStorage.getItem('plimploms-style'); if (sv === 'drawn' || sv === 'classic' || sv === 'sprites') crStyle = sv; } catch (e) { /* storage blocked */ }
 function crAtlasOn() { return crReady && crStyle === 'drawn'; }
 function crWholeOn() { return crWholeData !== null && crStyle === 'sprites'; }
-function crSetStyle(s) { crStyle = s === 'drawn' || s === 'classic' ? s : 'sprites'; try { localStorage.setItem('plimploms-style', crStyle); } catch (e) { /* ignore */ } crCache.clear(); }
+function crSetStyle(s) { crStyle = s === 'drawn' || s === 'classic' ? s : 'sprites'; try { localStorage.setItem('plimploms-style', crStyle); } catch (e) { /* ignore */ } crCache.clear(); if (typeof TZ !== 'undefined' && TZ.album) for (const e of TZ.album) e.redo = true; }
 /* whole-creature sprites (AI drawn, recoloured from the genome) */
 let crWholeData = null;
 const crWholeCache = new Map(), crWingCache = new Map();

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Plimploms: a shared world of evolving artificial creatures</title>
-<meta name="description" content="Plimploms is a free artificial life game in your browser. Creatures evolve bodies, brains and language in one persistent shared world. Adopt one, teach it words, raise it in your own terrarium.">
+<meta name="description" content="Plimploms is a free artificial life game in your browser. Creatures evolve bodies, brains and language in one persistent shared world, with fire, tools and scent. Adopt one, teach it words, raise it in your own terrarium and workshop.">
 <link rel="canonical" href="https://plimploms.com/">
 <link rel="alternate" hreflang="en" href="https://plimploms.com/">
 <link rel="alternate" hreflang="de" href="https://plimploms.com/?lang=de">
@@ -34,6 +34,7 @@ h1{font-size:clamp(30px,6vw,52px);line-height:1.1;margin:.2em 0}
 .cta{display:inline-block;background:var(--btn);color:#0b1a0a;font-weight:700;padding:14px 26px;border-radius:10px;text-decoration:none;font-size:19px}
 .cta:hover{filter:brightness(1.08)}
 .note{color:var(--mut);font-size:14px;margin-top:8px}
+.shot{width:100%;height:auto;border-radius:12px;border:1px solid var(--line);display:block;margin:10px 0 18px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;padding:10px 0 30px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
 .card h3{margin:.1em 0 .3em;font-size:18px}.card p{margin:0;color:var(--mut);font-size:16px}
@@ -64,15 +65,47 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding-top:18px;padding
 <div class="grid">
   <div class="card"><h3>Evolution you can watch</h3><p>Bodies, brains and behaviour are inherited and mutated. Whoever finds enough food reproduces. Legs, fins, wings and weapons appear because they pay off.</p></div>
   <div class="card"><h3>Brains that learn</h3><p>Every Plimplom decides with its own neural network and keeps learning during its life. Stroking rewards, scolding punishes.</p></div>
-  <div class="card"><h3>A language of their own</h3><p>Words start as random syllables. Meaning arises from what they experience together. Teach them new words by pointing at things.</p></div>
-  <div class="card"><h3>Your own terrarium</h3><p>Adopt a Plimplom, name it, raise it and release it into the shared world. It keeps living when you are away.</p></div>
-  <div class="card"><h3>One world for everyone</h3><p>The world runs on a server, day and night. Seasons, days and years are the same for all visitors.</p></div>
-  <div class="card"><h3>Open and honest</h3><p>The simulation core is written in Rust, runs as WebAssembly and is open source. Evolution is real, but happens inside rules we wrote, and we say so.</p></div>
+  <div class="card"><h3>A language of their own</h3><p>Words start as random syllables. Meaning arises from what they experience together, including place words and word order. Teach them new words by pointing at things.</p></div>
+  <div class="card"><h3>Scent, soil and shelter</h3><p>They leave scent trails, dig burrows, fertilize the ground and build shelters and barriers. Plants spread by seed and prefer fertile soil. Climate drifts over the years.</p></div>
+  <div class="card"><h3>Fire and tools</h3><p>Lightning, sparks from two stones or a guardian's hand start fires that spread over plants, warm, cook meat and burn. Creatures can pick up stones, sticks and nuts, crack nuts, craft hammers and carry torches. None of it is scripted, and it stays rare until evolution finds it.</p></div>
+  <div class="card"><h3>One world for everyone</h3><p>The world runs on a server, day and night. Seasons, days and years are the same for all visitors. As a guardian you can stroke, scold, feed, teach, carry, fertilize, build and light fires, paid from a power bar that refills over time.</p></div>
 </div>
+
+<h2>Your own terrarium</h2>
+<p class="sub">Adopt a Plimplom from the world with one click and raise it at home. It needs food, water, warmth, light, play, rest and company, grows up, forms bonds, hatches eggs and has children.</p>
+<img class="shot" src="/shot-garden.jpg" width="1100" height="551" alt="Terrarium garden room with plants and a pond area" loading="lazy">
+<div class="grid">
+  <div class="card"><h3>Six rooms</h3><p>Home, garden, pond, cave, workshop and a gallery. Your pets travel between them on their own and use what each room offers.</p></div>
+  <div class="card"><h3>Teach and dress up</h3><p>Show a pet what a word means, set puzzles, play ball, throw a party, give it a bow or a crown.</p></div>
+  <div class="card"><h3>It lives when you are away</h3><p>The terrarium keeps running in your browser and catches up while you are gone, never faster than is fair.</p></div>
+</div>
+
+<h2>The workshop lab</h2>
+<p class="sub">In the workshop, pets find stones, sticks, nuts and fibres, pick them up, strike, combine and eat. Each pet learns from reward which handles work, and copies what its neighbours do successfully.</p>
+<img class="shot" src="/shot-lab.jpg" width="1100" height="551" alt="Workshop room with three pets carrying items next to a small fire" loading="lazy">
+<div class="grid">
+  <div class="card"><h3>Materials with properties</h3><p>Hard, heavy, long, flammable, shell. A stone cracks a nut only sometimes, a hammer made of stone and stick almost always.</p></div>
+  <div class="card"><h3>Fire as physics</h3><p>Sparks ignite dry things, burning sticks become torches, fire warms and cooks, and it burns careless pets. They learn to be wary.</p></div>
+  <div class="card"><h3>Discoveries</h3><p>First fire, first hammer, first cooked meal: discoveries are logged and appear in each pet's life story.</p></div>
+</div>
+
+<h2>A gallery of lives</h2>
+<p class="sub">Every Plimplom you raise gets a photo frame and a short life story: moved in, learned the word, became a parent, was released into the wild, or passed away.</p>
+<img class="shot" src="/shot-gallery.jpg" width="1100" height="551" alt="Gallery room with framed photos of three pets" loading="lazy">
+
+<h2>How it works</h2>
+<div class="grid">
+  <div class="card"><h3>1. Watch</h3><p>Open the world, zoom, follow a creature, read its thoughts and its family tree.</p></div>
+  <div class="card"><h3>2. Adopt</h3><p>Pick one you like. It moves into your terrarium. Nothing to install, no account.</p></div>
+  <div class="card"><h3>3. Release</h3><p>When it is grown, send it back into the shared world and see its children evolve.</p></div>
+</div>
+<p><a class="cta" href="/world.html">Enter the world</a></p>
+
 <h2>Questions</h2>
 <details><summary>Do I need an account?</summary><p>No. Your browser keeps an anonymous token that connects you to your own terrarium. No name, email or tracking.</p></details>
 <details><summary>Is it free?</summary><p>Yes. If you like it, you can support the server with a coffee.</p></details>
-<details><summary>Is this real evolution?</summary><p>Genes, mutation and selection are real and nothing is scripted per behaviour. But the creatures live inside a fixed set of rules and senses that we designed, so entirely new abilities cannot appear. It is a bounded, observable experiment.</p></details>
+<details><summary>Is this real evolution?</summary><p>Genes, mutation and selection are real and nothing is scripted per behaviour. The creatures live inside rules and senses that we designed, and the senses and handles are a fixed set: bodies, scent, digging, building, grabbing, striking, combining and speaking. Within that set, new combinations do appear, and some of them we did not expect. Entirely new kinds of senses or actions cannot appear on their own. It is a bounded, observable experiment, and we say so.</p></details>
+<details><summary>Do the creatures really use fire and tools?</summary><p>The ingredients exist and some creatures have been seen to strike sparks and crack nuts in our tests. Whether and how often it happens in your world depends on what evolution finds. In the terrarium workshop pets learn it within their lifetime.</p></details>
 <details><summary>Can I watch on my phone?</summary><p>Yes, but the world is designed for larger screens. A desktop browser gives the best view.</p></details>
 </div>
 
@@ -80,15 +113,47 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding-top:18px;padding
 <div class="grid">
   <div class="card"><h3>Evolution zum Zuschauen</h3><p>Körper, Gehirn und Verhalten werden vererbt und verändern sich. Wer genug Nahrung findet, pflanzt sich fort. Beine, Flossen, Flügel und Waffen entstehen, weil sie sich lohnen.</p></div>
   <div class="card"><h3>Gehirne, die lernen</h3><p>Jeder Plimplom entscheidet mit einem eigenen neuronalen Netz und lernt sein Leben lang weiter. Streicheln belohnt, Tadeln bestraft.</p></div>
-  <div class="card"><h3>Eine eigene Sprache</h3><p>Wörter beginnen als zufällige Silben. Die Bedeutung entsteht aus gemeinsamen Erlebnissen. Sie können neue Wörter beibringen, indem Sie auf Dinge zeigen.</p></div>
-  <div class="card"><h3>Ihr eigenes Terrarium</h3><p>Adoptieren, benennen, großziehen und in die gemeinsame Welt entlassen. Es lebt weiter, während Sie weg sind.</p></div>
-  <div class="card"><h3>Eine Welt für alle</h3><p>Die Welt läuft auf einem Server, Tag und Nacht. Jahreszeiten, Tage und Jahre sind für alle Besucher gleich.</p></div>
-  <div class="card"><h3>Offen und ehrlich</h3><p>Der Simulationskern ist in Rust geschrieben, läuft als WebAssembly und ist Open Source. Die Evolution ist echt, passiert aber innerhalb von Regeln, die wir geschrieben haben, und das sagen wir offen.</p></div>
+  <div class="card"><h3>Eine eigene Sprache</h3><p>Wörter beginnen als zufällige Silben. Die Bedeutung entsteht aus gemeinsamen Erlebnissen, auch Ortswörter und Wortstellung. Sie können neue Wörter beibringen, indem Sie auf Dinge zeigen.</p></div>
+  <div class="card"><h3>Duft, Boden und Unterschlupf</h3><p>Sie legen Duftspuren, graben Höhlen, düngen den Boden und bauen Unterschlüpfe und Barrieren. Pflanzen verbreiten sich über Samen und bevorzugen fruchtbaren Boden. Das Klima verschiebt sich über die Jahre.</p></div>
+  <div class="card"><h3>Feuer und Werkzeuge</h3><p>Blitze, Funken aus zwei Steinen oder die Hand eines Wächters entfachen Feuer. Es breitet sich über Pflanzen aus, wärmt, gart Fleisch und verbrennt. Wesen können Steine, Stöcke und Nüsse aufheben, Nüsse knacken, Hämmer bauen und Fackeln tragen. Nichts davon ist geskriptet, und es bleibt selten, bis die Evolution es findet.</p></div>
+  <div class="card"><h3>Eine Welt für alle</h3><p>Die Welt läuft auf einem Server, Tag und Nacht. Jahreszeiten, Tage und Jahre sind für alle Besucher gleich. Als Wächter können Sie streicheln, tadeln, füttern, lehren, tragen, düngen, bauen und Feuer legen, bezahlt aus einer Kraftleiste, die sich mit der Zeit füllt.</p></div>
 </div>
+
+<h2>Ihr eigenes Terrarium</h2>
+<p class="sub">Adoptieren Sie einen Plimplom mit einem Klick aus der Welt und ziehen Sie ihn zu Hause groß. Er braucht Futter, Wasser, Wärme, Licht, Spiel, Ruhe und Gesellschaft, wächst heran, knüpft Bindungen, brütet Eier aus und bekommt Kinder.</p>
+<img class="shot" src="/shot-garden.jpg" width="1100" height="551" alt="Terrarium-Gartenraum mit Pflanzen und Teichbereich" loading="lazy">
+<div class="grid">
+  <div class="card"><h3>Sechs Räume</h3><p>Zuhause, Garten, Teich, Höhle, Werkstatt und eine Galerie. Ihre Tiere wandern selbst zwischen den Räumen und nutzen, was jeder Raum bietet.</p></div>
+  <div class="card"><h3>Lehren und verkleiden</h3><p>Zeigen Sie einem Tier, was ein Wort bedeutet, stellen Sie Rätsel, spielen Sie Ball, feiern Sie eine Party, setzen Sie eine Schleife oder eine Krone auf.</p></div>
+  <div class="card"><h3>Es lebt weiter, wenn Sie weg sind</h3><p>Das Terrarium läuft in Ihrem Browser weiter und holt auf, während Sie fort sind, nie schneller als fair.</p></div>
+</div>
+
+<h2>Das Werkstatt-Labor</h2>
+<p class="sub">In der Werkstatt finden die Tiere Steine, Stöcke, Nüsse und Fasern, heben sie auf, schlagen, kombinieren und essen. Jedes Tier lernt durch Belohnung, welche Handgriffe funktionieren, und ahmt nach, was seine Nachbarn erfolgreich tun.</p>
+<img class="shot" src="/shot-lab.jpg" width="1100" height="551" alt="Werkstattraum mit drei Tieren, die Gegenstände tragen, neben einem kleinen Feuer" loading="lazy">
+<div class="grid">
+  <div class="card"><h3>Materialien mit Eigenschaften</h3><p>Hart, schwer, lang, brennbar, Schale. Ein Stein knackt eine Nuss nur manchmal, ein Hammer aus Stein und Stock fast immer.</p></div>
+  <div class="card"><h3>Feuer als Physik</h3><p>Funken entzünden Trockenes, brennende Stöcke werden zu Fackeln, Feuer wärmt und gart und verbrennt unvorsichtige Tiere. Sie lernen, vorsichtig zu sein.</p></div>
+  <div class="card"><h3>Entdeckungen</h3><p>Erstes Feuer, erster Hammer, erstes gegartes Essen: Entdeckungen werden protokolliert und erscheinen im Lebenslauf jedes Tieres.</p></div>
+</div>
+
+<h2>Eine Galerie der Leben</h2>
+<p class="sub">Jeder Plimplom, den Sie großziehen, bekommt einen Bilderrahmen und eine kurze Lebensgeschichte: eingezogen, Wort gelernt, Elternteil geworden, in die Wildnis entlassen oder gestorben.</p>
+<img class="shot" src="/shot-gallery.jpg" width="1100" height="551" alt="Galerieraum mit gerahmten Fotos von drei Tieren" loading="lazy">
+
+<h2>So funktioniert es</h2>
+<div class="grid">
+  <div class="card"><h3>1. Zuschauen</h3><p>Welt öffnen, zoomen, einem Wesen folgen, seine Gedanken und seinen Stammbaum lesen.</p></div>
+  <div class="card"><h3>2. Adoptieren</h3><p>Einen aussuchen, der Ihnen gefällt. Er zieht in Ihr Terrarium. Nichts zu installieren, kein Konto.</p></div>
+  <div class="card"><h3>3. Entlassen</h3><p>Wenn er erwachsen ist, schicken Sie ihn zurück in die gemeinsame Welt und sehen seine Kinder sich entwickeln.</p></div>
+</div>
+<p><a class="cta" href="/world.html?lang=de">Zur Welt</a></p>
+
 <h2>Fragen</h2>
 <details><summary>Brauche ich ein Konto?</summary><p>Nein. Ihr Browser merkt sich ein anonymes Token, das Sie Ihrem Terrarium zuordnet. Kein Name, keine E-Mail, kein Tracking.</p></details>
 <details><summary>Ist es kostenlos?</summary><p>Ja. Wenn es Ihnen gefällt, können Sie den Server mit einem Kaffee unterstützen.</p></details>
-<details><summary>Ist das echte Evolution?</summary><p>Gene, Mutation und Auslese sind echt, und für kein Verhalten gibt es ein Skript. Die Wesen leben aber in einem festen Satz von Regeln und Sinnen, den wir entworfen haben. Völlig neue Fähigkeiten können deshalb nicht entstehen. Es ist ein begrenztes, beobachtbares Experiment.</p></details>
+<details><summary>Ist das echte Evolution?</summary><p>Gene, Mutation und Auslese sind echt, und für kein Verhalten gibt es ein Skript. Die Wesen leben aber in Regeln und Sinnen, die wir entworfen haben, und die Sinne und Handgriffe sind ein fester Satz: Körper, Duft, Graben, Bauen, Greifen, Schlagen, Kombinieren und Sprechen. Innerhalb dieses Satzes entstehen neue Kombinationen, manche davon unerwartet. Völlig neue Arten von Sinnen oder Handlungen können nicht von selbst entstehen. Es ist ein begrenztes, beobachtbares Experiment, und das sagen wir offen.</p></details>
+<details><summary>Nutzen die Wesen wirklich Feuer und Werkzeuge?</summary><p>Die Zutaten sind da, und in unseren Tests haben einzelne Wesen Funken geschlagen und Nüsse geknackt. Ob und wie oft das in Ihrer Welt passiert, hängt davon ab, was die Evolution findet. In der Werkstatt des Terrariums lernen die Tiere es innerhalb ihres Lebens.</p></details>
 <details><summary>Geht das auch am Handy?</summary><p>Ja, die Welt ist aber für größere Bildschirme gemacht. Am besten funktioniert ein Desktop-Browser.</p></details>
 </div>
 </main>
