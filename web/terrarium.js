@@ -838,6 +838,7 @@ function tzRender() {
         else sndFx('need', pan);
       }
     }
+    c.thTop = key && key !== 'rest' ? top : 0; c.thKey = key; c.thWord = word;
     if (key) tzGlyph(Math.round(c.x), top, key, word);
   }
   for (const p of TZ.parts) {
@@ -856,6 +857,14 @@ function tzRender() {
     const nx = c.x * S, ny = (c.y + 12) * S;
     tc.fillStyle = 'rgba(40,30,60,.75)'; tc.fillText(c.name, nx + 1, ny + 1);
     tc.fillStyle = c.id === TZ.sel ? '#ffd84a' : '#fffaf0'; tc.fillText(c.name, nx, ny);
+  }
+  tc.font = '10px Silkscreen, monospace';
+  for (const c of order) {
+    if (!c.thTop || c.sleeping) continue;
+    const txt = tThought((c.thWord && c.thKey !== 'love' ? 'want' : c.thKey) + '|' + c.name + '|' + (c.thWord || ''));
+    const w = Math.ceil(tc.measureText(txt).width) + 10, x = Math.round(c.x * S - w / 2), y = (c.thTop - 22) * S;
+    tc.fillStyle = 'rgba(214,230,245,.92)'; tc.fillRect(x, y, w, 16);
+    tc.fillStyle = '#15191d'; tc.fillText(txt, c.x * S, y + 12);
   }
 }
 

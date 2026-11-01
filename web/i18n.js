@@ -73,6 +73,8 @@ const I18N = {
     'tz.vocab': 'Own words',
     'tz.levels': 'Extra shelves',
     'tz.puzzleHint': 'Puzzle box: creatures learn to open it and get treats',
+    th: { 't.fear': '{0} is scared', 't.sick': '{0} feels sick', 't.hurt': '{0}: ouch', 't.hungry': '{0} is hungry', 't.tired': '{0} is tired', 't.eat': '{0}: yum', 't.happy': '{0} is happy', 't.word': '{0} thinks of "{1}"',
+      food: '{0} is hungry', water: '{0} is thirsty', warmth: '{0} is cold', light: '{0} wants light', fun: '{0} is bored', rest: '{0} is sleepy', social: '{0} is lonely', love: '{0} is happy', want: '{0} wants {1}' },
     'tz.needs': { food: 'Food', water: 'Water', warmth: 'Warmth', light: 'Light', fun: 'Play', rest: 'Rest', social: 'Company' },
     'tz.help': 'Click bowls, lamp, light, music and puzzle box | Keys 1 to 9 and 0: tool',
     'tz.intro': 'Adopted Plimploms live here. They need food, water, warmth, light, play and rest. Neglect causes stress and death. While you are away, time passes at a quarter of the speed and never below a safe minimum. Happy adults nearby become fond of each other and lay eggs. Release them into the wild and they take everything they learned with them.',
@@ -355,6 +357,8 @@ const I18N = {
     'tz.vocab': 'Eigene Wörter',
     'tz.levels': 'Zusätzliche Bretter',
     'tz.puzzleHint': 'Tüftelbox: Kreaturen lernen sie zu öffnen und bekommen Leckerli',
+    th: { 't.fear': '{0} hat Angst', 't.sick': '{0} fühlt sich krank', 't.hurt': '{0}: aua', 't.hungry': '{0} hungrig', 't.tired': '{0} müde', 't.eat': '{0}: mampf', 't.happy': '{0} froh', 't.word': '{0} denkt an "{1}"',
+      food: '{0} hungrig', water: '{0} durstig', warmth: '{0} friert', light: '{0} will Licht', fun: '{0} langweilt sich', rest: '{0} müde', social: '{0} einsam', love: '{0} froh', want: '{0} will {1}' },
     'tz.needs': { food: 'Futter', water: 'Wasser', warmth: 'Wärme', light: 'Licht', fun: 'Spiel', rest: 'Ruhe', social: 'Gesellschaft' },
     'tz.help': 'Näpfe, Lampe, Licht, Spieluhr und Tüftelbox anklicken | Tasten 1 bis 9 und 0: Werkzeug',
     'tz.intro': 'Adoptierte Plimploms leben hier. Sie brauchen Futter, Wasser, Wärme, Licht, Spiel und Ruhe. Vernachlässigung führt zu Stress und Tod. Während Ihrer Abwesenheit vergeht die Zeit mit einem Viertel der Geschwindigkeit und nie unter einem sicheren Minimum. Zufriedene Erwachsene in der Nähe werden sich zugetan und legen Eier. Wenn Sie sie auswildern, nehmen sie alles Gelernte mit.',
@@ -650,6 +654,7 @@ function tToast(o) {
   if (o.k === 't.mirror') return (tr('t.mirror') || {})[o.p[0]] || '';
   return t(o.k, ...(o.p || []));
 }
+function tThought(s) { const a = String(s).split('|'); const v = tr('th')[a[0]]; return typeof v === 'string' ? v.replace('{0}', a[1] || '').replace('{1}', a[2] || '') : a[1] || ''; }
 function tBody(k) { const s = tr(k); return typeof s === 'string' ? s : k; }
 function tShape(s) {
   if (!s) return '-';

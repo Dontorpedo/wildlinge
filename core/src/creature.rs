@@ -128,6 +128,8 @@ pub struct Creature {
     #[serde(default)]
     pub sick: u32,
     #[serde(default)]
+    pub thought_cool: u32,
+    #[serde(default)]
     pub imm: u32,
     #[serde(default)]
     pub rx_t: u32,
@@ -239,6 +241,7 @@ impl Creature {
             cdep: 0,
             cret: 0,
             sick: 0,
+            thought_cool: 0,
             imm: 0,
             rx_t: 0,
             rc_t: 0,

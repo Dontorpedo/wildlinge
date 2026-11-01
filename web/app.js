@@ -216,12 +216,12 @@ function drawBubbles(ox, oy, wpp) {
     if (q.until - now < 300 && ((now / 80) | 0) % 2) continue;
     const sx = (q.x - ox) / wpp * S, sy = (q.y - oy) / wpp * S;
     if (sx < -60 || sy < -60 || sx > VIEW_W + 60 || sy > VIEW_H + 60) continue;
-    const small = q.kind === 2;
+    const small = q.kind >= 2;
     ctx.font = (small ? '10px' : '13px') + ' Silkscreen, monospace';
     const tw = Math.ceil((ctx.measureText(q.text).width + 12) / S) * S, h = small ? 15 : 21;
     const x = rp((sx - tw / 2) / S) * S, y = rp((sy - 46) / S) * S;
     ctx.fillStyle = OUTLINE; ctx.fillRect(x - S, y - S, tw + 2 * S, h + 2 * S);
-    ctx.fillStyle = q.kind === 1 ? '#ffd84a' : small ? '#c9ccc4' : '#f2efe4';
+    ctx.fillStyle = q.kind === 1 ? '#ffd84a' : q.kind === 3 ? '#d6e6f5' : small ? '#c9ccc4' : '#f2efe4';
     ctx.fillRect(x, y, tw, h);
     const tx = rp(sx / S) * S;
     ctx.fillRect(tx - S, y + h, 2 * S, S);
@@ -611,7 +611,10 @@ function receive(m) {
     case 'frame': {
       if (serverMode) prepInterp(m);
       frame = m;
-      if (showBubbles) for (const q of m.meta.bub || []) bubbles.push({ x: q.x, y: q.y, text: q.kind === 2 ? tBody(q.text) : q.text, kind: q.kind, until: performance.now() + (q.kind === 2 ? 1100 : 1600) });
+      if (showBubbles) { let nt = 0; for (const q of m.meta.bub || []) {
+        if (q.kind === 3) { if (nt >= 4) continue; nt++; bubbles.push({ x: q.x, y: q.y, text: tThought(q.text), kind: 3, until: performance.now() + 2600 }); continue; }
+        bubbles.push({ x: q.x, y: q.y, text: q.kind === 2 ? tBody(q.text) : q.text, kind: q.kind, until: performance.now() + (q.kind === 2 ? 1100 : 1600) });
+      } }
       if (bubbles.length > 90) bubbles.splice(0, bubbles.length - 90);
       if (viewMode !== 'terra') { if (m.meta.bub) { const hw = BW * ZOOMS[cam.zi] / 2; for (const q of m.meta.bub) sndBubble(q, cam.x, cam.y, hw); }
       sndAmbient('wild', m.meta.night); }

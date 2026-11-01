@@ -1196,6 +1196,7 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
             0
         };
         c.actc[c.actv as usize] += 1;
+        think(w, c);
     }
     if metabolize(w, c, bwater, 1.0, drown) {
         return;
@@ -1236,4 +1237,42 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
         w.add_creature(child);
         w.births += 1;
     }
+}
+
+/* occasional inner thought, shown as a bubble: "key|name|extra" */
+fn think(w: &mut World, c: &mut Creature) {
+    if c.thought_cool > 0 {
+        c.thought_cool -= 1;
+        return;
+    }
+    let key = if c.fear > 0.5 {
+        "t.fear"
+    } else if c.sick > 0 {
+        "t.sick"
+    } else if c.health < 40.0 {
+        "t.hurt"
+    } else if c.energy < c.max_e() * 0.3 {
+        "t.hungry"
+    } else if c.tired > 0.75 {
+        "t.tired"
+    } else if c.actv == 4 {
+        "t.eat"
+    } else if c.wellbeing > 0.9 && w.rng.below(3) == 0 {
+        "t.happy"
+    } else {
+        ""
+    };
+    c.thought_cool = 1200 + w.rng.below(1800) as u32;
+    let mut extra = String::new();
+    let k = if key.is_empty() {
+        let ws: Vec<&String> = c.lex.m.iter().filter(|e| c.lex.top(&e.0).1 > 0.3).map(|e| &e.0).collect();
+        if ws.is_empty() {
+            return;
+        }
+        extra = ws[w.rng.below(ws.len())].clone();
+        "t.word"
+    } else {
+        key
+    };
+    w.bubbles.push(crate::world::Bubble { x: c.x, y: c.y, text: format!("{}|{}|{}", k, c.name, extra), kind: 3 });
 }

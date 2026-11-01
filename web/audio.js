@@ -163,6 +163,7 @@ function sndBubble(q, camX, camY, halfW) {
     else if (k === 'b.sleep') sndFx('sigh', pan);
     return;
   }
+  if (q.kind === 3) return;
   sndSay(q.text, pan, 0);
 }
 
