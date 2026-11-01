@@ -36,6 +36,12 @@ const windP = Array.from({ length: 120 }, () => ({ x: Math.random() * WORLD_W, y
 
 /* ---------- small helpers ---------- */
 function setHtml(el, html) { if (el._h !== html) { el._h = html; el.innerHTML = html; } }
+function useBars(use, idx, names, cols) {
+  return '<div style="display:flex;flex-direction:column;gap:3px;min-width:120px">' + idx.map((k, i) => {
+    const p = Math.max(0, Math.min(1, use[k] || 0));
+    return `<div style="display:flex;align-items:center;gap:6px;font-size:11px" title="${names[i]} ${Math.round(p * 100)}%"><span style="width:44px;overflow:hidden;text-overflow:ellipsis">${names[i]}</span><span style="flex:1;height:7px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden"><span style="display:block;height:100%;width:${Math.max(p > 0 ? 3 : 0, p * 100)}%;background:${cols[i]}"></span></span><span style="width:30px;text-align:right">${Math.round(p * 100)}%</span></div>`;
+  }).join('') + '</div>';
+}
 const row = (k, v) => `<tr><td>${k}</td><td>${v}</td></tr>`;
 const pct = v => Math.round((v || 0) * 100) + ' %';
 const sub = s => `<h4>${s}</h4>`;
@@ -207,6 +213,7 @@ function render() {
   ctx.drawImage(bufCanvas, 0, 0, BW * S, BH * S);
   if (showSoil && frame && frame.meta && frame.meta.sl) drawSoil(frame.meta.sl, ox, oy, wpp);
   if (showScent && frame && frame.meta && frame.meta.sc) drawScent(frame.meta.sc, ox, oy, wpp);
+  if (frame && frame.meta && frame.meta.fx) drawFx(frame.meta.fx, ox, oy, wpp);
   drawBubbles(ox, oy, wpp);
   drawHover();
 }
@@ -261,6 +268,48 @@ function selThought(s) {
   if (!s.thought) return t('hud.noThought');
   const a = s.thought.split('|');
   return tThought(a[0] + '|' + s.name + '|' + (a[1] || '')) + ' (' + t('hud.ago', Math.round(s.thoughtAgo / 60)) + ')';
+}
+function drawFx(fx, ox, oy, wpp) {
+  const col = ['255,90,90', '90,230,110', '100,150,255'];
+  const ph = animT * 0.12;
+  for (let k = 0; k + 3 < fx.length; k += 4) {
+    const x = (fx[k] - ox) / wpp * S, y = (fx[k + 1] - oy) / wpp * S, m = fx[k + 2] | 0;
+    if (x < -60 || y < -60 || x > VIEW_W + 60 || y > VIEW_H + 60) continue;
+    const r = Math.max(14, fx[k + 3] / wpp * S * 1.8), seed = (k * 0.7) % 6.28;
+    for (let c = 0; c < 3; c++) {
+      if (!(m & (1 << c))) continue;
+      for (let j = 0; j < 4; j++) {
+        const u = (ph * 0.6 + j * 0.25 + c * 0.1) % 1;
+        const px = x + Math.sin(seed + j * 1.9 + c * 2.1) * r * (0.6 + u * 0.8), py = y - r * 0.2 - u * r * 1.6;
+        ctx.fillStyle = `rgba(${col[c]},${(0.8 * (1 - u)).toFixed(2)})`;
+        ctx.beginPath(); ctx.arc(px, py, r * (0.25 + u * 0.35), 0, 6.283); ctx.fill();
+      }
+    }
+    if (m & 8) {
+      ctx.fillStyle = 'rgba(70,45,25,0.55)';
+      ctx.beginPath(); ctx.ellipse(x, y + r * 0.45, r * 0.9, r * 0.3, 0, 0, 6.283); ctx.fill();
+      for (let j = 0; j < 6; j++) {
+        const u = (ph * 0.9 + j * 0.17) % 1, dx = (j - 2.5) * r * 0.28;
+        const px = x + dx * (0.5 + u), py = y + r * 0.3 - Math.sin(u * 3.14) * r * 1.1;
+        ctx.fillStyle = j % 2 ? '#8a6238' : '#5c3e22';
+        const q = Math.max(3, r * 0.22); ctx.fillRect(px - q / 2, py - q / 2, q, q);
+      }
+    }
+    if (m & 16) {
+      for (let j = 0; j < 5; j++) {
+        const u = (ph * 1.2 + j * 0.2) % 1, a = seed + j * 1.26;
+        ctx.fillStyle = `rgba(255,220,90,${(1 - u).toFixed(2)})`;
+        const q = Math.max(2, r * 0.14); ctx.fillRect(x + Math.cos(a) * r * (0.5 + u) - q / 2, y + Math.sin(a) * r * (0.5 + u) - q / 2, q, q);
+      }
+    }
+    if (m & 32) {
+      for (let j = 0; j < 2; j++) {
+        const u = (ph * 0.5 + j * 0.5) % 1;
+        ctx.strokeStyle = `rgba(255,236,140,${(1 - u).toFixed(2)})`; ctx.lineWidth = Math.max(2.5, S * 1.5);
+        ctx.beginPath(); ctx.arc(x, y - r * 0.2, r * (0.6 + u * 1.8), 0, 6.283); ctx.stroke();
+      }
+    }
+  }
 }
 function drawSoil(sl, ox, oy, wpp) {
   const cell = 40 / wpp * S, gw = WORLD_W / 40;
@@ -349,7 +398,7 @@ function renderWorld(p) {
     row(t('st.cycle'), `${st.dets} / ${st.fert}`) +
     (st.react && st.react[0] >= 20 ? row(t('st.react'), `${Math.round(100 * st.react[1] / st.react[0])}% / ${st.react[2] ? Math.round(100 * st.react[3] / st.react[2]) : 0}%`) + row(t('st.react2'), st.react[0]) : '') +
     (st.speaker ? row(t('st.speaker'), `<a class="w" data-id="${st.speaker.id}">${esc(st.speaker.name)}</a> (${esc(tr('spkWhy')[st.speaker.why] || '')})`) + (st.speaker.last ? row(t('st.speakerLast'), esc(st.speaker.last)) : '') : '') +
-    (st.novel ? row(t('st.plant'), Math.round(st.novel.sp)) + row(t('st.novel'), `${st.novel.div} (${st.novel.masks})`) + row(t('st.use'), st.novel.use.slice(0, 3).map(v => Math.round(v * 100) + '%').join(' / ')) + row(t('st.use2'), [3, 4, 5].map(k => Math.round(st.novel.use[k] * 100) + '%').join(' / ')) : '') +
+    (st.novel ? row(t('st.plant'), Math.round(st.novel.sp)) + row(t('st.novel'), `${st.novel.div} (${st.novel.masks})`) + row(t('st.use'), useBars(st.novel.use, [0, 1, 2], ['A', 'B', 'C'], ['#ff5a5a', '#5ae66e', '#6496ff'])) + row(t('st.use2'), useBars(st.novel.use, [3, 4, 5], [t('io.dig'), t('io.build'), t('io.sig')], ['#8a6238', '#ffd84a', '#ffec8c'])) : '') +
     (st.tri && st.tri[1] >= 20 ? row(t('st.tri'), `${st.tri[0]}`) + row(t('st.tri2'), `${Math.round(100 * st.tri[2] / st.tri[1])}%`) : '') +
     (st.cache ? row(t('st.cache'), `${st.cache[0]} | ${st.cache[3]}`) + row(t('st.cache2'), `${st.cache[1]} / ${st.cache[2]}`) : '') +
     (st.acts ? tr('acts').map((n, k) => (st.acts[k] ? row(t('st.acts') + ': ' + n, `${st.acts[k]} (${Math.round(100 * st.acts[k] / Math.max(1, st.acts.reduce((p, q) => p + q, 0)))}%)`) : '')).join('') : '') +

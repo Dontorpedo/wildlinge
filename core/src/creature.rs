@@ -131,6 +131,8 @@ pub struct Creature {
     pub thought_cool: u32,
     #[serde(default)]
     pub use_n: [u32; 6],
+    #[serde(skip)]
+    pub fxt: [u32; 6],
     #[serde(default)]
     pub sig: f32,
     #[serde(default)]
@@ -251,6 +253,7 @@ impl Creature {
             sick: 0,
             thought_cool: 0,
             use_n: [0; 6],
+            fxt: [0; 6],
             sig: 0.0,
             thought: String::new(),
             thought_age: 0,

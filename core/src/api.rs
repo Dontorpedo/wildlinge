@@ -92,6 +92,23 @@ pub fn frame(w: &mut World, x0: f32, y0: f32, x1: f32, y1: f32, wpp: f32, sel: u
             }
         }
     }
+    let mut fx: Vec<f32> = Vec::new();
+    for c in &w.creatures {
+        if c.x > x0 - 40.0 && c.x < x1 + 40.0 && c.y > y0 - 40.0 && c.y < y1 + 40.0 {
+            let mut m = 0u32;
+            for k in 0..6 {
+                if c.fxt[k] > 0 && w.t.saturating_sub(c.fxt[k]) <= 8 {
+                    m |= 1 << k;
+                }
+            }
+            if m != 0 {
+                fx.extend_from_slice(&[c.x, c.y, m as f32, c.size()]);
+                if fx.len() >= 400 {
+                    break;
+                }
+            }
+        }
+    }
     let mut sl: Vec<u32> = Vec::new();
     {
         let f = &w.soil;
@@ -112,7 +129,7 @@ pub fn frame(w: &mut World, x0: f32, y0: f32, x1: f32, y1: f32, wpp: f32, sel: u
             }
         }
     }
-    json!({"t": w.t, "sc": sc, "sl": sl, "sf": w.sf, "night": w.night, "frozen": w.frozen, "mirrors": w.mirrors, "bub": bub, "sel": sel_found}).to_string()
+    json!({"t": w.t, "sc": sc, "sl": sl, "fx": fx, "sf": w.sf, "night": w.night, "frozen": w.frozen, "mirrors": w.mirrors, "bub": bub, "sel": sel_found}).to_string()
 }
 
 pub const TERRA_MAX: usize = 8;

@@ -832,6 +832,7 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
             c.energy -= 0.004 * amt;
             w.pher.add(ch, c.x, c.y, 0.12 * amt);
             c.use_n[ch] += 1;
+            c.fxt[ch] = w.t;
         }
     }
     if o[13] > 0.5 {
@@ -839,6 +840,7 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
         if !c.fly && c.energy > 3.0 && BIOMES[w.bio_at(c.x, c.y)].water < 2 {
             c.energy -= 0.012;
             w.soil.dig(c.x, c.y);
+            c.fxt[3] = w.t;
         }
     }
     if o[14] > 0.5 {
@@ -846,6 +848,7 @@ pub fn update(w: &mut World, c: &mut Creature, _idx: usize) {
     }
     if o[15].abs() > 0.4 {
         c.use_n[5] += 1;
+        c.fxt[5] = w.t;
     }
 
     // speaking
