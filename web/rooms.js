@@ -7,7 +7,8 @@ const TZ_ROOMS = [
   { key: 'garden', lv: [TZ_FL, { x0: 560, x1: 740, y: 270 }], prov: { food: 8, water: 20, warmth: 1.2, rest: 1.0, fun: 2 } },
   { key: 'pond', lv: [TZ_FL, { x0: 560, x1: 760, y: 290 }], prov: { food: 8, water: 22, warmth: 1.2, rest: 1.0, fun: 3 } },
   { key: 'cave', lv: [TZ_FL, { x0: 300, x1: 480, y: 270 }], prov: { food: 8, water: 20, warmth: 1.8, rest: 1.2, fun: 2 } },
-  { key: 'shop', lv: [TZ_FL, { x0: 520, x1: 700, y: 280 }], prov: { food: 12, water: 22, warmth: 1.4, rest: 1.0, fun: 3 } }
+  { key: 'shop', lv: [TZ_FL, { x0: 520, x1: 700, y: 280 }], prov: { food: 12, water: 22, warmth: 1.4, rest: 1.0, fun: 3 } },
+  { key: 'gallery', lv: [TZ_FL], prov: { food: 0, water: 0, warmth: 1, rest: 1, fun: 1 } }
 ];
 TZ.cur = 0;
 TZ.bf = [{ x: 300, y: 250 }, { x: 500, y: 240 }, { x: 650, y: 255 }];
@@ -21,6 +22,7 @@ function tzLightOn(c) {
   return TZ.night < 0.5;
 }
 function tzRestoreRooms(P) {
+  if (Array.isArray(P.album)) TZ.album = P.album.slice(-80).map(a => ({ ...a, img: null, redo: false }));
   if (Array.isArray(P.garden) && P.garden.length === 4) TZ.garden = P.garden.map((q, i) => ({ x: [150, 290, 430, 570][i], g: tzClamp(+q.g || 0, 0, 1) }));
 }
 function tzRoomsStep(dt) {
@@ -129,7 +131,7 @@ function tzUseR(c, g, dt) {
     case 'machine': {
       c.act += dt;
       if (c.act > 1.6) {
-        c.act = 0; c.skill = Math.min(1, c.skill + 0.035 * (c.learn / 0.06)); c.obey = Math.min(1, c.obey + 0.01); n.fun = mx(n.fun + 7);
+        c.act = 0; c.skill = Math.min(1, c.skill + 0.035 * (c.learn / 0.06)); if (c.skill >= 0.95 && !c.skilled) { c.skilled = true; tzAlbumNote(c.id, 'skilled'); } c.obey = Math.min(1, c.obey + 0.01); n.fun = mx(n.fun + 7);
         tzBurst('star', 420, 290, 4); sndFx('tick', (420 - 400) / 400);
       }
       break;
@@ -181,6 +183,7 @@ function tzAway(c, dt) {
 function tzRoomClick(x, y) {
   for (const d of tzDoors()) if (Math.abs(x - d.x) < 24 && y > TZ_FLOOR - 70 && y < TZ_FLOOR + 6) { tzViewRoom(d.to); return true; }
   const r = TZ.cur;
+  if (r === 5) return tzGalleryClick(x, y);
   if (r === 1) {
     for (const p of TZ.garden) if (Math.abs(x - p.x) < 24 && y > 230) { p.g = Math.min(1, p.g + 0.2); tzBurst('star', p.x, TZ_FLOOR - 24, 6); sndFx('pop', (p.x - 400) / 400); return true; }
   } else if (r === 2) {
@@ -283,6 +286,7 @@ function tzRoomDraw(r, now) {
     const gx = 420 + Math.cos(now / 400) * 6, gy = 307 + Math.sin(now / 400) * 6;
     tzRect('#ffd84a', gx - 3, gy - 3, 6, 6); tzRect('#ffd84a', 400, 300, 4, 4); tzRect('#e0486a', 436, 300, 4, 4);
   }
+  else if (r === 5) tzGalleryDraw(now);
   /* doors */
   for (const d of tzDoors()) {
     const x = d.dir > 0 ? 770 : 6;

@@ -871,7 +871,9 @@ const I18N = {
     'tz.puzzleHint': 'Puzzle box: creatures learn to open it and get treats',
     th: { 't.fear': '{0} is scared', 't.sick': '{0} feels sick', 't.hurt': '{0}: ouch', 't.hungry': '{0} is hungry', 't.tired': '{0} is tired', 't.eat': '{0}: yum', 't.happy': '{0} is happy', 't.word': '{0} thinks of "{1}"',
       food: '{0} is hungry', water: '{0} is thirsty', warmth: '{0} is cold', light: '{0} wants light', fun: '{0} is bored', rest: '{0} is sleepy', social: '{0} is lonely', love: '{0} is happy', want: '{0} wants {1}' },
-    'tz.rooms': ['Living room', 'Garden', 'Pond', 'Cave', 'Workshop'],
+    'tz.rooms': ['Living room', 'Garden', 'Pond', 'Cave', 'Workshop', 'Gallery'],
+    'tz.gal.empty': 'No photos yet. Adopt a Plimplom and it gets its first portrait.', 'tz.gal.sum': '{0}, generation {1}. {2} days with you, {3} words taught, {4} children.', 'tz.gal.st.home': 'Lives in your terrarium', 'tz.gal.st.wild': 'Released into the wild on {0}', 'tz.gal.st.dead': 'Died on {0} ({1})',
+    'tz.gal.ev.adopt': 'Moved into your terrarium', 'tz.gal.ev.hatch': 'Hatched from an egg', 'tz.gal.ev.known': 'Lives in your terrarium', 'tz.gal.ev.teach': 'Learned the word "{0}" for: {1}', 'tz.gal.ev.kid': 'Became a parent of {0}', 'tz.gal.ev.adult': 'Grew up', 'tz.gal.ev.skilled': 'Mastered the learning machine', 'tz.gal.ev.release': 'Released into the wild', 'tz.gal.ev.death': 'Died ({0})',
     'tz.needs': { food: 'Food', water: 'Water', warmth: 'Warmth', light: 'Light', fun: 'Play', rest: 'Rest', social: 'Company' },
     'tz.help': 'Click bowls, lamp, light, music and puzzle box | Keys 1 to 9 and 0: tool',
     'tz.intro': 'Adopted Plimploms live here. They need food, water, warmth, light, play and rest. Neglect causes stress and death. While you are away, time passes at a quarter of the speed and never below a safe minimum. Happy adults nearby become fond of each other and lay eggs. Release them into the wild and they take everything they learned with them.',
@@ -1163,7 +1165,9 @@ const I18N = {
     'tz.puzzleHint': 'Tüftelbox: Kreaturen lernen sie zu öffnen und bekommen Leckerli',
     th: { 't.fear': '{0} hat Angst', 't.sick': '{0} fühlt sich krank', 't.hurt': '{0}: aua', 't.hungry': '{0} hungrig', 't.tired': '{0} müde', 't.eat': '{0}: mampf', 't.happy': '{0} froh', 't.word': '{0} denkt an "{1}"',
       food: '{0} hungrig', water: '{0} durstig', warmth: '{0} friert', light: '{0} will Licht', fun: '{0} langweilt sich', rest: '{0} müde', social: '{0} einsam', love: '{0} froh', want: '{0} will {1}' },
-    'tz.rooms': ['Wohnzimmer', 'Garten', 'Teich', 'Höhle', 'Werkstatt'],
+    'tz.rooms': ['Wohnzimmer', 'Garten', 'Teich', 'Höhle', 'Werkstatt', 'Galerie'],
+    'tz.gal.empty': 'Noch keine Fotos. Adoptieren Sie einen Plimplom, dann entsteht sein erstes Porträt.', 'tz.gal.sum': '{0}, Generation {1}. {2} Tage bei Ihnen, {3} Wörter beigebracht, {4} Kinder.', 'tz.gal.st.home': 'Lebt in Ihrem Terrarium', 'tz.gal.st.wild': 'Am {0} in die Wildnis entlassen', 'tz.gal.st.dead': 'Am {0} gestorben ({1})',
+    'tz.gal.ev.adopt': 'Ins Terrarium eingezogen', 'tz.gal.ev.hatch': 'Aus dem Ei geschlüpft', 'tz.gal.ev.known': 'Lebt in Ihrem Terrarium', 'tz.gal.ev.teach': 'Wort "{0}" gelernt für: {1}', 'tz.gal.ev.kid': 'Wurde Elternteil von {0}', 'tz.gal.ev.adult': 'Ist erwachsen geworden', 'tz.gal.ev.skilled': 'Hat die Lernmaschine gemeistert', 'tz.gal.ev.release': 'In die Wildnis entlassen', 'tz.gal.ev.death': 'Gestorben ({0})',
     'tz.needs': { food: 'Futter', water: 'Wasser', warmth: 'Wärme', light: 'Licht', fun: 'Spiel', rest: 'Ruhe', social: 'Gesellschaft' },
     'tz.help': 'Näpfe, Lampe, Licht, Spieluhr und Tüftelbox anklicken | Tasten 1 bis 9 und 0: Werkzeug',
     'tz.intro': 'Adoptierte Plimploms leben hier. Sie brauchen Futter, Wasser, Wärme, Licht, Spiel und Ruhe. Vernachlässigung führt zu Stress und Tod. Während Ihrer Abwesenheit vergeht die Zeit mit einem Viertel der Geschwindigkeit und nie unter einem sicheren Minimum. Zufriedene Erwachsene in der Nähe werden sich zugetan und legen Eier. Wenn Sie sie auswildern, nehmen sie alles Gelernte mit.',
@@ -3504,6 +3508,8 @@ async function tzAdopt(id) {
   const c = tzMake(r, null);
   TZ.list.push(c);
   TZ.sel = c.id;
+  tzAlbumAdd(c, 'adopt');
+  tzViewRoom(0);
   toast(t('tz.adopted', c.name));
   setViewMode('terra');
   tzSave();
@@ -3514,6 +3520,8 @@ async function tzRelease(id) {
   if (!confirm(t('tz.releaseConfirm', c.name))) return;
   const r = await tzCall({ type: 'release', id, growth: tzGrowth(c), hp: c.hp });
   if (!r.ok) return;
+  if (c.room === TZ.cur) tzSnap(c);
+  tzAlbumNote(id, 'release');
   TZ.list = TZ.list.filter(q => q.id !== id);
   if (TZ.sel === id) TZ.sel = 0;
   toast(t('tz.released', c.name));
@@ -3549,7 +3557,7 @@ async function tzReconcile() {
 /* ---------- persistence ---------- */
 function tzSerialize() {
   return JSON.stringify({
-    v: 2, savedAt: Date.now(), garden: TZ.garden, room: TZ.room, graves: TZ.graves, extra: TZ.extra,
+    v: 2, savedAt: Date.now(), garden: TZ.garden, room: TZ.room, graves: TZ.graves, extra: TZ.extra, album: TZ.album.map(a => ({ id: a.id, name: a.name, gen: a.gen, hue: a.hue, born: a.born, state: a.state, end: a.end, cause: a.cause, ev: a.ev, kids: a.kids, words: a.words, adult: a.adult, photo: a.photo, snapAt: a.snapAt })),
     eggs: TZ.eggs.map(e => ({ id: e.id, x: e.x, left: e.left })),
     list: TZ.list.map(c => ({ id: c.id, age: c.age, needs: c.needs, hp: c.hp, stress: c.stress, love: c.love, breedCool: c.breedCool, x: c.x, y: c.y, lvl: c.lvl, acc: c.acc, skill: c.skill, obey: c.obey, vocab: c.vocab, wi: c.wi, room: c.room }))
   });
@@ -3685,6 +3693,7 @@ function tzHatch() {
     const c = tzMake({ id: e.id, name: e.name, gen: e.gen, rec: e.rec, growth: 0, children: 0, learn: e.learn, cur: e.cur, soc: e.soc }, { age: 0, x: e.x });
     c.heartUntil = Date.now() + 2500;
     TZ.list.push(c);
+    tzAlbumAdd(c, 'hatch');
     tzBurst('star', c.x, c.y - c.half, 14);
     tzBurst('heart', c.x, c.y - c.half * 2, 4);
     sndFx('born', (c.x - 400) / 400);
@@ -3697,6 +3706,7 @@ async function tzDeaths() {
     if (c.hp > 0) continue;
     TZ.list = TZ.list.filter(q => q.id !== c.id);
     if (TZ.sel === c.id) TZ.sel = 0;
+    tzAlbumNote(c.id, 'death', c.cause || 'stress');
     TZ.parts.push({ type: 'ghost', x: c.x, y: c.y - c.half * 2, vx: 0, vy: -0.35, life: 150, col: '#f2f6ff' });
     tzBurst('star', c.x, c.y - c.half, 6);
     sndFx('death', (c.x - 400) / 400);
@@ -3727,6 +3737,7 @@ async function tzBreeding() {
     if (r.ok) {
       TZ.eggs.push({ id: r.id, name: r.name, gen: r.gen, rec: Array.from(r.rec), learn: r.learn, cur: r.cur, soc: r.soc, x: (c.x + o.x) / 2, y: Math.min(c.y, o.y) - 20, vy: 0, left: 90 });
       c.kids++; o.kids++;
+      tzAlbumNote(c.id, 'kid', r.name); tzAlbumNote(o.id, 'kid', r.name);
       c.heartUntil = o.heartUntil = Date.now() + 2500;
       tzBurst('heart', (c.x + o.x) / 2, c.y - c.half * 2, 12);
       tzBurst('star', (c.x + o.x) / 2, c.y - c.half * 2, 8);
@@ -4193,6 +4204,7 @@ function tzRender() {
   }
   const order = TZ.list.filter(c => c.room === TZ.cur).sort((p, q) => p.y - q.y);
   for (const c of order) { const oy = c.y; if (c.swim) c.y += 7 + Math.sin(now / 300 + c.id) * 1.5; tzSide(c, c.id === TZ.sel, now); c.y = oy; }
+  tzGalleryShots(order);
   if (TZ.cur) tzRoomOver(TZ.cur, now);
   for (const c of order) {
     const top = Math.round(c.y - c.half * 2 - 8);
@@ -4321,7 +4333,7 @@ async function tzTeach(c) {
   if (!w) { toast(t('app.wordFirst')); inp.focus(); return; }
   const mv = tzEl('tzMean').value, need = mv && TZ_FEAT[mv] !== undefined ? mv : TZ_GOALNEED[c.goal && c.goal.type] || 'fun', feat = TZ_FEAT[need] === undefined ? 9 : TZ_FEAT[need];
   const r = await tzCall({ type: 'tteach', id: c.id, word: w, feat });
-  if (r.ok) { c.vocab[need] = w; c.words = r.words || c.words; c.heartUntil = Date.now() + 1500; toast(t('tz.taught', c.name, w, tr('tz.needs')[need])); tzSave(); } else toast(t('tz.noTeach'));
+  if (r.ok) { c.vocab[need] = w; c.words = r.words || c.words; c.heartUntil = Date.now() + 1500; tzAlbumNote(c.id, 'teach', w, need); toast(t('tz.taught', c.name, w, tr('tz.needs')[need])); tzSave(); } else toast(t('tz.noTeach'));
 }
 function tzSetTool(name) {
   TZ.tool = name;
@@ -4386,6 +4398,7 @@ function tzPanel(force) {
       row(t('tz.skill'), pct(sel.skill)) + row(t('tz.obey'), pct(sel.obey)) + row(t('tz.acc'), esc(t('tz.accs.' + TZ_ACC[sel.acc]))) +
       row(t('tz.gen'), sel.gen) + row(t('tz.kids'), sel.kids) + row(t('tz.words'), sel.words) + row(t('tz.vocab'), voc || '-') + '</table>');
   }
+  if (TZ.cur === 5) { setHtml(tzEl('tzList'), tzGalleryHtml()); setHtml(tzEl('tzEggs'), ''); tzEl('tzSelHead').style.display = 'none'; }
   const gr = TZ.graves.slice().reverse().map(q => `<tr><td class="l">${esc(q.name)} <span class="muted">${esc(t('tz.gen'))} ${q.gen}</span></td><td>${esc(tr('causes')[q.cause] || q.cause)}</td></tr>`).join('');
   setHtml(tzEl('tzGraves'), gr ? `<table>${gr}</table>` : `<div class="muted">-</div>`);
   const rm = TZ.room, yes = `<span class="yes">${esc(t('sel.yes'))}</span>`, no = `<span class="no">${esc(t('sel.no'))}</span>`;
@@ -4402,7 +4415,8 @@ const TZ_ROOMS = [
   { key: 'garden', lv: [TZ_FL, { x0: 560, x1: 740, y: 270 }], prov: { food: 8, water: 20, warmth: 1.2, rest: 1.0, fun: 2 } },
   { key: 'pond', lv: [TZ_FL, { x0: 560, x1: 760, y: 290 }], prov: { food: 8, water: 22, warmth: 1.2, rest: 1.0, fun: 3 } },
   { key: 'cave', lv: [TZ_FL, { x0: 300, x1: 480, y: 270 }], prov: { food: 8, water: 20, warmth: 1.8, rest: 1.2, fun: 2 } },
-  { key: 'shop', lv: [TZ_FL, { x0: 520, x1: 700, y: 280 }], prov: { food: 12, water: 22, warmth: 1.4, rest: 1.0, fun: 3 } }
+  { key: 'shop', lv: [TZ_FL, { x0: 520, x1: 700, y: 280 }], prov: { food: 12, water: 22, warmth: 1.4, rest: 1.0, fun: 3 } },
+  { key: 'gallery', lv: [TZ_FL], prov: { food: 0, water: 0, warmth: 1, rest: 1, fun: 1 } }
 ];
 TZ.cur = 0;
 TZ.bf = [{ x: 300, y: 250 }, { x: 500, y: 240 }, { x: 650, y: 255 }];
@@ -4416,6 +4430,7 @@ function tzLightOn(c) {
   return TZ.night < 0.5;
 }
 function tzRestoreRooms(P) {
+  if (Array.isArray(P.album)) TZ.album = P.album.slice(-80).map(a => ({ ...a, img: null, redo: false }));
   if (Array.isArray(P.garden) && P.garden.length === 4) TZ.garden = P.garden.map((q, i) => ({ x: [150, 290, 430, 570][i], g: tzClamp(+q.g || 0, 0, 1) }));
 }
 function tzRoomsStep(dt) {
@@ -4524,7 +4539,7 @@ function tzUseR(c, g, dt) {
     case 'machine': {
       c.act += dt;
       if (c.act > 1.6) {
-        c.act = 0; c.skill = Math.min(1, c.skill + 0.035 * (c.learn / 0.06)); c.obey = Math.min(1, c.obey + 0.01); n.fun = mx(n.fun + 7);
+        c.act = 0; c.skill = Math.min(1, c.skill + 0.035 * (c.learn / 0.06)); if (c.skill >= 0.95 && !c.skilled) { c.skilled = true; tzAlbumNote(c.id, 'skilled'); } c.obey = Math.min(1, c.obey + 0.01); n.fun = mx(n.fun + 7);
         tzBurst('star', 420, 290, 4); sndFx('tick', (420 - 400) / 400);
       }
       break;
@@ -4576,6 +4591,7 @@ function tzAway(c, dt) {
 function tzRoomClick(x, y) {
   for (const d of tzDoors()) if (Math.abs(x - d.x) < 24 && y > TZ_FLOOR - 70 && y < TZ_FLOOR + 6) { tzViewRoom(d.to); return true; }
   const r = TZ.cur;
+  if (r === 5) return tzGalleryClick(x, y);
   if (r === 1) {
     for (const p of TZ.garden) if (Math.abs(x - p.x) < 24 && y > 230) { p.g = Math.min(1, p.g + 0.2); tzBurst('star', p.x, TZ_FLOOR - 24, 6); sndFx('pop', (p.x - 400) / 400); return true; }
   } else if (r === 2) {
@@ -4678,6 +4694,7 @@ function tzRoomDraw(r, now) {
     const gx = 420 + Math.cos(now / 400) * 6, gy = 307 + Math.sin(now / 400) * 6;
     tzRect('#ffd84a', gx - 3, gy - 3, 6, 6); tzRect('#ffd84a', 400, 300, 4, 4); tzRect('#e0486a', 436, 300, 4, 4);
   }
+  else if (r === 5) tzGalleryDraw(now);
   /* doors */
   for (const d of tzDoors()) {
     const x = d.dir > 0 ? 770 : 6;
@@ -4743,6 +4760,115 @@ function tzGardenPlant(p, now) {
   } else if (g > 0.6) { tzRect('#ff9fc4', x - 4, y - h - 4, 8, 6); tzRect('#fff07a', x - 1, y - h - 2, 3, 3); }
   else if (g > 0.15) tzRect('#7fcf8c', x - 3, y - h - 3, 7, 5);
 }
+
+'use strict';
+/* Gallery room: photo album of own and past creatures with a short life story. Loaded after rooms.js. */
+TZ.album = []; TZ.galSel = 0; TZ.galPage = 0;
+const TZ_GAL_PER = 10, TZ_GAL_MAX = 80, TZ_GAL = 5;
+
+function tzAlbumGet(id) { return TZ.album.find(a => a.id === id); }
+function tzAlbumAdd(c, k) {
+  let e = tzAlbumGet(c.id);
+  if (!e) {
+    e = { id: c.id, name: c.name, gen: c.gen, hue: (c.rec && c.rec[5]) || 0, born: Date.now(), state: 'home', ev: [], kids: 0, words: 0, adult: false, photo: '', img: null, snapAt: 0, redo: false };
+    TZ.album.push(e);
+    if (TZ.album.length > TZ_GAL_MAX) { const i = TZ.album.findIndex(q => q.state !== 'home'); TZ.album.splice(i < 0 ? 0 : i, 1); }
+    if (k) tzAlbumNote(c.id, k);
+  }
+  return e;
+}
+function tzAlbumNote(id, k, a, b) {
+  const e = tzAlbumGet(id); if (!e) return;
+  e.ev.push({ ts: Date.now(), k, a: a === undefined ? '' : a, b: b === undefined ? '' : b });
+  if (e.ev.length > 50) e.ev.splice(1, 1);
+  if (k === 'kid') e.kids++;
+  if (k === 'teach') e.words++;
+  if (k === 'release') { e.state = 'wild'; e.end = Date.now(); }
+  if (k === 'death') { e.state = 'dead'; e.end = Date.now(); e.cause = a; }
+}
+function tzSnap(c) {
+  const e = tzAlbumGet(c.id); if (!e) return;
+  const w = 72, h = 80, sx = Math.max(0, Math.min(BW - w, Math.round(c.x - w / 2))), sy = Math.max(0, Math.min(BH - h, Math.round(c.y - c.half * 2 - 18)));
+  const cv2 = document.createElement('canvas'); cv2.width = w; cv2.height = h;
+  cv2.getContext('2d').drawImage(bufCanvas, sx, sy, w, h, 0, 0, w, h);
+  try { e.photo = cv2.toDataURL('image/png'); } catch (err) { return; }
+  e.img = null; e.snapAt = Date.now(); e.redo = false;
+}
+/* called right after the pets of the viewed room were drawn */
+function tzGalleryShots(order) {
+  for (const c of TZ.list) { const e = tzAlbumAdd(c, 'known'); const g = tzGrowth(c); if (!e.adult && g >= TZ.ADULT) { e.adult = true; if (e.ev.length > 1) tzAlbumNote(c.id, 'adult'); e.redo = true; } }
+  for (const c of order) { const e = tzAlbumGet(c.id); if (e && !c.held && (!e.photo || e.redo)) tzSnap(c); }
+}
+function tzGalList() {
+  return TZ.album.slice().sort((p, q) => ((q.ev.length ? q.ev[q.ev.length - 1].ts : 0) - (p.ev.length ? p.ev[p.ev.length - 1].ts : 0)));
+}
+function tzGalPages() { return Math.max(1, Math.ceil(TZ.album.length / TZ_GAL_PER)); }
+function tzGalSlots() {
+  const list = tzGalList().slice(TZ.galPage * TZ_GAL_PER, (TZ.galPage + 1) * TZ_GAL_PER);
+  return list.map((e, i) => ({ e, x: 30 + (i % 5) * 150, y: 16 + ((i / 5) | 0) * 152, w: 112, h: 126 }));
+}
+function tzGalleryDraw(now) {
+  const B = b;
+  tzRect('#eadcc2', 0, 0, BW, TZ_FLOOR);
+  for (let x = 0; x < BW; x += 40) tzRect('#e3d3b6', x, 0, 20, TZ_FLOOR);
+  tzRect('#5a4026', 0, TZ_FLOOR - 8, BW, 8); tzRect('#7a5a38', 0, TZ_FLOOR, BW, BH - TZ_FLOOR);
+  for (let x = 0; x < BW; x += 60) tzRect('#68492a', x, TZ_FLOOR + 6, 2, BH);
+  tzRect('#9a7448', 0, TZ_FLOOR, BW, 3);
+  const slots = tzGalSlots();
+  B.textAlign = 'center'; B.textBaseline = 'middle'; B.font = '8px Silkscreen, monospace';
+  for (const s of slots) {
+    const e = s.e, sel = e.id === TZ.galSel;
+    if (sel) { B.fillStyle = 'rgba(255,230,120,.35)'; B.fillRect(s.x - 8, s.y - 8, s.w + 16, s.h + 30); }
+    tzRect('rgba(0,0,0,.18)', s.x + 4, s.y + 4, s.w, s.h);
+    tzRect(OUTLINE, s.x - 1, s.y - 1, s.w + 2, s.h + 2); tzRect('#d9b25a', s.x, s.y, s.w, s.h); tzRect('#f0d27a', s.x + 2, s.y + 2, s.w - 4, 3);
+    tzRect('#fff8e8', s.x + 6, s.y + 6, s.w - 12, s.h - 12);
+    const px = s.x + 10, py = s.y + 10, pw = s.w - 20, ph = s.h - 20;
+    if (e.photo) {
+      if (!e.img) { e.img = new Image(); e.img.src = e.photo; }
+      if (e.img.complete && e.img.naturalWidth) { B.imageSmoothingEnabled = false; B.drawImage(e.img, px, py, pw, ph); if (e.state === 'dead') { B.fillStyle = 'rgba(70,70,90,.45)'; B.fillRect(px, py, pw, ph); } }
+    } else { tzRect(`hsl(${e.hue},60%,80%)`, px, py, pw, ph); }
+    tzRect('#7a5a38', s.x + 8, s.y + s.h + 4, s.w - 16, 12); tzRect('#fff8e8', s.x + 9, s.y + s.h + 5, s.w - 18, 10);
+    B.fillStyle = '#3a2a18'; B.fillText(e.name.slice(0, 14), s.x + s.w / 2, s.y + s.h + 10.5);
+    const mx = s.x + s.w - 12, my = s.y + 12;
+    if (e.state === 'home') { tzRect('#3fae5a', mx - 3, my - 3, 7, 7); tzRect('#9af0a8', mx - 2, my - 2, 3, 3); }
+    else if (e.state === 'wild') { tzRect('#3a8fd8', mx - 3, my - 3, 7, 7); tzRect('#a8d8ff', mx - 2, my - 2, 3, 3); }
+    else { tzRect('#2a2a34', mx - 3, my - 4, 7, 9); tzRect('#e8e8f0', mx - 1, my - 3, 3, 7); tzRect('#e8e8f0', mx - 2, my - 1, 5, 2); }
+  }
+  if (!slots.length) { B.fillStyle = '#6a5436'; B.font = '10px Silkscreen, monospace'; B.fillText(t('tz.gal.empty'), 400, 150); }
+  const pages = tzGalPages();
+  if (pages > 1) {
+    B.font = '10px Silkscreen, monospace'; B.fillStyle = '#6a5436';
+    B.fillText(`${TZ.galPage + 1} / ${pages}`, 400, TZ_FLOOR - 22);
+    tzRect('#d9b25a', 330, TZ_FLOOR - 30, 22, 16); tzRect('#d9b25a', 448, TZ_FLOOR - 30, 22, 16);
+    B.fillStyle = '#3a2a18'; B.fillText('<', 341, TZ_FLOOR - 21); B.fillText('>', 459, TZ_FLOOR - 21);
+  }
+  B.textAlign = 'start'; B.textBaseline = 'alphabetic';
+}
+function tzGalleryClick(x, y) {
+  if (tzGalPages() > 1 && y > TZ_FLOOR - 34 && y < TZ_FLOOR - 10) {
+    if (x > 326 && x < 356) { TZ.galPage = (TZ.galPage + tzGalPages() - 1) % tzGalPages(); sndFx('tick', 0); tzPanel(true); return true; }
+    if (x > 444 && x < 474) { TZ.galPage = (TZ.galPage + 1) % tzGalPages(); sndFx('tick', 0); tzPanel(true); return true; }
+  }
+  for (const s of tzGalSlots()) if (x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h + 18) { TZ.galSel = s.e.id; sndFx('chime', (x - 400) / 400); tzPanel(true); return true; }
+  return false;
+}
+function tzGalleryHtml() {
+  const list = tzGalList();
+  const e = tzAlbumGet(TZ.galSel) || list[0];
+  if (!e) return `<div class="muted">${esc(t('tz.gal.empty'))}</div>`;
+  const fmt = ts => new Date(ts).toLocaleDateString(LANG === 'de' ? 'de-AT' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  const days = Math.max(0, Math.round(((e.end || Date.now()) - e.born) / 86400000));
+  const st = e.state === 'dead' ? t('tz.gal.st.dead', fmt(e.end), tr('causes')[e.cause] || e.cause || '') : e.state === 'wild' ? t('tz.gal.st.wild', fmt(e.end)) : t('tz.gal.st.home');
+  const sum = t('tz.gal.sum', e.name, e.gen, days < 1 ? '<1' : days, e.words, e.kids);
+  const evs = e.ev.map(v => {
+    const a = v.k === 'teach' ? v.a : v.k === 'death' ? (tr('causes')[v.a] || v.a) : v.a, bb = v.k === 'teach' ? (tr('tz.needs')[v.b] || v.b) : v.b;
+    return `<tr><td class="l muted" style="white-space:nowrap">${esc(fmt(v.ts))}</td><td>${esc(t('tz.gal.ev.' + v.k, a, bb))}</td></tr>`;
+  }).join('');
+  const img = e.photo ? `<img src="${e.photo}" alt="" style="width:144px;image-rendering:pixelated;border:5px solid #d9b25a;border-radius:3px;background:#fff8e8;float:left;margin:0 10px 6px 0">` : '';
+  const pg = tzGalPages() > 1 ? `<div class="row"><button data-galpage="-1">&lt;</button><span class="muted">${TZ.galPage + 1} / ${tzGalPages()}</span><button data-galpage="1">&gt;</button></div>` : '';
+  return `<div class="tzcard on">${img}<b>${esc(e.name)}</b><div class="muted">${esc(st)}</div><div style="margin-top:6px">${esc(sum)}</div><div style="clear:both"></div><table>${evs}</table></div>${pg}`;
+}
+tzEl('tzList').addEventListener('click', ev => { const bt = ev.target.closest('[data-galpage]'); if (bt) { TZ.galPage = (TZ.galPage + (+bt.dataset.galpage) + tzGalPages()) % tzGalPages(); tzPanel(true); } });
 </script>
 <script>'use strict';
 /* Plimploms user interface: rendering loop, panels, charts, input. The simulation runs in a worker (WebAssembly). */

@@ -12,6 +12,7 @@ An open experiment in artificial life that runs entirely in your browser. Nobody
 - **Language:** open meanings as prototype categories, separate words for "what" and "where", emergent word order, prestige of bosses.
 - **Society:** species by morphological distance, bosses elected from six aspects.
 - **Open world:** reserved brain channels (three scent channels, dig, build, signal) with an observable novelty counter; soil layer (fertility, burrows); plants with an inherited seed-spread gene; structures (shelter, barrier) built by creatures or placed by guardians; slow climate drift.
+- **Terrarium gallery:** a sixth room with photo frames of your current and past Plimploms (taken from the terrarium) and a short life story: moved in, words taught, children, released, died.
 - **Science:** Gaussian approximation of integrated information (Phi), Lempel-Ziv complexity, MODES and Bedau activity for open-ended evolution, language entropy, mutual information and topographic similarity, controlled experiments with Welch t-tests, exports to CSV, Newick and PyPhi.
 
 ## Build
