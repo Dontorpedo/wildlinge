@@ -20,7 +20,7 @@ const csp = [
 const shim = "try { new Intl.NumberFormat(navigator.language); } catch (e) { Object.defineProperty(Navigator.prototype, 'language', { get: () => 'en' }); }\n";
 const libs = shim + txt('node_modules/uplot/dist/uPlot.iife.min.js') + '\n;\n' + txt('node_modules/d3-hierarchy/dist/d3-hierarchy.min.js');
 const worker = txt('web/worker.js');
-if (/<\/script/i.test(worker + libs + txt('web/app.js') + txt('web/gfx.js') + txt('web/terrarium.js') + txt('web/critter.js') + txt('web/i18n.js'))) throw new Error('script end tag inside source');
+if (/<\/script/i.test(worker + libs + txt('web/app.js') + txt('web/gfx.js') + txt('web/audio.js') + txt('web/terrarium.js') + txt('web/critter.js') + txt('web/i18n.js'))) throw new Error('script end tag inside source');
 
 const parts = {
   CSP: csp,
@@ -32,6 +32,7 @@ const parts = {
   I18N: txt('web/i18n.js'),
   GFX: 'const TILE_STAMPS=' + txt('web/assets/tiles/stamps.json') + ';\n' + txt('web/gfx.js'),
   CRITTER: (existsSync(new URL('../web/assets/whole/anim.png', import.meta.url)) ? 'const CR_ANIM_IMG=' + JSON.stringify('data:image/png;base64,' + rd('web/assets/whole/anim.png').toString('base64')) + ';\nconst CR_ANIM_META=' + txt('web/assets/whole/anim.json') + ';\n' : '') + (existsSync(new URL('../web/assets/whole/parts.png', import.meta.url)) ? 'const CR_PARTX_IMG=' + JSON.stringify('data:image/png;base64,' + rd('web/assets/whole/parts.png').toString('base64')) + ';\nconst CR_PARTX_META=' + txt('web/assets/whole/parts.json') + ';\n' : '') + (existsSync(new URL('../web/assets/whole/extra-tags.json', import.meta.url)) ? 'const CR_EXTRA_TAGS=' + txt('web/assets/whole/extra-tags.json') + ';\n' : '') + 'const CR_WHOLE_IMG=' + JSON.stringify('data:image/png;base64,' + rd('web/assets/whole/whole.png').toString('base64')) + ';\nconst CR_WHOLE_META=' + txt('web/assets/whole/whole.json') + ';\nconst CR_ATLAS=' + JSON.stringify(Object.fromEntries(['heads', 'bodies', 'ears', 'tails', 'legs', 'wings', 'crests', 'horns'].map(n => [n, 'data:image/png;base64,' + rd('web/assets/parts/' + n + '.png').toString('base64')]))) + ';\n' + txt('web/critter.js'),
+  SND: txt('web/audio.js'),
   TERRA: txt('web/terrarium.js'),
   APP: txt('web/app.js')
 };

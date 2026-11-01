@@ -464,6 +464,7 @@ function tzPop(i, c) {
   const x = TZ.items.indexOf(i);
   if (x >= 0) TZ.items.splice(x, 1);
   tzBurst('star', i.x, i.y, 6);
+  sndFx('pop', (i.x - 400) / 400);
   if (c) { c.needs.fun = Math.min(100, c.needs.fun + 7); c.laughUntil = Date.now() + 700; }
 }
 /* walk, jump or fly towards x on level lvl; true when there */
@@ -801,6 +802,7 @@ function tzSide(c, sel, now) {
   }
 }
 function tzRender() {
+  sndAmbient('terra', TZ.night);
   const now = Date.now(), B = b;
   tzRoom(now);
   for (const e of TZ.eggs) {
@@ -826,6 +828,16 @@ function tzRender() {
     if (c.sleeping) key = (now / 700 | 0) % 2 ? 'rest' : null;
     else if (c.heartUntil > now) key = 'love';
     else if (c.bubble && c.bubbleUntil > TZ.clock) { key = c.bubble; word = c.vocab[c.bubble] || null; }
+    if (key !== c.sk) {
+      c.sk = key;
+      if (key) {
+        const pan = (c.x - 400) / 400;
+        if (key === 'love') sndFx('joy', pan);
+        else if (key === 'rest') sndFx('sigh', pan);
+        else if (word) sndSay(word, pan, 0);
+        else sndFx('need', pan);
+      }
+    }
     if (key) tzGlyph(Math.round(c.x), top, key, word);
   }
   for (const p of TZ.parts) {
@@ -869,7 +881,7 @@ function tzDown(e) {
       case 'select': TZ.drag = { id: hit.id, dy: y - (hit.y - hit.half), dx: x - hit.x, from: hit.y, moved: false }; tzEl('terra').setPointerCapture(e.pointerId); break;
       case 'pet': hit.stress = Math.max(0, hit.stress - 10); n.fun = Math.min(100, n.fun + 7); n.social = Math.min(100, n.social + 8); hit.love = Math.min(100, hit.love + 3); hit.heartUntil = now + 1800; hit.sleeping = false; tzBurst('heart', hit.x, hit.y - hit.half * 2, 2); break;
       case 'brush': hit.stress = Math.max(0, hit.stress - 18); n.social = Math.min(100, n.social + 12); n.rest = Math.min(100, n.rest + 4); hit.heartUntil = now + 2200; tzBurst('star', hit.x, hit.y - hit.half, 8); break;
-      case 'tickle': { hit.sleeping = false; hit.laughUntil = now + 900; hit.tick = (hit.tick || 0) + 1; if (now - (hit.tickAt || 0) > 4000) hit.tick = 1; hit.tickAt = now; n.fun = Math.min(100, n.fun + 14); if (hit.tick > 5) hit.stress = Math.min(100, hit.stress + 4); if (hit.ground) { hit.vy = -3.4; hit.ground = false; hit.hopT = 0.35; } tzBurst('star', hit.x, hit.y - hit.half, 4); break; }
+      case 'tickle': { hit.sleeping = false; hit.laughUntil = now + 900; sndFx('joy', (hit.x - 400) / 400); hit.tick = (hit.tick || 0) + 1; if (now - (hit.tickAt || 0) > 4000) hit.tick = 1; hit.tickAt = now; n.fun = Math.min(100, n.fun + 14); if (hit.tick > 5) hit.stress = Math.min(100, hit.stress + 4); if (hit.ground) { hit.vy = -3.4; hit.ground = false; hit.hopT = 0.35; } tzBurst('star', hit.x, hit.y - hit.half, 4); break; }
       case 'dress': hit.acc = (hit.acc + 1) % TZ_ACC.length; hit.heartUntil = now + 900; tzBurst('star', hit.x, hit.y - hit.half * 1.6, 6); break;
       case 'teach': tzTeach(hit); break;
       default: break;
@@ -892,7 +904,7 @@ function tzDown(e) {
     case 'bubbles': for (let i = 0; i < 5; i++) if (TZ.items.filter(q => q.type === 'sbub').length < 14) TZ.items.push({ type: 'sbub', x: tzClamp(x + tzRnd(-18, 18), 10, 790), y: tzClamp(y + tzRnd(-14, 14), 10, 300), vx: tzRnd(-0.3, 0.3), vy: tzRnd(-0.4, 0.05) }); break;
     case 'plush': if (TZ.items.filter(i => i.type === 'plush').length >= 2) TZ.items.splice(TZ.items.findIndex(i => i.type === 'plush'), 1); TZ.items.push({ type: 'plush', x: tzClamp(x, 14, 786), y: Math.min(y, 220), vx: 0, vy: 0, ground: false }); break;
     case 'call': TZ.callT = 8; TZ.callX = tzClamp(x, 20, 780); TZ.callLvl = tzLevelOf(y); tzBurst('star', x, y, 6); for (const c of TZ.list) { c.sleeping = false; c.goalT = 0; } break;
-    case 'party': if (TZ.partyCool <= 0) { TZ.partyCool = 6; tzBurst('conf', x, Math.min(y, 120), 60); for (const c of TZ.list) { c.danceUntil = now + 4000; c.needs.fun = Math.min(100, c.needs.fun + 12); c.needs.social = Math.min(100, c.needs.social + 6); c.sleeping = false; } } break;
+    case 'party': if (TZ.partyCool <= 0) { sndFx('joy', 0); TZ.partyCool = 6; tzBurst('conf', x, Math.min(y, 120), 60); for (const c of TZ.list) { c.danceUntil = now + 4000; c.needs.fun = Math.min(100, c.needs.fun + 12); c.needs.social = Math.min(100, c.needs.social + 6); c.sleeping = false; } } break;
     case 'level': tzToggleLevel(x, y); break;
     default: TZ.sel = 0; break;
   }

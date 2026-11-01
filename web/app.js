@@ -613,6 +613,8 @@ function receive(m) {
       frame = m;
       if (showBubbles) for (const q of m.meta.bub || []) bubbles.push({ x: q.x, y: q.y, text: q.kind === 2 ? tBody(q.text) : q.text, kind: q.kind, until: performance.now() + (q.kind === 2 ? 1100 : 1600) });
       if (bubbles.length > 90) bubbles.splice(0, bubbles.length - 90);
+      if (viewMode !== 'terra') { if (m.meta.bub) { const hw = BW * ZOOMS[cam.zi] / 2; for (const q of m.meta.bub) sndBubble(q, cam.x, cam.y, hw); }
+      sndAmbient('wild', m.meta.night); }
       if (!centered && m.cs.length >= CS_STRIDE) { centered = true; cam.x = m.cs[1]; cam.y = m.cs[2]; }
       break;
     }
@@ -950,6 +952,7 @@ $('follow').onchange = e => { follow = e.target.checked; };
 $('showSense').onchange = e => { showSense = e.target.checked; };
 $('styleSel').value = crStyle;
 $('styleSel').onchange = e => { crSetStyle(e.target.value); };
+sndUiInit();
 $('showBubbles').onchange = e => { showBubbles = e.target.checked; if (!showBubbles) bubbles = []; };
 $('showMeaning').onchange = e => { showMeaning = e.target.checked; if (panel) renderPanel(panel); };
 $('chartSet').onchange = () => { upl = null; drawSeries(); };
