@@ -122,3 +122,7 @@ Erst Einzelplatz-Version "Kreaturen" in JavaScript, dann kompletter Umbau auf Ru
 3. Wie sollte Sprachentstehung gemessen werden, damit man echte Syntax von Programmierung unterscheiden kann?
 4. Welche Risiken (Moderation, Recht, Kosten, Sicherheit) sehen Sie bei einer öffentlichen gemeinsamen Welt, einem Auto-Poster und optionaler KI-Anbindung?
 5. Welche Schwächen aus Abschnitt 9 sollten vor einem öffentlichen Start behoben werden?
+
+
+## Terrarium-Labor (Werkstatt)
+Materialien mit Eigenschaften (hart, schwer, lang, brennbar, Schale, essbar), allgemeine Handgriffe (aufheben, ablegen, schlagen, kombinieren, essen), Feuer als Physik (Funken, Entzündung, Fackeln, Wärme, Garen, Verbrennung). Die Tiere lernen pro Tier Aktionswerte durch Belohnung, ahmen erfolgreiche Nachbarn nach und protokollieren Entdeckungen. Nur im Terrarium, rein clientseitig (`web/lab.js`).

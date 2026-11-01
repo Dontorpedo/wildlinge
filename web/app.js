@@ -111,7 +111,8 @@ const TOOL_ICONS = {
   call: ['M4 10v4h3l6 4V6L7 10z M16 9a4 4 0 0 1 0 6 M18.5 6.5a8 8 0 0 1 0 11', '#c9b6ff'],
   dress: ['M5 15h14 M7 15l1-9a4 4 0 0 1 8 0l1 9 M4 15l-1 4h18l-1-4', '#ff9de2'],
   party: ['M12 3l2.6 5.6 6 .7-4.5 4.1 1.3 6L12 16.4 6.6 19.4l1.3-6L3.4 9.3l6-.7z', '#ffd84a'],
-  level: ['M3 20h5v-5h5v-5h5V5h3', '#8be28b']
+  level: ['M3 20h5v-5h5v-5h5V5h3', '#8be28b'],
+  lab: ['M9 3h6 M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3 M8 15h8', '#ff9a4a']
 };
 function initToolIcons() {
   const ns = 'http://www.w3.org/2000/svg';

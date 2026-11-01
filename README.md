@@ -13,6 +13,7 @@ An open experiment in artificial life that runs entirely in your browser. Nobody
 - **Society:** species by morphological distance, bosses elected from six aspects.
 - **Open world:** reserved brain channels (three scent channels, dig, build, signal) with an observable novelty counter; soil layer (fertility, burrows); plants with an inherited seed-spread gene; structures (shelter, barrier) built by creatures or placed by guardians; slow climate drift.
 - **Terrarium gallery:** a sixth room with photo frames of your current and past Plimploms (taken from the terrarium) and a short life story: moved in, words taught, children, released, died.
+- **Terrarium lab (workshop room):** items with numeric properties (hard, heavy, long, flammable, shell, food), general handles (pick up, put down, strike, combine, eat), fire as physics (sparks from stone on stone, ignition, burning items as torches, warmth, cooking, burn damage). Pets learn per-pet action values by reward (epsilon-greedy, optimistic start), copy successful actions of nearby pets, and log discoveries (also in the gallery). Client-side only (`web/lab.js`), stored with the terrarium.
 - **Science:** Gaussian approximation of integrated information (Phi), Lempel-Ziv complexity, MODES and Bedau activity for open-ended evolution, language entropy, mutual information and topographic similarity, controlled experiments with Welch t-tests, exports to CSV, Newick and PyPhi.
 
 ## Build

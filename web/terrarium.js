@@ -15,7 +15,7 @@ const TZ_RATE = { food: 0.12, water: 0.15, warmth: 0.05, light: 0.08, fun: 0.1, 
 const TZ_FEAT = { food: 1, water: 8, warmth: 7, light: 9, fun: 9, rest: 5, social: 3 };
 const TZ_GOALNEED = { food: 'food', treat: 'food', water: 'water', warm: 'warmth', sleep: 'rest', ball: 'fun', music: 'fun', puzzle: 'fun', bubble: 'fun', plush: 'social', social: 'social', call: 'social', wander: 'fun', party: 'fun' };
 const TZ_ACC = ['none', 'bow', 'hat', 'glasses', 'scarf', 'crown', 'flower'];
-const TZ_TOOLS = ['select', 'pet', 'brush', 'tickle', 'treat', 'ball', 'bubbles', 'plush', 'call', 'dress', 'party', 'teach', 'level'];
+const TZ_TOOLS = ['select', 'pet', 'brush', 'tickle', 'treat', 'ball', 'bubbles', 'plush', 'call', 'dress', 'party', 'teach', 'level', 'lab'];
 const TZ_GLYPH = {
   food: [['00100', '01110', '11111', '11111', '01110'], '#e86a5a'],
   water: [['00100', '00100', '01110', '11111', '01110'], '#4a9ae0'],
@@ -102,7 +102,7 @@ function tzMake(r, st) {
     age: (st && st.age !== undefined) ? st.age : g * TZ.GROW,
     needs: Object.assign(tzDefNeeds(), st && st.needs || {}),
     hp: st && st.hp !== undefined ? st.hp : 100, stress: st && st.stress || 0, love: st && st.love || 0, breedCool: st && st.breedCool || 0,
-    acc: st && st.acc || 0, skill: st && st.skill || 0, obey: st && st.obey || 0, vocab: st && st.vocab || {},
+    lsk: st && st.lsk || {}, hold: null, holdT: 0, acc: st && st.acc || 0, skill: st && st.skill || 0, obey: st && st.obey || 0, vocab: st && st.vocab || {},
     x: st && st.x !== undefined ? tzClamp(st.x, 30, 770) : tzRnd(80, 720), y: TZ_FLOOR, vx: 0, vy: 0, face: 1, lvl: 0, ground: true, held: false,
     room: st && st.room > 0 && st.room < 5 ? st.room | 0 : 0, dest: 0, stay: 0, swim: false,
     goal: null, goalT: 0, sleeping: false, bubble: null, bubbleUntil: 0, nextBubble: 0, heartUntil: 0, laughUntil: 0, danceUntil: 0, hopT: 0, moving: false, kick: 0, act: 0,
@@ -205,9 +205,9 @@ async function tzReconcile() {
 /* ---------- persistence ---------- */
 function tzSerialize() {
   return JSON.stringify({
-    v: 2, savedAt: Date.now(), garden: TZ.garden, room: TZ.room, graves: TZ.graves, extra: TZ.extra, album: TZ.album.map(a => ({ id: a.id, name: a.name, gen: a.gen, hue: a.hue, born: a.born, state: a.state, end: a.end, cause: a.cause, ev: a.ev, kids: a.kids, words: a.words, adult: a.adult, photo: a.photo, snapAt: a.snapAt })),
+    v: 2, savedAt: Date.now(), lab: tzLabSer(), garden: TZ.garden, room: TZ.room, graves: TZ.graves, extra: TZ.extra, album: TZ.album.map(a => ({ id: a.id, name: a.name, gen: a.gen, hue: a.hue, born: a.born, state: a.state, end: a.end, cause: a.cause, ev: a.ev, kids: a.kids, words: a.words, adult: a.adult, photo: a.photo, snapAt: a.snapAt })),
     eggs: TZ.eggs.map(e => ({ id: e.id, x: e.x, left: e.left })),
-    list: TZ.list.map(c => ({ id: c.id, age: c.age, needs: c.needs, hp: c.hp, stress: c.stress, love: c.love, breedCool: c.breedCool, x: c.x, y: c.y, lvl: c.lvl, acc: c.acc, skill: c.skill, obey: c.obey, vocab: c.vocab, wi: c.wi, room: c.room }))
+    list: TZ.list.map(c => ({ id: c.id, age: c.age, needs: c.needs, hp: c.hp, stress: c.stress, love: c.love, breedCool: c.breedCool, x: c.x, y: c.y, lvl: c.lvl, acc: c.acc, skill: c.skill, obey: c.obey, vocab: c.vocab, wi: c.wi, room: c.room, lsk: c.lsk }))
   });
 }
 async function tzSave() {
@@ -315,6 +315,7 @@ function tzStep(dt) {
   }
   if (TZ.cur === 0) tzItems(k, dt);
   tzRoomsStep(dt);
+  tzLabStep(dt);
   tzParts(k);
   for (const e of TZ.eggs) { e.left -= dt; e.vy += 0.25 * k; e.y = Math.min(TZ_FLOOR, e.y + e.vy * k); if (e.y >= TZ_FLOOR) e.vy = 0; }
   tzHatch();
@@ -988,6 +989,7 @@ function tzSetTool(name) {
   for (const bt of document.querySelectorAll('#ttools button[data-ttool]')) bt.classList.toggle('on', bt.dataset.ttool === name);
   const h = tzEl('help');
   if (h && typeof viewMode !== 'undefined' && viewMode === 'terra') h.textContent = t('tz.help') + ' | ' + t('tz.tip.' + name);
+  tzLabMats();
   tzEl('terra').style.cursor = name === 'select' ? 'grab' : 'pointer';
 }
 function tzFillMean() {
@@ -1051,5 +1053,5 @@ function tzPanel(force) {
   setHtml(tzEl('tzGraves'), gr ? `<table>${gr}</table>` : `<div class="muted">-</div>`);
   const rm = TZ.room, yes = `<span class="yes">${esc(t('sel.yes'))}</span>`, no = `<span class="no">${esc(t('sel.no'))}</span>`;
   setHtml(tzEl('tzRoom'), tzNavHtml() + '<table>' + row(t('tz.bowlFood'), barHtml(rm.food / 100, '#c98f5a')) + row(t('tz.bowlWater'), barHtml(rm.water / 100, '#7cc0f0')) +
-    row(t('tz.lamp'), rm.lamp ? yes : no) + row(t('tz.light'), rm.light ? yes : no) + row(t('tz.levels'), TZ.lv.length - 1) + '</table>');
+    row(t('tz.lamp'), rm.lamp ? yes : no) + row(t('tz.light'), rm.light ? yes : no) + row(t('tz.levels'), TZ.lv.length - 1) + '</table>' + (TZ.cur === 4 ? tzLabHtml() : ''));
 }

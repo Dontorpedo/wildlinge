@@ -22,6 +22,7 @@ function tzLightOn(c) {
   return TZ.night < 0.5;
 }
 function tzRestoreRooms(P) {
+  tzLabRestore(P);
   if (Array.isArray(P.album)) TZ.album = P.album.slice(-80).map(a => ({ ...a, img: null, redo: false }));
   if (Array.isArray(P.garden) && P.garden.length === 4) TZ.garden = P.garden.map((q, i) => ({ x: [150, 290, 430, 570][i], g: tzClamp(+q.g || 0, 0, 1) }));
 }
@@ -97,6 +98,7 @@ function tzChooseR(c) {
     if (n.water < 55) opt.push([100 - n.water, use('water', 190, 26)]);
     if (n.warmth < 55) opt.push([100 - n.warmth, use('warmth', 300, 1.8, 0, 25)]);
     if (n.rest < 30 || (night > 0.6 && n.rest < 70)) opt.push([100 - n.rest + night * 15, { type: 'sleep', x: 740, lvl: 0, t: 60 }]);
+    if (n.fun < 75 && Math.random() < 0.6) { const lg = tzLabGoal(c); if (lg) opt.push([100 - n.fun + 12, lg]); }
     if (n.fun < 70) {
       if (c.skill < 0.95 && Math.random() < 0.6) opt.push([100 - n.fun + 8, { type: 'machine', x: 420, lvl: 0, t: 16 }]);
       else opt.push([100 - n.fun, { type: 'tramp', x: 600, lvl: 0, t: 12 }]);
@@ -125,6 +127,7 @@ function tzUseR(c, g, dt) {
       } else { p.g = Math.min(1, p.g + 0.03 * dt); n.fun = mx(n.fun + 1.2 * dt); if (Math.random() < dt * 0.4) tzBurst('star', p.x, TZ_FLOOR - 14, 1); }
       break;
     }
+    case 'lab': tzLabAct(c, g, dt); break;
     case 'flutter': n.fun = mx(n.fun + 4 * dt); if (Math.random() < dt * 0.5) tzBurst('heart', c.x, c.y - c.half * 2, 1); break;
     case 'swim': c.swim = true; n.fun = mx(n.fun + 5 * dt); n.warmth = Math.max(0, n.warmth - 0.3 * dt); if (Math.random() < dt * 0.8) tzBurst('star', c.x + tzRnd(-10, 10), 318, 1); break;
     case 'gaze': n.fun = mx(n.fun + 5 * dt); if (Math.random() < dt * 0.5) sndFx('chime', (c.x - 400) / 400); break;
@@ -184,6 +187,7 @@ function tzRoomClick(x, y) {
   for (const d of tzDoors()) if (Math.abs(x - d.x) < 24 && y > TZ_FLOOR - 70 && y < TZ_FLOOR + 6) { tzViewRoom(d.to); return true; }
   const r = TZ.cur;
   if (r === 5) return tzGalleryClick(x, y);
+  if (r === 4 && TZ.tool === 'lab') return tzLabClick(x, y);
   if (r === 1) {
     for (const p of TZ.garden) if (Math.abs(x - p.x) < 24 && y > 230) { p.g = Math.min(1, p.g + 0.2); tzBurst('star', p.x, TZ_FLOOR - 24, 6); sndFx('pop', (p.x - 400) / 400); return true; }
   } else if (r === 2) {
@@ -296,6 +300,7 @@ function tzRoomDraw(r, now) {
 /* drawn after the pets: water, glow */
 function tzRoomOver(r, now) {
   const B = b;
+  if (r === 4) tzLabOver(now);
   if (r === 2) {
     const ph = now / 400;
     B.fillStyle = TZ.night > 0.5 ? 'rgba(40,70,140,.62)' : 'rgba(90,170,230,.55)';
