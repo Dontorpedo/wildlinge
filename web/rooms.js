@@ -36,7 +36,7 @@ function tzGardenCatchUp(sec) { for (const p of TZ.garden) p.g = Math.min(1, p.g
 /* ---------- decor props (Pixellab sprites, drawn behind the pets) ---------- */
 /* [sprite, x, scale, bottom y (optional), glow colour (optional)] */
 const TZ_PROPS = {};
-const TZ_BGDY = [26, 0, 0, 24, 24];
+const TZ_BGDY = [40, 0, 0, 24, 24];
 function tzProps(r, now) {
   const L = TZ_PROPS[r]; if (!L) return;
   const B = b, dark = TZ.night > 0.5 && (r === 1 || r === 2);
@@ -135,7 +135,7 @@ function tzChooseR(c) {
     if (others.length) { const o = others.sort((a, b) => Math.abs(a.x - c.x) - Math.abs(b.x - c.x))[0]; opt.push([100 - n.social, { type: 'social', x: o.x + tzRnd(-20, 20), lvl: o.lvl, t: 8 }]); }
   }
   if (opt.length) { opt.sort((a, b) => b[0] - a[0]); return opt[0][1]; }
-  if (Math.random() < 0.12 && Math.min(n.food, n.water, n.rest) > 50) { c.dest = Math.random() < 0.5 ? 0 : (Math.random() * 5) | 0; c.stay = c.dest ? tzRnd(40, 100) : 0; const tg = tzTripGoal(c); if (tg) return tg; }
+  if (Math.random() < 0.2 && Math.min(n.food, n.water, n.rest) > 50) { c.dest = Math.random() < 0.3 ? 0 : 1 + ((Math.random() * 4) | 0); c.stay = c.dest ? tzRnd(60, 160) : 0; const tg = tzTripGoal(c); if (tg) return tg; }
   const cand = TZ.lv.map((L, i) => i).filter(i => TZ.reach[i]);
   const lv = Math.random() < 0.6 ? 0 : cand[(Math.random() * cand.length) | 0], L = TZ.lv[lv];
   return { type: 'wander', x: lv === 0 ? tzRnd(40, 760) : tzRnd(L.x0 + 15, L.x1 - 15), lvl: lv, t: tzRnd(3, 8) };

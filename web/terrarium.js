@@ -505,6 +505,7 @@ function tzChoose(c) {
   if (TZ.callT > 0 && c.obey + 0.3 > Math.random()) return { type: 'call', x: TZ.callX, lvl: TZ.callLvl, t: 6 };
   const tre = TZ.items.filter(i => i.type === 'treat' && i.ground).sort((a, b) => Math.abs(a.x - c.x) - Math.abs(b.x - c.x))[0];
   if (tre && n.food < 85) return { type: 'treat', item: tre, x: tre.x, lvl: tzLevelOf(tre.y), t: 8 };
+  if (c.stay <= 0 && Math.min(n.food, n.water, n.rest) > 45 && n.fun < 85 && Math.random() < 0.18) { c.dest = 1 + ((Math.random() * 4) | 0); c.stay = tzRnd(90, 220); const tg0 = tzTripGoal(c); if (tg0) return tg0; }
   const opt = [];
   if (n.food < 55 && room.food > 1) opt.push([100 - n.food, { type: 'food', x: TZ_OBJ.food, lvl: 0, t: 12 }]);
   if (n.water < 55 && room.water > 1) opt.push([100 - n.water, { type: 'water', x: TZ_OBJ.water, lvl: 0, t: 12 }]);
