@@ -304,14 +304,14 @@ function tzCatchUp(sec) {
     c.age += sec;
     let low = false;
     for (const k of TZ_NEEDS) { const rate = TZ_RATE[k] * (k === 'social' && tzAlone() ? 2 : 1); c.needs[k] = Math.max(Math.min(c.needs[k], 15), c.needs[k] - rate * sec * 0.25); if (c.needs[k] <= 15) low = true; }
-    if (low) { c.hp = Math.max(30, c.hp - Math.min(40, sec / 900)); c.stress = Math.min(70, c.stress + sec / 400); }
+    if (low) { c.hp = Math.max(Math.min(c.hp, 60), c.hp - Math.min(20, sec / 1800)); c.stress = Math.min(50, c.stress + sec / 800); }
     c.sleeping = false; c.goal = null; c.ground = true; c.y = TZ_FLOOR; c.lvl = 0; c.vy = 0; c.held = false;
     tzGeom(c);
   }
   for (const e of TZ.eggs) e.left -= sec;
   tzGardenCatchUp(sec);
-  TZ.room.food = Math.max(0, TZ.room.food - sec * 0.01);
-  TZ.room.water = Math.max(0, TZ.room.water - sec * 0.01);
+  TZ.room.food = Math.max(40, TZ.room.food - sec * 0.01);
+  TZ.room.water = Math.max(40, TZ.room.water - sec * 0.01);
   tzHatch();
 }
 
@@ -357,7 +357,16 @@ function tzFrame() {
   tzStep(ms / 1000);
   if (now - TZ.saveAt > 10000) tzSave();
 }
+TZ.actAt = Date.now();
+['pointerdown', 'pointermove', 'keydown', 'touchstart', 'wheel'].forEach(ev => window.addEventListener(ev, () => {
+  const idle = Date.now() - TZ.actAt;
+  TZ.actAt = Date.now();
+  if (idle > 300000 && TZ.ready && TZ.list.length && typeof toast === 'function') toast(t('tz.back'));
+}, { passive: true }));
+function tzIdle() { return Date.now() - TZ.actAt > 300000 || document.hidden; }
 function tzNeeds(c, dt, lightOn, alone) {
+  const idle = tzIdle();
+  if (idle) dt *= 0.15;
   const n = c.needs, sl = c.sleeping, nt = c.room >= 3 ? 0 : TZ.night;
   lightOn = tzLightOn(c);
   c.age += dt;
@@ -374,7 +383,8 @@ function tzNeeds(c, dt, lightOn, alone) {
   const min = Math.min(n.food, n.water, n.warmth, n.light, n.fun, n.rest, n.social);
   const w = n.social === min && min < 25 ? 0.5 : 1;
   if (min < 25) c.stress = Math.min(100, c.stress + (25 - min) / 25 * 0.6 * dt * w); else if (min > 50) c.stress = Math.max(0, c.stress - 0.8 * dt);
-  if (n.food <= 0 || n.water <= 0 || n.warmth <= 0) { c.hp -= 0.4 * dt; c.cause = n.water <= 0 ? 'thirst' : n.food <= 0 ? 'hunger' : 'cold'; }
+  if (idle) { if (c.hp < 50) c.hp = Math.min(50, c.hp + 0.3 * dt); c.stress = Math.min(c.stress, 50); }
+  else if (n.food <= 0 || n.water <= 0 || n.warmth <= 0) { c.hp -= 0.4 * dt; c.cause = n.water <= 0 ? 'thirst' : n.food <= 0 ? 'hunger' : 'cold'; }
   else if (c.stress > 80) { c.hp -= 0.1 * dt; c.cause = n.social < 15 ? 'lonely' : 'stress'; }
   else if (tzMood(c) > 55) c.hp = Math.min(100, c.hp + 0.15 * dt);
   c.breedCool = Math.max(0, c.breedCool - dt);
@@ -386,6 +396,7 @@ function tzStep(dt) {
   TZ.partyCool = Math.max(0, TZ.partyCool - dt);
   TZ.callT = Math.max(0, TZ.callT - dt);
   if (TZ.room.music > 0) TZ.room.music = Math.max(0, TZ.room.music - dt);
+  if (tzIdle()) { TZ.room.food = Math.max(TZ.room.food, 40); TZ.room.water = Math.max(TZ.room.water, 40); }
   const lightOn = TZ.night < 0.5 || TZ.room.light, alone = tzAlone();
   for (const c of TZ.list) {
     if (c.held) continue;

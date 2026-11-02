@@ -297,10 +297,10 @@ function crBuild(rec, opt) {
 const CR_ATL = {};
 let crReady = false;
 let crStyle = 'sprites';
-try { const sv = localStorage.getItem('plimploms-style'); if (sv === 'drawn' || sv === 'classic' || sv === 'sprites') crStyle = sv; } catch (e) { /* storage blocked */ }
-function crAtlasOn() { return crReady && crStyle === 'drawn'; }
+try { const sv = localStorage.getItem('plimploms-style'); if (sv === 'classic') crStyle = 'classic'; } catch (e) { /* storage blocked */ }
+function crAtlasOn() { return crReady && crStyle === 'sprites' && crWholeData === null; }
 function crWholeOn() { return crWholeData !== null && crStyle === 'sprites'; }
-function crSetStyle(s) { crStyle = s === 'drawn' || s === 'classic' ? s : 'sprites'; try { localStorage.setItem('plimploms-style', crStyle); } catch (e) { /* ignore */ } crCache.clear(); if (typeof TZ !== 'undefined' && TZ.album) for (const e of TZ.album) e.redo = true; }
+function crSetStyle(s) { crStyle = s === 'classic' ? 'classic' : 'sprites'; try { localStorage.setItem('plimploms-style', crStyle); } catch (e) { /* ignore */ } crCache.clear(); if (typeof TZ !== 'undefined' && TZ.album) for (const e of TZ.album) e.redo = true; }
 /* whole-creature sprites (AI drawn, recoloured from the genome) */
 let crWholeData = null;
 const crWholeCache = new Map(), crWingCache = new Map();
@@ -712,10 +712,11 @@ function crFinish(c, opt) {
 function crSprite(rec, opt) {
   const sh = opt.baby ? 1 : 0;
   let key = [Math.round(rec[5] / 12), opt.r, sh, opt.ph | 0, opt.lie ? 1 : opt.fly ? 2 : 0, rec[19], rec[20].toFixed(1), rec[21].toFixed(1), rec[22] | 0, rec[23].toFixed(1), rec[24].toFixed(1), ...[82, 83, 84, 85, 86, 87, 88, 89].map(i => rec[i] | 0), (() => { let s = ''; for (let i = 0; i < (rec[19] | 0); i++) s += (rec[26 + i * 7 + 5] | 0) + ((rec[26 + i * 7 + 1] > 0) ? 's' : 'a') + (Math.round(rec[26 + i * 7 + 2] * 4)); return s; })()].join('|');
-  if (crReady) key += '|A';
+  const atlas = crReady && crStyle !== 'classic';
+  if (atlas) key += '|A';
   let e = crCache.get(key);
   if (e) return e;
-  if (crReady) {
+  if (atlas) {
     e = crScaleSprite(crFinish(crCompose(rec, opt), opt), opt);
     if (crCache.size > 400) crCache.delete(crCache.keys().next().value);
     crCache.set(key, e);
