@@ -1099,7 +1099,10 @@ function crObjDraw(ctx, name, x, y, h, flip, rot) {
 /* room backgrounds (Pixellab, 400x200 each, stacked in bgs.png) */
 let crBgImg = null;
 if (typeof CR_BG_IMG !== 'undefined') { const bi = new Image(); bi.onload = () => { crBgImg = bi; }; bi.src = CR_BG_IMG; }
-function crBgDraw(ctx, idx, w, h) {
+function crBgDraw(ctx, idx, w, h, dy) {
   if (crBgImg === null) return false;
-  ctx.imageSmoothingEnabled = false; ctx.drawImage(crBgImg, 0, idx * 200, 400, 200, 0, 0, w, h); return true;
+  dy = dy || 0; ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(crBgImg, 0, idx * 200, 400, 200, 0, -dy, w, h);
+  if (dy > 0) ctx.drawImage(crBgImg, 0, idx * 200 + 180, 400, 4, 0, h - dy, w, dy);
+  return true;
 }

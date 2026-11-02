@@ -697,7 +697,7 @@ function tzItems(k, dt) {
 function tzRoom(now) {
   const B = b, night = TZ.night, sun = tzClamp((TZ.hour - 6) / 14, 0, 1);
   B.imageSmoothingEnabled = false;
-  const bgOk = crBgDraw(B, 0, BW, BH);
+  const bgOk = crBgDraw(B, 0, BW, BH, TZ_BGDY[0]);
   if (bgOk && night > 0.5 && !TZ.room.light) { B.fillStyle = 'rgba(14,20,70,.4)'; B.fillRect(0, 0, BW, BH); }
   if (!bgOk) {
   for (let x = 0; x < BW; x += 20) { B.fillStyle = (x / 20) % 2 ? '#f6e9f0' : '#f1e1ea'; B.fillRect(x, 0, 20, TZ_FLOOR); }
@@ -734,31 +734,39 @@ function tzRoom(now) {
   }
   if (!bgOk) tzPlant(745, TZ_FLOOR, 1.2);
   tzPlant(610, TZ.lv[2].y, 0.7);
+  if (!crObjDraw(B, 'f_bed', TZ_OBJ.bed, TZ_FLOOR + 2, 30)) {
   B.fillStyle = '#ffb7cf'; B.fillRect(TZ_OBJ.bed - 34, TZ_FLOOR - 12, 68, 12); B.fillRect(TZ_OBJ.bed - 30, TZ_FLOOR - 16, 60, 4);
   B.fillStyle = '#ffd2e0'; B.fillRect(TZ_OBJ.bed - 28, TZ_FLOOR - 15, 40, 3);
   B.fillStyle = '#f08fb0'; B.fillRect(TZ_OBJ.bed - 34, TZ_FLOOR - 2, 68, 2);
-  tzBowl(TZ_OBJ.food, TZ.room.food, '#9ccff2', '#c98f5a');
-  tzBowl(TZ_OBJ.water, TZ.room.water, '#ffc9dc', '#7cc0f0');
+  }
+  tzBowl(TZ_OBJ.food, TZ.room.food, '#9ccff2', '#c98f5a', 'f_food');
+  tzBowl(TZ_OBJ.water, TZ.room.water, '#ffc9dc', '#7cc0f0', 'f_water');
   const my = TZ.lv[1].y;
+  if (!crObjDraw(B, 'f_music', TZ_OBJ.music, my + 1, 28)) {
   B.fillStyle = '#9b7ad8'; B.fillRect(TZ_OBJ.music - 14, my - 14, 28, 14); B.fillStyle = '#c4a8f2'; B.fillRect(TZ_OBJ.music - 14, my - 14, 28, 3);
   B.fillStyle = '#ffe58a'; B.fillRect(TZ_OBJ.music + 14, my - 10, 5, 2); B.fillRect(TZ_OBJ.music + 17, my - 10, 2, 6);
+  }
   if (TZ.room.music > 0) {
     B.fillStyle = '#9b7ad8';
     for (let i = 0; i < 3; i++) { const q = ((now / 30 + i * 33) % 100), nx = TZ_OBJ.music - 6 + i * 8 + Math.sin(q / 8) * 3, ny = my - 18 - q * 0.5; B.fillRect(nx | 0, ny | 0, 3, 3); B.fillRect((nx + 2) | 0, (ny - 5) | 0, 1, 5); }
   }
   /* puzzle box */
   const py = TZ.lv[2].y, px = TZ_OBJ.puzzle, blink = (now / 400 | 0) % 2;
+  if (!crObjDraw(B, 'puzzle1', px, py + 1, 40)) {
   B.fillStyle = OUTLINE; B.fillRect(px - 15, py - 25, 30, 25);
   B.fillStyle = '#7ad0c0'; B.fillRect(px - 14, py - 24, 28, 23); B.fillStyle = '#a8e8dc'; B.fillRect(px - 14, py - 24, 28, 4);
   B.fillStyle = '#ff7a8a'; B.fillRect(px - 5, py - 18, 10, 8); B.fillStyle = '#ffb0ba'; B.fillRect(px - 4, py - 17, 4, 3);
   B.fillStyle = blink ? '#fff07a' : '#c8c070'; B.fillRect(px + 8, py - 22, 3, 3);
   B.fillStyle = '#4a9a8c'; B.fillRect(px - 6, py - 6, 12, 5);
+  }
   B.fillStyle = '#b9b3a6'; B.fillRect(TZ_OBJ.ceiling, 0, 1, 26);
   B.fillStyle = '#fff1c4'; B.fillRect(TZ_OBJ.ceiling - 12, 26, 24, 8); B.fillRect(TZ_OBJ.ceiling - 8, 22, 16, 4);
   if (TZ.room.light) { B.fillStyle = '#fff6a8'; B.fillRect(TZ_OBJ.ceiling - 6, 34, 12, 3); }
   B.fillStyle = '#b9b3a6'; B.fillRect(TZ_OBJ.lamp, 0, 1, 40);
+  if (!crObjHas('f_lamp')) {
   B.fillStyle = '#9aa6ba'; B.fillRect(TZ_OBJ.lamp - 14, 40, 28, 8); B.fillRect(TZ_OBJ.lamp - 9, 36, 18, 4);
   B.fillStyle = TZ.room.lamp ? '#ffb35a' : '#8a8f9a'; B.fillRect(TZ_OBJ.lamp - 6, 48, 12, 5);
+  } else { if (!TZ.room.lamp) B.filter = 'grayscale(1) brightness(.85)'; crObjDraw(B, 'f_lamp', TZ_OBJ.lamp, 58, 34); B.filter = 'none'; }
   if (TZ.room.lamp) { B.fillStyle = 'rgba(255,190,110,.13)'; B.beginPath(); B.moveTo(TZ_OBJ.lamp - 8, 53); B.lineTo(TZ_OBJ.lamp + 8, 53); B.lineTo(TZ_OBJ.lamp + 80, TZ_FLOOR); B.lineTo(TZ_OBJ.lamp - 80, TZ_FLOOR); B.closePath(); B.fill(); }
   if (typeof tzProps === 'function') tzProps(0, now);
 }
@@ -769,8 +777,9 @@ function tzPlant(x, y, s) {
   for (let i = -2; i <= 2; i++) B.fillRect(x + i * 6 * s - 2, y - (30 + (2 - Math.abs(i)) * 9) * s, 5 * s, (18 + (2 - Math.abs(i)) * 9) * s);
   B.fillStyle = '#a8e6ae'; for (let i = -2; i <= 2; i++) B.fillRect(x + i * 6 * s - 2, y - (30 + (2 - Math.abs(i)) * 9) * s, 2, 5 * s);
 }
-function tzBowl(x, level, col, fill) {
+function tzBowl(x, level, col, fill, spr) {
   const B = b, y = TZ_FLOOR;
+  if (spr && crObjDraw(B, spr, x, y + 2, 22)) { B.fillStyle = 'rgba(0,0,0,.35)'; B.fillRect(x - 12, y + 5, 24, 3); B.fillStyle = fill; B.fillRect(x - 12, y + 5, Math.round(24 * level / 100), 3); return; }
   B.fillStyle = col; B.fillRect(x - 17, y - 10, 34, 10); B.fillRect(x - 14, y - 12, 28, 2);
   B.fillStyle = 'rgba(255,255,255,.45)'; B.fillRect(x - 15, y - 9, 3, 6);
   if (level > 1) { B.fillStyle = fill; const h = Math.max(1, Math.round(level / 100 * 8)); B.fillRect(x - 12, y - 12 - h + 2, 24, h); }

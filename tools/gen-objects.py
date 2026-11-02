@@ -22,9 +22,27 @@ PROPS = {
  'shop': ['wooden workbench with tools', 'brass gears and cogs pile', 'tall standing desk lamp', 'potted houseplant', 'toy chest overflowing with toys', 'round colorful rug', 'wall clock with pendulum', 'tall bookshelf with colorful books', 'cardboard boxes stack', 'small glowing robot toy'],
  'home': ['cozy floor lamp', 'potted fern plant', 'round woven rug', 'small bookshelf', 'framed picture of sun and hills', 'cute pet bed cushion', 'wooden toy shelf with toys']
 }
+OBJ['puzzle0'] = ('colorful wooden puzzle box toy with buttons, levers and a small treat drawer, cute', 48)
+OBJ['puzzle1'] = ('cute robot shaped puzzle machine with colorful buttons and a treat slot, toy', 48)
 for rk, lst in PROPS.items():
     for i, d in enumerate(lst):
         OBJ[f'p_{rk}{i}'] = (d, 64)
+
+FUNC = {
+ 'f_disp': ('automatic pet food dispenser with clear hopper full of kibble and a small bowl below, cute', 64),
+ 'f_tap': ('cute water tap faucet with one drip over a small basin', 48),
+ 'f_rad': ('cast iron radiator heater with warm glowing fins', 48),
+ 'f_tramp': ('round red trampoline with springs and legs, side view', 64),
+ 'f_bed': ('soft pink pet bed cushion with small pillow', 64),
+ 'f_mach': ('cute retro learning machine with green screen, buttons and a lever, metal and wood', 64),
+ 'f_food': ('pet food bowl filled with kibble', 48),
+ 'f_water': ('pet water bowl filled with blue water', 48),
+ 'f_music': ('cute purple music box with golden crank and musical notes', 48),
+ 'f_lamp': ('hanging warm heat lamp glowing orange', 48),
+ 'm_stone': ('gray stone', 32), 'm_stick': ('wooden stick', 32), 'm_nut': ('brown nut', 32), 'm_kern0': ('raw corn kernel', 32), 'm_kern1': ('popped popcorn', 32),
+ 'm_hammer': ('small stone hammer with wooden handle', 32), 'm_bundle': ('bundle of straw tied with string', 32), 'm_fiber': ('bundle of plant fibers', 32),
+}
+OBJ.update(FUNC)
 
 
 def call(path, body=None):

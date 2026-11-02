@@ -35,15 +35,10 @@ function tzGardenCatchUp(sec) { for (const p of TZ.garden) p.g = Math.min(1, p.g
 
 /* ---------- decor props (Pixellab sprites, drawn behind the pets) ---------- */
 /* [sprite, x, scale, bottom y (optional), glow colour (optional)] */
-const TZ_PROPS = {
-  0: [['p_home0', 62, 1.2], ['p_home2', 400, 2.2, TZ_FLOOR + 12, null, 0.28], ['p_home3', 590, 1.15], ['p_home6', 470, 1.0]],
-  1: [['p_garden1', 70, 1.5], ['p_garden2', 215, 1.2], ['p_garden5', 360, 1.3], ['p_garden4', 480, 1.1], ['p_garden9', 330, 0.9], ['p_garden10', 150, 1.0], ['p_garden7', 790, 1.1]],
-  2: [['p_garden1', 85, 1.4], ['p_pond5', 168, 1.3], ['p_pond3', 60, 1.1], ['p_pond4', 540, 1.2], ['p_pond7', 700, 1.0, 290], ['p_pond6', 130, 1.2]],
-  3: [['p_cave0', 60, 1.4, null, '120,200,255'], ['p_cave1', 265, 1.2, null, '200,120,255'], ['p_cave2', 335, 1.0, null, '120,255,240'], ['p_cave4', 520, 1.4], ['p_cave6', 745, 1.1], ['p_cave7', 215, 1.3, 140, '255,170,70'], ['p_cave8', 575, 1.1, null, '255,150,230']],
-  4: [['p_shop2', 62, 1.3], ['p_shop4', 240, 1.0], ['p_shop3', 340, 1.1], ['p_shop5', 430, 2.2, TZ_FLOOR + 12, null, 0.28], ['p_shop6', 470, 1.2, 150], ['p_shop7', 500, 1.1], ['p_shop9', 150, 0.9]]
-};
+const TZ_PROPS = {};
+const TZ_BGDY = [26, 0, 0, 24, 24];
 function tzProps(r, now) {
-  const L = TZ_PROPS[r]; if (!L || !crObjHas('p_home0')) return;
+  const L = TZ_PROPS[r]; if (!L) return;
   const B = b, dark = TZ.night > 0.5 && (r === 1 || r === 2);
   if (dark) B.filter = 'brightness(.62)';
   const pulse = 0.6 + 0.4 * Math.sin(now / 700);
@@ -258,7 +253,7 @@ function tzSun(now, x0, y0, w) {
 function tzRoomDraw(r, now) {
   const B = b, night = TZ.night, nb = night > 0.5;
   B.imageSmoothingEnabled = false;
-  const bgOk = r >= 1 && r <= 4 && crBgDraw(B, r, BW, BH);
+  const bgOk = r >= 1 && r <= 4 && crBgDraw(B, r, BW, BH, TZ_BGDY[r]);
   if (bgOk && (r === 1 || r === 2) && night > 0.02) { B.fillStyle = `rgba(14,20,70,${(0.55 * Math.min(1, night)).toFixed(2)})`; B.fillRect(0, 0, BW, BH); }
   if (r === 1) {
     if (!bgOk) {
@@ -319,19 +314,25 @@ function tzRoomDraw(r, now) {
     }
     /* shelf ledge */
     tzRect('#8a5a30', 520, 280, 180, 7); tzRect('#b07a44', 520, 280, 180, 2); tzRect('#7a4f28', 530, 287, 5, 12); tzRect('#7a4f28', 685, 287, 5, 12);
-    tzRect('#e0486a', 560, 262, 18, 18); tzRect('#4a9ae0', 590, 266, 14, 14); tzRect('#e8b020', 640, 264, 20, 16);
+    if (!bgOk) { tzRect('#e0486a', 560, 262, 18, 18); tzRect('#4a9ae0', 590, 266, 14, 14); tzRect('#e8b020', 640, 264, 20, 16); }
     /* food dispenser, tap, radiator, trampoline, bed */
+    if (!(crObjHas('f_disp') && crObjHas('f_tap'))) {
     tzRect('#9ccff2', 92, TZ_FLOOR - 52, 36, 52); tzRect('#c98f5a', 98, TZ_FLOOR - 46, 24, 20); tzRect('#6a8ab0', 98, TZ_FLOOR - 10, 24, 10);
     tzRect('#b9b3a6', 186, TZ_FLOOR - 56, 6, 56); tzRect('#b9b3a6', 186, TZ_FLOOR - 56, 22, 6); tzRect('#7cc0f0', 204, TZ_FLOOR - 50, 3, 8);
     tzRect('#c0c0c8', 280, TZ_FLOOR - 28, 40, 28); for (let i = 0; i < 5; i++) tzRect('#9a9aa6', 284 + i * 7, TZ_FLOOR - 24, 3, 20);
     tzRect('#3a3a48', 570, TZ_FLOOR - 12, 60, 4); tzRect('#e0486a', 570, TZ_FLOOR - 16, 60, 4); tzRect('#3a3a48', 574, TZ_FLOOR - 12, 4, 12); tzRect('#3a3a48', 622, TZ_FLOOR - 12, 4, 12);
     tzRect('#ffb7cf', 706, TZ_FLOOR - 12, 68, 12); tzRect('#ffd2e0', 710, TZ_FLOOR - 15, 40, 3);
+    } else {
+      crObjDraw(B, 'f_disp', 110, TZ_FLOOR + 2, 62); crObjDraw(B, 'f_tap', 196, TZ_FLOOR + 2, 56); crObjDraw(B, 'f_rad', 300, TZ_FLOOR + 2, 34); crObjDraw(B, 'f_tramp', 600, TZ_FLOOR + 2, 30); crObjDraw(B, 'f_bed', 740, TZ_FLOOR + 2, 30);
+    }
+    if (!crObjDraw(B, 'f_mach', 420, TZ_FLOOR + 2, 84)) {
     /* learning machine */
     const blink = (now / 300 | 0) % 2;
     tzRect(OUTLINE, 388, 252, 64, 78); tzRect('#7a8ad8', 390, 254, 60, 74); tzRect('#a8b4f0', 390, 254, 60, 6);
     tzRect('#15191d', 398, 266, 44, 26); tzRect(blink ? '#6fd36f' : '#3fa03f', 402, 270, 36, 18);
     const gx = 420 + Math.cos(now / 400) * 6, gy = 307 + Math.sin(now / 400) * 6;
     tzRect('#ffd84a', gx - 3, gy - 3, 6, 6); tzRect('#ffd84a', 400, 300, 4, 4); tzRect('#e0486a', 436, 300, 4, 4);
+    }
   }
   else if (r === 5) tzGalleryDraw(now);
   tzProps(r, now);

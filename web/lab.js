@@ -245,7 +245,9 @@ function tzLabStep(dt) {
 function tzLabSprite(it, now) {
   const x = Math.round(it.x), y = Math.round(it.y), p = it.p, B = b;
   const R = (col, dx, dy, w, h) => tzRect(col, x + dx, y + dy, w, h);
-  switch (it.k) {
+  const ms = it.k === 'kernel' ? 'm_kern' + (it.cooked ? 1 : 0) : 'm_' + it.k;
+  const spr = crObjHas(ms) && crObjDraw(B, ms, x, y + 2, it.k === 'stick' || it.k === 'hammer' ? 14 : 18);
+  if (!spr) switch (it.k) {
     case 'stone': R(OUTLINE, -7, -7, 14, 9); R('#8d939c', -6, -6, 12, 7); R('#b9bec6', -4, -6, 5, 2); R('#6c717a', 1, -1, 5, 2); break;
     case 'stick': R(OUTLINE, -12, -4, 24, 5); R('#8a5a30', -11, -3, 22, 3); R('#a8763f', -11, -3, 22, 1); R('#5e3a1a', 4, -3, 2, 3); break;
     case 'nut': R(OUTLINE, -5, -8, 10, 10); R('#8a5a30', -4, -7, 8, 8); R('#b07a44', -3, -7, 4, 3); R('#5e3a1a', -1, -9, 2, 2); break;
