@@ -1078,3 +1078,20 @@ function crDrawWild(cs, o, px, py, r, baby, moving, st, hp) {
   }
   return true;
 }
+
+/* Terrarium objects and room props (Pixellab atlas objs.png) */
+let crObjImg = null;
+if (typeof CR_OBJ_IMG !== 'undefined') { const oi = new Image(); oi.onload = () => { crObjImg = oi; }; oi.src = CR_OBJ_IMG; }
+function crObjHas(name) { return crObjImg !== null && typeof CR_OBJ_META !== 'undefined' && !!CR_OBJ_META[name]; }
+function crObjSize(name) { const m = CR_OBJ_META[name]; return m ? { w: m[2], h: m[3] } : null; }
+/* draws centered at x, bottom edge at y; h = target height in px, optional flip, rotation (rad, around centre) */
+function crObjDraw(ctx, name, x, y, h, flip, rot) {
+  if (!crObjHas(name)) return false;
+  const m = CR_OBJ_META[name], w = Math.round(m[2] * h / m[3]);
+  ctx.save(); ctx.imageSmoothingEnabled = false;
+  ctx.translate(Math.round(x), Math.round(y - (rot ? h / 2 : 0)));
+  if (rot) ctx.rotate(rot);
+  if (flip) ctx.scale(-1, 1);
+  ctx.drawImage(crObjImg, m[0], m[1], m[2], m[3], -Math.round(w / 2), rot ? -Math.round(h / 2) : -h, w, h);
+  ctx.restore(); return true;
+}

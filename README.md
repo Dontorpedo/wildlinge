@@ -73,3 +73,6 @@ Jedes Genom kann bis zu 12 Sensoren tragen (`Sensor {slot, Ziel, Modus, Winkel, 
 - Folgen: Schaltfläche im Auswahlfeld, die Ansicht wechselt mit dem gewählten Tier durch die Räume.
 - Tiere spielen zusammen (Ziel `play`): Hüpfen, Herzen, Freude.
 - Wildnis: bei starkem Herauszoomen nur Musik, nah weiche pentatonische Stimmen; neue Laute ach, hm, oh, Seufzer.
+
+## Terrarium-Gegenstaende und Dekor
+Baelle (6), Kuscheltiere (6), Spielzeuge (10) und Raumdekor (ca. 45 Sprites) stammen von Pixellab (`tools/gen-objects.py`, `tools/pack-objs.py` -> `web/assets/whole/objs.png/json`). Raumdekor: `TZ_PROPS` in `web/rooms.js`.

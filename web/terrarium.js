@@ -15,9 +15,9 @@ const TZ_OBJ = { food: 230, water: 292, lamp: 650, bed: 120, music: 395, ceiling
 const TZ_NEEDS = ['food', 'water', 'warmth', 'light', 'fun', 'rest', 'social'];
 const TZ_RATE = { food: 0.12, water: 0.15, warmth: 0.05, light: 0.08, fun: 0.1, rest: 0.04, social: 0.06 };
 const TZ_FEAT = { food: 1, water: 8, warmth: 7, light: 9, fun: 9, rest: 5, social: 3 };
-const TZ_GOALNEED = { food: 'food', treat: 'food', water: 'water', warm: 'warmth', sleep: 'rest', ball: 'fun', music: 'fun', puzzle: 'fun', bubble: 'fun', plush: 'social', social: 'social', play: 'fun', call: 'social', wander: 'fun', party: 'fun' };
+const TZ_GOALNEED = { food: 'food', treat: 'food', water: 'water', warm: 'warmth', sleep: 'rest', ball: 'fun', music: 'fun', puzzle: 'fun', bubble: 'fun', plush: 'social', toy: 'fun', social: 'social', play: 'fun', call: 'social', wander: 'fun', party: 'fun' };
 const TZ_ACC = ['none', 'bow', 'hat', 'glasses', 'scarf', 'crown', 'flower'];
-const TZ_TOOLS = ['select', 'pet', 'brush', 'tickle', 'treat', 'ball', 'bubbles', 'plush', 'call', 'dress', 'party', 'teach', 'level', 'lab'];
+const TZ_TOOLS = ['select', 'pet', 'brush', 'tickle', 'treat', 'ball', 'bubbles', 'plush', 'toy', 'call', 'dress', 'party', 'teach', 'level', 'lab'];
 const TZ_GLYPH = {
   food: [['00100', '01110', '11111', '11111', '01110'], '#e86a5a'],
   water: [['00100', '00100', '01110', '11111', '01110'], '#4a9ae0'],
@@ -178,7 +178,7 @@ function tzFeel(c, dt, now) {
     c.gkey = gt;
     let msg = null, a = '';
     if (gt === 'play' && c.goal.with) { msg = 'play'; a = c.goal.with.name; tzAlbumNote(c.id, 'play', a); }
-    else if (['social', 'music', 'swim', 'machine', 'lab', 'tramp', 'ball', 'bubble', 'plush', 'puzzle', 'gaze', 'flutter'].includes(gt)) msg = gt;
+    else if (['social', 'music', 'swim', 'machine', 'lab', 'tramp', 'ball', 'bubble', 'plush', 'toy', 'puzzle', 'gaze', 'flutter'].includes(gt)) msg = gt;
     else if (gt === 'door') { msg = 'door'; a = (tr('tz.rooms') || [])[Math.max(0, Math.min(5, c.room + c.goal.dir))] || ''; }
     if (msg) { tzFeed(c, msg, a); c.fcool = 10; }
   }
@@ -520,6 +520,8 @@ function tzChoose(c) {
   if (n.fun < 65) {
     const bub = TZ.items.find(i => i.type === 'sbub');
     const ball = TZ.items.find(i => i.type === 'ball');
+    const toy = TZ.items.find(i => i.type === 'toy');
+    if (toy) opt.push([100 - n.fun + 2, { type: 'toy', item: toy, x: toy.x, lvl: tzLevelOf(toy.y), t: 14 }]);
     if (bub) opt.push([100 - n.fun + 10, { type: 'bubble', item: bub, x: bub.x, lvl: tzLevelOf(bub.y + 30), t: 8 }]);
     if (ps[2] && (c.skill > 0.3 || n.fun < 50) && Math.random() < 0.6) opt.push([100 - n.fun + c.skill * 30, { type: 'puzzle', x: TZ_OBJ.puzzle, lvl: 2, t: 20 }]);
     if (ball) opt.push([100 - n.fun, { type: 'ball', item: ball, x: ball.x, lvl: tzLevelOf(ball.y), t: 15 }]);
@@ -575,6 +577,7 @@ function tzAI(c, dt, k) {
       break; }
     case 'social': n.social = Math.min(100, n.social + 0.8 * dt); break;
     case 'plush': n.social = Math.min(100, n.social + 2 * dt); n.fun = Math.min(100, n.fun + 0.6 * dt); if (Math.random() < dt * 0.5) tzBurst('heart', c.x, c.y - c.half * 2, 1); break;
+    case 'toy': n.fun = Math.min(100, n.fun + 3.2 * dt); c.act += dt; if (Math.random() < dt * 0.9) tzBurst(Math.random() < 0.5 ? 'note' : 'star', c.x + c.face * 8, c.y - c.half * 2, 1); if (c.act > 2.4) { c.act = 0; g.item.vx = c.face * tzRnd(0.8, 1.6); g.item.vy = -tzRnd(1.5, 2.6); g.item.ground = false; c.spinUntil = Date.now() + 650; } break;
     case 'call': if (c.goalT > 1.5) { n.fun = Math.min(100, n.fun + 2); c.obey = Math.min(1, c.obey + 0.04); c.heartUntil = Date.now() + 1200; c.goalT = 1.4; } break;
     case 'treat': { const i = TZ.items.indexOf(g.item); if (i >= 0) { TZ.items.splice(i, 1); n.food = Math.min(100, n.food + 30); n.fun = Math.min(100, n.fun + 6); c.heartUntil = Date.now() + 1500; tzBurst('star', c.x, c.y - c.half, 4); } c.goalT = 0; break; }
     case 'bubble': if (Math.hypot(g.item.x - c.x, g.item.y - (c.y - c.half)) < c.half + 16) tzPop(g.item, c); break;
@@ -665,17 +668,17 @@ function tzItems(k, dt) {
       if (i.y >= L.y - 4 || i.age > 16) { i.dead = true; tzBurst('star', i.x, i.y, 4); }
       continue;
     }
-    if (i.ground && (i.type === 'treat' || i.type === 'plush')) {
+    if (i.ground && (i.type === 'treat' || i.type === 'plush' || i.type === 'toy')) {
       const L = Ls[tzLevelOf(i.y + 6)];
       if (i.x < L.x0 - 2 || i.x > L.x1 + 2) i.ground = false; else continue;
     }
     i.vy += 0.25 * k;
-    i.x += i.vx * k; i.y += i.vy * k;
+    i.x += i.vx * k; i.y += i.vy * k; if (i.type === 'ball') i.rot = (i.rot || 0) + i.vx * 0.12 * k;
     i.vx *= i.ground ? 0.9 : 0.999;
     if (i.x < 8) { i.x = 8; i.vx = Math.abs(i.vx) * 0.6; }
     if (i.x > 792) { i.x = 792; i.vx = -Math.abs(i.vx) * 0.6; }
     i.ground = false;
-    const rad = i.type === 'plush' ? 8 : 5;
+    const rad = i.type === 'plush' ? 8 : i.type === 'toy' ? 7 : 5;
     let best = -1;
     for (let q = 0; q < Ls.length; q++) {
       const L = Ls[q];
@@ -752,6 +755,7 @@ function tzRoom(now) {
   B.fillStyle = '#9aa6ba'; B.fillRect(TZ_OBJ.lamp - 14, 40, 28, 8); B.fillRect(TZ_OBJ.lamp - 9, 36, 18, 4);
   B.fillStyle = TZ.room.lamp ? '#ffb35a' : '#8a8f9a'; B.fillRect(TZ_OBJ.lamp - 6, 48, 12, 5);
   if (TZ.room.lamp) { B.fillStyle = 'rgba(255,190,110,.13)'; B.beginPath(); B.moveTo(TZ_OBJ.lamp - 8, 53); B.lineTo(TZ_OBJ.lamp + 8, 53); B.lineTo(TZ_OBJ.lamp + 80, TZ_FLOOR); B.lineTo(TZ_OBJ.lamp - 80, TZ_FLOOR); B.closePath(); B.fill(); }
+  if (typeof tzProps === 'function') tzProps(0, now);
 }
 function tzPlant(x, y, s) {
   const B = b, w = 18 * s;
@@ -966,7 +970,10 @@ function tzRender() {
     B.fillStyle = `hsl(${(e.rec[5] || 0)},70%,80%)`; B.fillRect(e.x - 5 + wob, e.y - 9, 10, 3); B.fillRect(e.x - 2 + wob, e.y - 14, 3, 2);
   }
   for (const i of TZ.cur ? [] : TZ.items) {
-    if (i.type === 'ball') { tzDisc(i.x, i.y, 6, OUTLINE); tzDisc(i.x, i.y, 5, '#ff9db8'); B.fillStyle = '#ffffff'; B.fillRect(Math.round(i.x) - 5, Math.round(i.y), 10, 2); tzDisc(i.x - 2, i.y - 3, 1, '#ffe0ea'); }
+    if (i.type === 'ball' && crObjHas('ball' + (i.v || 0))) crObjDraw(B, 'ball' + (i.v || 0), i.x, i.y + 7, 18, false, i.rot || 0);
+    else if (i.type === 'plush' && crObjHas('plush' + (i.v || 0))) crObjDraw(B, 'plush' + (i.v || 0), i.x, i.y + 8, 24, false, 0);
+    else if (i.type === 'toy' && crObjHas('toy' + (i.v || 0))) crObjDraw(B, 'toy' + (i.v || 0), i.x, i.y + 7, 20, false, 0);
+    else if (i.type === 'ball') { tzDisc(i.x, i.y, 6, OUTLINE); tzDisc(i.x, i.y, 5, '#ff9db8'); B.fillStyle = '#ffffff'; B.fillRect(Math.round(i.x) - 5, Math.round(i.y), 10, 2); tzDisc(i.x - 2, i.y - 3, 1, '#ffe0ea'); }
     else if (i.type === 'sbub') { tzDisc(i.x, i.y, 8, 'rgba(160,215,255,.55)'); tzDisc(i.x, i.y, 6, 'rgba(235,248,255,.5)'); B.fillStyle = 'rgba(255,255,255,.95)'; B.fillRect(Math.round(i.x) - 4, Math.round(i.y) - 4, 2, 2); }
     else if (i.type === 'plush') {
       tzDisc(i.x, i.y, 9, OUTLINE); tzDisc(i.x, i.y, 8, '#ffd0a8'); tzDisc(i.x - 6, i.y - 7, 3, '#ffd0a8'); tzDisc(i.x + 6, i.y - 7, 3, '#ffd0a8');
@@ -1085,9 +1092,10 @@ function tzDown(e) {
   if (near(TZ_OBJ.puzzle, TZ.lv[2].y - 12, 18, 14)) { tzBurst('star', TZ_OBJ.puzzle, TZ.lv[2].y - 26, 5); toast(t('tz.puzzleHint')); return; }
   switch (TZ.tool) {
     case 'treat': if (TZ.items.filter(i => i.type === 'treat').length < 6) TZ.items.push({ type: 'treat', x: tzClamp(x, 10, 790), y: Math.min(y, 200), vx: 0, vy: 0, ground: false }); break;
-    case 'ball': if (TZ.items.filter(i => i.type === 'ball').length >= 2) TZ.items.splice(TZ.items.findIndex(i => i.type === 'ball'), 1); TZ.items.push({ type: 'ball', x: tzClamp(x, 10, 790), y: Math.min(y, 200), vx: tzRnd(-1, 1), vy: 0, ground: false }); break;
+    case 'ball': if (TZ.items.filter(i => i.type === 'ball').length >= 2) TZ.items.splice(TZ.items.findIndex(i => i.type === 'ball'), 1); TZ.items.push({ type: 'ball', v: (Math.random() * 6) | 0, x: tzClamp(x, 10, 790), y: Math.min(y, 200), vx: tzRnd(-1, 1), vy: 0, ground: false }); break;
     case 'bubbles': for (let i = 0; i < 5; i++) if (TZ.items.filter(q => q.type === 'sbub').length < 14) TZ.items.push({ type: 'sbub', x: tzClamp(x + tzRnd(-18, 18), 10, 790), y: tzClamp(y + tzRnd(-14, 14), 10, 300), vx: tzRnd(-0.3, 0.3), vy: tzRnd(-0.4, 0.05) }); break;
-    case 'plush': if (TZ.items.filter(i => i.type === 'plush').length >= 2) TZ.items.splice(TZ.items.findIndex(i => i.type === 'plush'), 1); TZ.items.push({ type: 'plush', x: tzClamp(x, 14, 786), y: Math.min(y, 220), vx: 0, vy: 0, ground: false }); break;
+    case 'plush': if (TZ.items.filter(i => i.type === 'plush').length >= 2) TZ.items.splice(TZ.items.findIndex(i => i.type === 'plush'), 1); TZ.items.push({ type: 'plush', v: (Math.random() * 6) | 0, x: tzClamp(x, 14, 786), y: Math.min(y, 220), vx: 0, vy: 0, ground: false }); break;
+    case 'toy': if (TZ.items.filter(i => i.type === 'toy').length >= 3) TZ.items.splice(TZ.items.findIndex(i => i.type === 'toy'), 1); TZ.items.push({ type: 'toy', v: (Math.random() * 10) | 0, x: tzClamp(x, 14, 786), y: Math.min(y, 220), vx: 0, vy: 0, ground: false }); break;
     case 'call': TZ.callT = 8; TZ.callX = tzClamp(x, 20, 780); TZ.callLvl = tzLevelOf(y); tzBurst('star', x, y, 6); for (const c of TZ.list) { c.sleeping = false; c.goalT = 0; } break;
     case 'party': if (TZ.partyCool <= 0) { sndFx('joy', 0); TZ.partyCool = 6; tzBurst('conf', x, Math.min(y, 120), 60); for (const c of TZ.list) { c.danceUntil = now + 4000; c.needs.fun = Math.min(100, c.needs.fun + 12); c.needs.social = Math.min(100, c.needs.social + 6); c.sleeping = false; } } break;
     case 'level': tzToggleLevel(x, y); break;

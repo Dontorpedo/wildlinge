@@ -32,6 +32,36 @@ function tzRoomsStep(dt) {
 }
 function tzGardenCatchUp(sec) { for (const p of TZ.garden) p.g = Math.min(1, p.g + sec / TZ_GROW_S); }
 
+
+/* ---------- decor props (Pixellab sprites, drawn behind the pets) ---------- */
+/* [sprite, x, scale, bottom y (optional), glow colour (optional)] */
+const TZ_PROPS = {
+  0: [['p_home0', 62, 1.2], ['p_home2', 400, 2.2, TZ_FLOOR + 12, null, 0.28], ['p_home3', 700, 1.15], ['p_home4', 520, 1.1, 150], ['p_home6', 470, 1.0], ['p_home1', 745, 1.0]],
+  1: [['p_garden1', 70, 1.5], ['p_garden2', 215, 1.2], ['p_garden5', 360, 1.3], ['p_garden4', 480, 1.1], ['p_garden9', 330, 0.9], ['p_garden10', 150, 1.0], ['p_garden7', 790, 1.1]],
+  2: [['p_pond5', 168, 1.3], ['p_pond3', 60, 1.1], ['p_pond4', 540, 1.2], ['p_pond7', 700, 1.0, 290], ['p_pond6', 130, 1.2]],
+  3: [['p_cave0', 60, 1.4, null, '120,200,255'], ['p_cave1', 265, 1.2, null, '200,120,255'], ['p_cave2', 335, 1.0, null, '120,255,240'], ['p_cave4', 520, 1.4], ['p_cave6', 745, 1.1], ['p_cave7', 215, 1.3, 140, '255,170,70'], ['p_cave8', 575, 1.1, null, '255,150,230']],
+  4: [['p_shop2', 62, 1.3], ['p_shop4', 240, 1.0], ['p_shop3', 340, 1.1], ['p_shop5', 430, 2.2, TZ_FLOOR + 12, null, 0.28], ['p_shop6', 470, 1.2, 150], ['p_shop7', 500, 1.1], ['p_shop9', 150, 0.9]]
+};
+function tzProps(r, now) {
+  const L = TZ_PROPS[r]; if (!L || !crObjHas('p_home0')) return;
+  const B = b, dark = TZ.night > 0.5 && (r === 1 || r === 2);
+  if (dark) B.filter = 'brightness(.62)';
+  const pulse = 0.6 + 0.4 * Math.sin(now / 700);
+  for (const q of L) {
+    const sz = crObjSize(q[0]); if (!sz) continue;
+    const y = q[3] || TZ_FLOOR + 3;
+    if (q[4]) {
+      const g = B.createRadialGradient(q[1], y - sz.h * q[2] * 0.5, 2, q[1], y - sz.h * q[2] * 0.5, 38 + 14 * pulse);
+      g.addColorStop(0, `rgba(${q[4]},${0.35 * pulse})`); g.addColorStop(1, `rgba(${q[4]},0)`);
+      B.fillStyle = g; B.fillRect(q[1] - 60, y - sz.h * q[2] - 40, 120, sz.h * q[2] + 80);
+    }
+    if (q[5]) { B.save(); B.translate(q[1], y); B.scale(1, q[5]); B.translate(-q[1], -y); }
+    crObjDraw(B, q[0], q[1], y, Math.round(sz.h * q[2]));
+    if (q[5]) B.restore();
+  }
+  if (dark) B.filter = 'none';
+}
+
 /* ---------- navigation ---------- */
 function tzNavHtml() {
   const names = tr('tz.rooms');
@@ -294,6 +324,7 @@ function tzRoomDraw(r, now) {
     tzRect('#ffd84a', gx - 3, gy - 3, 6, 6); tzRect('#ffd84a', 400, 300, 4, 4); tzRect('#e0486a', 436, 300, 4, 4);
   }
   else if (r === 5) tzGalleryDraw(now);
+  tzProps(r, now);
   /* doors */
   for (const d of tzDoors()) {
     const x = d.dir > 0 ? 770 : 6;
@@ -318,7 +349,8 @@ function tzRoomOver(r, now) {
       B.fillStyle = '#15191d'; B.fillRect(fx + 9, fy + 1, 1, 1);
     }
     /* lily pads */
-    B.fillStyle = '#4faa58'; B.fillRect(300, 316, 14, 4); B.fillRect(440, 317, 12, 3); B.fillStyle = '#ff9fc4'; B.fillRect(305, 313, 4, 4);
+    if (crObjHas('p_pond0')) { crObjDraw(B, 'p_pond0', 300, 322, 26 + Math.round(Math.sin(now / 900)), false); crObjDraw(B, 'p_pond0', 455, 323, 22, true); crObjDraw(B, 'p_pond2', 395 + Math.sin(now / 1500) * 6, 324 + Math.sin(now / 700), 30, false); }
+    else { B.fillStyle = '#4faa58'; B.fillRect(300, 316, 14, 4); B.fillRect(440, 317, 12, 3); B.fillStyle = '#ff9fc4'; B.fillRect(305, 313, 4, 4); }
   } else if (r === 3) {
     const pulse = 0.5 + 0.5 * Math.sin(now / 600);
     const gem = (x, y, h, col, glow) => {
