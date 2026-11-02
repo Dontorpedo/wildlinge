@@ -361,10 +361,22 @@ function crAnimInit() {
     crAnimData = im;
   };
   im.src = CR_ANIM_IMG;
+  if (typeof CR_ANIM2_IMG !== 'undefined') { const i2 = new Image(); i2.onload = () => { crAnimData2 = i2; }; i2.src = CR_ANIM2_IMG; }
 }
-function crAnimHas(idx) { return crAnimData !== null && CR_ANIM_META.sp[idx] != null; }
+let crAnimData2 = null;
+function crAnimSet(act) {
+  if (typeof CR_ANIM2_META !== 'undefined' && crAnimData2 !== null && CR_ANIM2_META.acts.indexOf(act) >= 0) return { am: CR_ANIM2_META, img: crAnimData2 };
+  if (crAnimData !== null && CR_ANIM_META.acts.indexOf(act) >= 0) return { am: CR_ANIM_META, img: crAnimData };
+  return null;
+}
+function crAnimHas(idx, act) {
+  if (act) { const S = crAnimSet(act); if (!S) return false; const a = S.am.sp[idx]; return !!a && (a.m === undefined || ((a.m >> S.am.acts.indexOf(act)) & 1) === 1); }
+  return crAnimData !== null && CR_ANIM_META.sp[idx] != null;
+}
 function crAnimFrame(sp, hue, acc, act, f) {
-  const am = CR_ANIM_META, a = am.sp[sp.idx], ai = am.acts.indexOf(act);
+  const S0 = crAnimSet(act);
+  if (!S0) return null;
+  const am = S0.am, crAnimDataX = S0.img, a = am.sp[sp.idx], ai = am.acts.indexOf(act);
   if (!a || ai < 0 || (a.m !== undefined && !((a.m >> ai) & 1))) return null;
   const pat = sp.pat | 0, key = sp.idx + '|' + hue + '|' + acc + '|' + ai + '|' + f + '|' + pat;
   let e = crAnimCache.get(key);
@@ -378,7 +390,7 @@ function crAnimFrame(sp, hue, acc, act, f) {
   if (!crAnimScratch) { crAnimScratch = document.createElement('canvas'); }
   crAnimScratch.width = a.aw; crAnimScratch.height = a.ah;
   const sx = crAnimScratch.getContext('2d', { willReadFrequently: true });
-  sx.clearRect(0, 0, a.aw, a.ah); sx.drawImage(crAnimData, (a.x || 0) + (slot * am.nf + f) * a.aw, a.y, a.aw, a.ah, 0, 0, a.aw, a.ah);
+  sx.clearRect(0, 0, a.aw, a.ah); sx.drawImage(crAnimDataX, (a.x || 0) + (slot * am.nf + f) * a.aw, a.y, a.aw, a.ah, 0, 0, a.aw, a.ah);
   const A = sx.getImageData(0, 0, a.aw, a.ah), cx = 0, cy = 0;
   const cnv = document.createElement('canvas'); cnv.width = a.aw; cnv.height = a.ah;
   const x = cnv.getContext('2d'), img = x.createImageData(a.aw, a.ah), d = img.data;
@@ -791,7 +803,7 @@ function crPose(kind0, t, id, spd, H, W) {
   else { S.pend = kind0; S.cnt = 1; }
   const kind = S.kind, dt = Math.max(0, Math.min(4, t - S.t));
   S.t = t; S.sp += ((spd || 0) - S.sp) * Math.min(1, dt * 0.08);
-  const z = CR_PZ; z.sx = 1; z.sy = 1; z.dy = 0; z.lean = 0; z.dx = 0; z.closed = false; z.bx = 1; z.by = 1;
+  const z = CR_PZ; z.sx = 1; z.sy = 1; z.dy = 0; z.lean = 0; z.dx = 0; z.closed = false; z.bx = 1; z.by = 1; z.step = 0;
   const sp = 0.5 + Math.min(1.5, S.sp) * 0.5, ab = Math.abs;
   S.w += dt * (kind === 'walk' ? sp : kind === 'run' ? sp * 1.5 : 1);
   const w = S.w;
@@ -867,14 +879,20 @@ function crDeform(sp, closed, tp, ep) {
 function crWholeBlit(ctx, sp, px, gy, s, flip, z) {
   const fine = s >= 1;
   let src = sp.cnv, pad = 0;
-  if (fine && z.act && crAnimHas(sp.idx)) {
-    const af = crAnimFrame(sp, z.hue, z.acc, z.act, z.fr);
-    if (af) {
-      const sx0 = z.sx, sy0 = z.sy, ln = z.lean, dx0 = z.dx;
-      if (z.act !== 'walk' || z.dy === 0) { z.sx = 1; z.sy = 1; z.lean = 0; z.dx = 0; }
-      const r = crBlitSrc(ctx, af.cnv, af.pad, px, gy, s, flip, z);
-      z.sx = sx0; z.sy = sy0; z.lean = ln; z.dx = dx0;
-      return r + CR_ANIM_META.sp[sp.idx].mt * s;
+  if (fine && z.act) {
+    let act = z.act;
+    if (act === 'walk' && crAnimHas(sp.idx, 'walk2')) act = 'walk2';
+    if (crAnimHas(sp.idx, act)) {
+      const af = crAnimFrame(sp, z.hue, z.acc, act, z.fr);
+      if (af) {
+        const sx0 = z.sx, sy0 = z.sy, ln = z.lean, dx0 = z.dx, stp = z.step;
+        if (z.act !== 'walk' || z.dy === 0) { z.sx = 1; z.sy = 1; z.lean = 0; z.dx = 0; }
+        if (act !== 'walk') z.step = 0;
+        const r = crBlitSrc(ctx, af.cnv, af.pad, px, gy, s, flip, z);
+        z.sx = sx0; z.sy = sy0; z.lean = ln; z.dx = dx0; z.step = stp;
+        const SS = crAnimSet(act);
+        return r + SS.am.sp[sp.idx].mt * s;
+      }
     }
   }
   const closed = fine && z.closed && sp.m.ex0 !== undefined, tp = fine && sp.tail ? z.tp : 2, ep = fine && sp.ear ? z.ep : 2;
@@ -888,11 +906,19 @@ function crBlitSrc(ctx, src, pad, px, gy, s, flip, z) {
   ctx.imageSmoothingEnabled = s < 0.75;
   let X = px;
   if (flip < 0) { ctx.save(); ctx.translate(px, 0); ctx.scale(-1, 1); X = 0; }
+  const stp = z.step || 0, legs = stp !== 0 && Hd >= 20 && s >= 1, bh = legs ? Math.max(2, Math.round(ch * 0.22)) : 0, chB = ch - bh, dHb = legs ? Math.round(Hd * chB / ch) : Hd;
   for (let i = 0; i < nb; i++) {
-    const s0 = Math.floor(ch * i / nb), s1 = Math.floor(ch * (i + 1) / nb), d0 = Math.round(Hd * i / nb), d1 = Math.round(Hd * (i + 1) / nb);
+    const s0 = Math.floor(chB * i / nb), s1 = Math.floor(chB * (i + 1) / nb), d0 = Math.round(dHb * i / nb), d1 = Math.round(dHb * (i + 1) / nb);
     if (s1 <= s0 || d1 <= d0) continue;
     const off = nb === 1 ? Math.round(z.lean * 0.5) : Math.round(z.lean * (nb - 1 - i + 0.5) / nb);
     ctx.drawImage(src, 0, s0, cw, s1 - s0, X - (Wd >> 1) + z.dx + off, bottom - Hd + d0, Wd, d1 - d0);
+  }
+  if (legs) {
+    const dB = Hd - dHb, yT = bottom - dB, hw = cw >> 1;
+    for (let h = 0; h < 2; h++) {
+      const sg = h ? stp : -stp, lift = Math.max(0, sg) * Math.max(1, Math.round(s * 1.3)), sh = Math.round(sg * s * 1.1), sw = h ? cw - hw : hw;
+      ctx.drawImage(src, h * hw, chB, sw, bh, X - (Wd >> 1) + z.dx + Math.round(Wd * h * hw / cw) + sh, yT - Math.round(lift), Math.max(1, Math.round(Wd * sw / cw)), dB);
+    }
   }
   if (flip < 0) ctx.restore();
   ctx.imageSmoothingEnabled = false;

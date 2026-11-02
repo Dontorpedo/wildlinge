@@ -822,7 +822,14 @@ function tzSideWhole(c, sel, now) {
   z.hue = (Math.round(rec[5] / 12) * 12) % 360; z.acc = rec[82] | 0;
   if (c.laughUntil > now) z.closed = true;
   { const dxm = Math.abs(c.x - (c.lx === undefined ? c.x : c.lx)); c.lx = c.x; c.wd = (c.wd || 0) + Math.min(dxm, 8);
-    if (kind === 'walk' && z.act === 'walk') z.fr = Math.floor(c.wd / Math.max(2, W * 0.09)) % 8; }
+    if (kind === 'walk' && z.act === 'walk') z.fr = Math.floor(c.wd / Math.max(2, W * 0.09)) % 8;
+    if (kind === 'walk' && c.moving && c.ground) z.step = Math.sin((c.wd || 0) * 0.17); }
+  { const wi = c.wi, g1 = c.goal, mdn = tzMood(c) / 100;
+    if (!c.sleeping && !c.held && !c.fly && !c.swim) {
+      if (c.yawnUntil > now && crAnimHas(wi, 'yawn') && !c.moving) { z.act = 'yawn'; z.fr = Math.max(0, Math.min(7, Math.floor((1 - (c.yawnUntil - now) / 1500) * 8))); }
+      else if ((c.laughUntil > now || c.danceUntil > now || (g1 && g1.type === 'play' && c.arrived && !c.moving)) && crAnimHas(wi, 'happy')) { z.act = 'happy'; z.fr = Math.floor(now / 110) % 8; }
+      else if (!c.moving && c.ground && mdn < 0.35 && crAnimHas(wi, 'sad')) { z.act = 'sad'; z.fr = Math.floor(now / 160) % 8; }
+    } }
   const cx = Math.round(c.x), gy = Math.round(c.y);
   const P = (u, v, w, h) => { w = w || 1; h = h || 1; b.fillRect(Math.round(f > 0 ? cx + u : cx - u - (w - 1)), Math.round(gy + v), w, h); };
   if (c.fly && !c.held) { b.fillStyle = 'rgba(70,50,80,.16)'; const sy = TZ.lv[tzLevelOf(c.y)].y, sw = W >> 2; b.fillRect(cx - sw, sy, sw * 2, 1); }

@@ -7,6 +7,11 @@ API = 'https://api.pixellab.ai/v2'
 KEY = os.environ['PIXELLAB_API_KEY']
 ACTIONS = {
     'walk': 'walking forward with small hopping steps, body bobbing up and down',
+    'walk2': 'walk cycle: legs clearly stepping one after another, front and back legs swinging forward and back, feet lifting off the ground, body bobbing slightly',
+    'happy': 'jumping with joy, bouncing up into the air and landing, body stretching and squashing, cheerful',
+    'sad': 'sad, head and body drooping down, slowly sinking, then slightly lifting, sniffling',
+    'yawn': 'yawning widely with mouth open, stretching the body, then relaxing',
+    'sit': 'sitting calmly, gently breathing, looking around by turning the head slightly',
     'sleep': 'lying down and sleeping, eyes closed, gentle slow breathing',
     'eat': 'head dipping down to eat and coming back up',
     'attack': 'lunging forward to bite and then recoiling back',
@@ -63,11 +68,11 @@ if __name__ == '__main__':
     jobs = [(i, a) for i in idxs for a in acts if not os.path.exists(f'{out}/{i}_{a}_8.png')]
 
     def go(t):
-        for k in range(3):
+        for k in range(8):
             try:
                 run(t[0], t[1], out); return
             except Exception as e:
-                print('ERR', t, e, flush=True); time.sleep(5)
-    with ThreadPoolExecutor(8) as ex:
+                print('ERR', t, e, flush=True); time.sleep(20 * (k + 1))
+    with ThreadPoolExecutor(int(os.environ.get('GF_THREADS', '3'))) as ex:
         list(ex.map(go, jobs))
     print('done', len(jobs), flush=True)
