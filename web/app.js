@@ -55,11 +55,17 @@ function b64ToBytes(s) {
   return u8;
 }
 function wasmBuffer() { return b64ToBytes($('wasm-b64').textContent.trim()).buffer; }
+function ovPos(el, mode) {
+  const cv = $('terra').style.display !== 'none' && getComputedStyle($('terra')).display !== 'none' ? $('terra') : $('world'), r = cv.getBoundingClientRect();
+  if (mode === 'c') { el.style.left = Math.round(r.left + r.width / 2) + 'px'; el.style.top = Math.max(8, Math.round(r.top + 14)) + 'px'; }
+  else { el.style.left = 'auto'; el.style.right = Math.max(4, Math.round(window.innerWidth - r.right + 10)) + 'px'; el.style.top = Math.max(8, Math.round(r.top + 10)) + 'px'; }
+}
 function toast(text) {
   if (!text) return;
   const el = $('toast');
   el.textContent = text;
   el.style.display = 'block';
+  ovPos(el, 'c');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { el.style.display = 'none'; }, 2400);
 }
@@ -182,6 +188,7 @@ function render() {
   if (typeof crBudget !== 'undefined') crBudget = 30;
   requestAnimationFrame(render);
   tzFrame();
+  tzCardUpdate(viewMode === 'terra');
   if (viewMode === 'terra') { tzRender(); if (activeTab === 'terra') tzPanel(false); return; }
   if (!frame || !terrainSummer) return;
   const fr = frame, cs = fr.cs, meta = fr.meta;

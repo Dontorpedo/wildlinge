@@ -36,9 +36,9 @@ function tzGardenCatchUp(sec) { for (const p of TZ.garden) p.g = Math.min(1, p.g
 /* ---------- decor props (Pixellab sprites, drawn behind the pets) ---------- */
 /* [sprite, x, scale, bottom y (optional), glow colour (optional)] */
 const TZ_PROPS = {
-  0: [['p_home0', 62, 1.2], ['p_home2', 400, 2.2, TZ_FLOOR + 12, null, 0.28], ['p_home3', 700, 1.15], ['p_home4', 520, 1.1, 150], ['p_home6', 470, 1.0], ['p_home1', 745, 1.0]],
+  0: [['p_home0', 62, 1.2], ['p_home2', 400, 2.2, TZ_FLOOR + 12, null, 0.28], ['p_home3', 590, 1.15], ['p_home6', 470, 1.0]],
   1: [['p_garden1', 70, 1.5], ['p_garden2', 215, 1.2], ['p_garden5', 360, 1.3], ['p_garden4', 480, 1.1], ['p_garden9', 330, 0.9], ['p_garden10', 150, 1.0], ['p_garden7', 790, 1.1]],
-  2: [['p_pond5', 168, 1.3], ['p_pond3', 60, 1.1], ['p_pond4', 540, 1.2], ['p_pond7', 700, 1.0, 290], ['p_pond6', 130, 1.2]],
+  2: [['p_garden1', 85, 1.4], ['p_pond5', 168, 1.3], ['p_pond3', 60, 1.1], ['p_pond4', 540, 1.2], ['p_pond7', 700, 1.0, 290], ['p_pond6', 130, 1.2]],
   3: [['p_cave0', 60, 1.4, null, '120,200,255'], ['p_cave1', 265, 1.2, null, '200,120,255'], ['p_cave2', 335, 1.0, null, '120,255,240'], ['p_cave4', 520, 1.4], ['p_cave6', 745, 1.1], ['p_cave7', 215, 1.3, 140, '255,170,70'], ['p_cave8', 575, 1.1, null, '255,150,230']],
   4: [['p_shop2', 62, 1.3], ['p_shop4', 240, 1.0], ['p_shop3', 340, 1.1], ['p_shop5', 430, 2.2, TZ_FLOOR + 12, null, 0.28], ['p_shop6', 470, 1.2, 150], ['p_shop7', 500, 1.1], ['p_shop9', 150, 0.9]]
 };
@@ -258,7 +258,10 @@ function tzSun(now, x0, y0, w) {
 function tzRoomDraw(r, now) {
   const B = b, night = TZ.night, nb = night > 0.5;
   B.imageSmoothingEnabled = false;
+  const bgOk = r >= 1 && r <= 4 && crBgDraw(B, r, BW, BH);
+  if (bgOk && (r === 1 || r === 2) && night > 0.02) { B.fillStyle = `rgba(14,20,70,${(0.55 * Math.min(1, night)).toFixed(2)})`; B.fillRect(0, 0, BW, BH); }
   if (r === 1) {
+    if (!bgOk) {
     tzSky(nb ? '#26305e' : '#a9dcfb', nb ? '#2d3a70' : '#b8e4fc', 8); tzSun(now, 80, 20, 560);
     tzRect(nb ? '#2e5a46' : '#8fd08a', 0, 210, BW, 120);
     for (let i = 0; i < 6; i++) { tzRect(nb ? '#264c3a' : '#7cc47a', i * 150 - 20, 190 + (i % 2) * 8, 120, 40); }
@@ -269,6 +272,7 @@ function tzRoomDraw(r, now) {
     /* tree with branch ledge */
     tzRect('#8a5a30', 640, 150, 26, 180); tzRect('#a8743e', 640, 150, 8, 180);
     tzRect(nb ? '#2c6a44' : '#4faa58', 540, 90, 220, 90); tzRect(nb ? '#3a7a52' : '#63c06a', 560, 80, 180, 40);
+    } else { if (nb) B.filter = 'brightness(.62)'; crObjDraw(B, 'p_garden0', 650, TZ_FLOOR + 2, 200); B.filter = 'none'; }
     tzRect('#8a5a30', 560, 270, 180, 7); tzRect('#b07a44', 560, 270, 180, 2);
     /* sun patch, moss bed, birdbath */
     if (!nb) { B.fillStyle = 'rgba(255,240,150,.35)'; B.beginPath(); B.ellipse(380, TZ_FLOOR - 2, 50, 8, 0, 0, 6.3); B.fill(); }
@@ -276,6 +280,7 @@ function tzRoomDraw(r, now) {
     tzRect('#b9b3a6', 696, TZ_FLOOR - 26, 8, 26); tzRect('#cfc8bd', 680, TZ_FLOOR - 32, 40, 8); tzRect('#7cc0f0', 684, TZ_FLOOR - 34, 32, 4);
     for (const p of TZ.garden) tzGardenPlant(p, now);
   } else if (r === 2) {
+    if (!bgOk) {
     tzSky(nb ? '#26305e' : '#a9dcfb', nb ? '#2d3a70' : '#b8e4fc', 8); tzSun(now, 80, 20, 560);
     tzRect(nb ? '#2e5a46' : '#8fd08a', 0, 230, BW, 100);
     tzRect(nb ? '#3f7a58' : '#6dbb6a', 0, TZ_FLOOR, BW, BH - TZ_FLOOR);
@@ -283,23 +288,27 @@ function tzRoomDraw(r, now) {
     tzRect(nb ? '#2c6a44' : '#4faa58', 40, TZ_FLOOR - 40, 80, 40); tzRect(nb ? '#3a7a52' : '#63c06a', 50, TZ_FLOOR - 46, 60, 14);
     for (let i = 0; i < 7; i++) tzRect('#e0486a', 48 + i * 10, TZ_FLOOR - 34 + (i * 7 % 22), 4, 4);
     tzRect('#5fae6a', 130, TZ_FLOOR - 10, 60, 10);
+    }
     /* dock */
     tzRect('#9a6a3a', 560, 290, 200, 7); tzRect('#b98a52', 560, 290, 200, 2); tzRect('#7a4f28', 575, 297, 6, 33); tzRect('#7a4f28', 735, 297, 6, 33);
     tzRect('#b9b3a6', 620, 276, 60, 14); tzRect('#cfc8bd', 626, 272, 48, 6);
     /* reeds */
     for (let i = 0; i < 8; i++) { tzRect('#4f8a3c', 222 + i * 6, TZ_FLOOR - 24 - (i % 3) * 7, 2, 28); tzRect('#7a5230', 221 + i * 6, TZ_FLOOR - 30 - (i % 3) * 7, 4, 8); }
   } else if (r === 3) {
+    if (!bgOk) {
     tzRect('#1b1730', 0, 0, BW, BH); for (let y = 0; y < TZ_FLOOR; y += 24) tzRect('#211c3a', 0, y, BW, 12);
     for (let x = 0; x < BW; x += 36) { const h = 20 + (x * 13 % 50); tzRect('#2a2447', x, 0, 22, h); tzRect('#352d58', x + 4, h, 14, 8); tzRect('#2a2447', x + 8, h + 8, 6, 10); }
     tzRect('#2b2543', 0, TZ_FLOOR, BW, BH - TZ_FLOOR); tzRect('#3a3260', 0, TZ_FLOOR, BW, 3);
+    }
     /* crystal ledge */
     tzRect('#4a4070', 300, 270, 180, 10); tzRect('#5c5190', 300, 270, 180, 3);
     /* mushrooms, fire, pool, moss */
-    for (let i = 0; i < 4; i++) { const mx = 120 + i * 22; tzRect('#e8e0d0', mx, TZ_FLOOR - 14 - i % 2 * 6, 4, 14 + i % 2 * 6); tzRect(i % 2 ? '#d86a9a' : '#6ab8d8', mx - 6, TZ_FLOOR - 18 - i % 2 * 6, 16, 6); }
+    if (!bgOk) for (let i = 0; i < 4; i++) { const mx = 120 + i * 22; tzRect('#e8e0d0', mx, TZ_FLOOR - 14 - i % 2 * 6, 4, 14 + i % 2 * 6); tzRect(i % 2 ? '#d86a9a' : '#6ab8d8', mx - 6, TZ_FLOOR - 18 - i % 2 * 6, 16, 6); }
     tzRect('#4a4a58', 600, TZ_FLOOR - 8, 64, 8); tzRect('#3a8fc8', 606, TZ_FLOOR - 10, 52, 4);
     tzRect('#3f6a4c', 690, TZ_FLOOR - 10, 70, 10); tzRect('#5a8a68', 696, TZ_FLOOR - 14, 58, 6);
     tzRect('#5a5a68', 376, TZ_FLOOR - 6, 50, 6);
   } else if (r === 4) {
+    if (!bgOk) {
     for (let x = 0; x < BW; x += 40) tzRect((x / 40) % 2 ? '#d9b98a' : '#d0ad7c', x, 0, 40, TZ_FLOOR);
     tzRect('#b98e5c', 0, 300, BW, 22);
     tzRect('#9a6f42', 0, TZ_FLOOR, BW, BH - TZ_FLOOR); for (let x = 0; x < BW; x += 60) tzRect('#855a30', x, TZ_FLOOR + 6, 2, BH);
@@ -307,6 +316,7 @@ function tzRoomDraw(r, now) {
     /* window and pegboard */
     tzRect('#fff4e2', 330, 40, 100, 80); tzRect(nb ? '#26305e' : '#a9dcfb', 336, 46, 88, 68); tzRect('#fff4e2', 378, 46, 4, 68);
     tzRect('#7a5a38', 40, 50, 160, 90); for (let i = 0; i < 6; i++) { tzRect(['#c8c8d0', '#e0486a', '#4a9ae0', '#e8b020', '#6fd36f', '#c060c8'][i], 55 + i * 24, 62 + (i % 2) * 20, 8, 30); }
+    }
     /* shelf ledge */
     tzRect('#8a5a30', 520, 280, 180, 7); tzRect('#b07a44', 520, 280, 180, 2); tzRect('#7a4f28', 530, 287, 5, 12); tzRect('#7a4f28', 685, 287, 5, 12);
     tzRect('#e0486a', 560, 262, 18, 18); tzRect('#4a9ae0', 590, 266, 14, 14); tzRect('#e8b020', 640, 264, 20, 16);

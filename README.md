@@ -76,3 +76,4 @@ Jedes Genom kann bis zu 12 Sensoren tragen (`Sensor {slot, Ziel, Modus, Winkel, 
 
 ## Terrarium-Gegenstaende und Dekor
 Baelle (6), Kuscheltiere (6), Spielzeuge (10) und Raumdekor (ca. 45 Sprites) stammen von Pixellab (`tools/gen-objects.py`, `tools/pack-objs.py` -> `web/assets/whole/objs.png/json`). Raumdekor: `TZ_PROPS` in `web/rooms.js`.
+Raumhintergruende: `tools/gen-bg.py` (Pixellab, 400x200 je Raum) und `tools/pack-bgs.py` -> `web/assets/whole/bgs.png`. Auswahl-Status des Tiers (Tut/Fuehlt/Denkt/Ort) als Overlay `#tzCard` ueber dem Terrarium.

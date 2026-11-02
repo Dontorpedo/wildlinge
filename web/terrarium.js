@@ -697,6 +697,9 @@ function tzItems(k, dt) {
 function tzRoom(now) {
   const B = b, night = TZ.night, sun = tzClamp((TZ.hour - 6) / 14, 0, 1);
   B.imageSmoothingEnabled = false;
+  const bgOk = crBgDraw(B, 0, BW, BH);
+  if (bgOk && night > 0.5 && !TZ.room.light) { B.fillStyle = 'rgba(14,20,70,.4)'; B.fillRect(0, 0, BW, BH); }
+  if (!bgOk) {
   for (let x = 0; x < BW; x += 20) { B.fillStyle = (x / 20) % 2 ? '#f6e9f0' : '#f1e1ea'; B.fillRect(x, 0, 20, TZ_FLOOR); }
   B.fillStyle = '#e7d4df'; B.fillRect(0, 300, BW, 22);
   B.fillStyle = '#fff6ea'; B.fillRect(0, 320, BW, 10);
@@ -722,13 +725,15 @@ function tzRoom(now) {
   B.fillStyle = '#fff4e2'; B.fillRect(wx + ww / 2 - 2, wy, 4, wh); B.fillRect(wx, wy + wh / 2 - 2, ww, 4);
   B.fillStyle = '#e9d3b4'; B.fillRect(wx - 10, wy + wh + 6, ww + 20, 6);
   if (night < 0.5) { B.fillStyle = 'rgba(255,244,200,.14)'; B.beginPath(); B.moveTo(wx, wy + wh); B.lineTo(wx + ww, wy + wh); B.lineTo(wx + ww + 120, TZ_FLOOR + 40); B.lineTo(wx + 80, TZ_FLOOR + 40); B.closePath(); B.fill(); }
+  }
   for (let i = 1; i < TZ.lv.length; i++) {
     const L = TZ.lv[i], ex = i >= TZ_BASE.length;
     B.fillStyle = ex ? '#bf9d78' : '#c99a6a'; B.fillRect(L.x0, L.y, L.x1 - L.x0, 7);
     B.fillStyle = ex ? '#dcc0a0' : '#e4bc8a'; B.fillRect(L.x0, L.y, L.x1 - L.x0, 2);
     B.fillStyle = '#b3855a'; B.fillRect(L.x0 + 10, L.y + 7, 5, 12); B.fillRect(L.x1 - 15, L.y + 7, 5, 12);
   }
-  tzPlant(745, TZ_FLOOR, 1.2); tzPlant(610, TZ.lv[2].y, 0.7);
+  if (!bgOk) tzPlant(745, TZ_FLOOR, 1.2);
+  tzPlant(610, TZ.lv[2].y, 0.7);
   B.fillStyle = '#ffb7cf'; B.fillRect(TZ_OBJ.bed - 34, TZ_FLOOR - 12, 68, 12); B.fillRect(TZ_OBJ.bed - 30, TZ_FLOOR - 16, 60, 4);
   B.fillStyle = '#ffd2e0'; B.fillRect(TZ_OBJ.bed - 28, TZ_FLOOR - 15, 40, 3);
   B.fillStyle = '#f08fb0'; B.fillRect(TZ_OBJ.bed - 34, TZ_FLOOR - 2, 68, 2);
@@ -1194,6 +1199,16 @@ function tzStatus(c) {
   else if (g && g.type === 'play' && g.with) th = t('tz.th.play', g.with.name);
   else th = t('tz.th.' + ty) !== 'tz.th.' + ty ? t('tz.th.' + ty) : t('tz.th.wander');
   return { act, feel: f.join(', '), think: th, where: room };
+}
+let tzCardAt = 0;
+function tzCardUpdate(show) {
+  const cd = $('tzCard'); if (!cd) return;
+  const sel = show ? tzFind(TZ.sel) : null;
+  if (!sel || TZ.cur === 5 || sel.away) { cd.style.display = 'none'; return; }
+  const now = Date.now(); if (now - tzCardAt < 300 && cd.style.display === 'block') return; tzCardAt = now;
+  const st = tzStatus(sel);
+  cd.innerHTML = `<b>${esc(sel.name)}</b><br><i>${esc(t('tz.st.do'))}</i> ${esc(st.act)}<br><i>${esc(t('tz.st.feel'))}</i> ${esc(st.feel)}<br><i>${esc(t('tz.st.think'))}</i> ${esc(st.think)}<br><i>${esc(t('tz.st.where'))}</i> ${esc(st.where)}`;
+  cd.style.display = 'block'; ovPos(cd, 'r');
 }
 function tzPanel(force) {
   const now = Date.now();
